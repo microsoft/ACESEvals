@@ -1,0 +1,3 @@
+[submodule "external/saber"]
+	path = external/saber
+	url = https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/SABER

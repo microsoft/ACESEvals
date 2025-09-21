@@ -1,0 +1,58 @@
+# Ignore virtual environment created by uv
+.venv/
+
+# Ignore Python cache files
+**/__pycache__/
+*.py[cod]
+*$py.class
+.coverage
+
+# Ignore pytest cache and result files
+**/.pytest_cache/
+**/*.pytest_cache/
+test-results.xml
+coverage.xml
+htmlcov/
+.tox/
+**/test_output/
+
+# Ignore Azure specific files
+**/.azure/
+
+# Ignore other common Python files
+*.log
+*.pot
+*.mo
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+dist/
+build/
+
+# Ignore .gitconfig and other git-related files
+.gitconfig
+
+# Ignore binaries
+bin/
+
+# Ignore environment variable files
+.env
+
+# Ignore linting cache
+**/.mypy_cache
+
+# Ignore data folders to not track large raw files
+**/data/
+
+**/.archive
+
+# Ignore log files
+**/logs
+
+# Ignore vscode for specific user setups
+**/.vscode
+
+# Ignore .cache and .local for client startups
+.cache/
+.local/

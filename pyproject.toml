@@ -1,0 +1,28 @@
+[project]
+name = "oss-saber"
+version = "0.1.0"
+description = "Open source security benchmarks for the SABER agentic benchmarking framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "SABER Team"}
+]
+
+dependencies = [
+    "saber",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+saber = { path = "./external/saber", editable = true }
