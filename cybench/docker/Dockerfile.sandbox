@@ -1,0 +1,66 @@
+# SABER Sandbox for Cybench Domain
+# Extends the minimal SABER sandbox base with essential cybersecurity tools
+FROM saber/sandbox:latest
+
+# Switch to root to install packages
+USER root
+
+# Install essential cybersecurity tools for web application testing
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        # Directory/file enumeration tools
+        gobuster \
+        dirb \
+        # Network tools
+        nmap \
+        netcat-openbsd \
+        socat \
+        # File analysis tools
+        file \
+        binutils \
+        xxd \
+        # Text processing tools
+        jq \
+        # Additional network utilities
+        dnsutils \
+        telnet \
+        # Archive tools
+        unzip \
+        zip \
+        # Build tools for compiling payloads if needed
+        gcc \
+        make \
+        # Additional useful tools
+        git \
+        nano \
+        vim \
+        && rm -rf /var/lib/apt/lists/*
+
+# Create wordlist directories and download common wordlists
+RUN mkdir -p /usr/share/wordlists/dirb && \
+    mkdir -p /usr/share/wordlists/dirbuster && \
+    # Download DIRB wordlists from the official source
+    curl -s -o /usr/share/wordlists/dirb/common.txt \
+        https://raw.githubusercontent.com/v0re/dirb/master/wordlists/common.txt && \
+    curl -s -o /usr/share/wordlists/dirb/big.txt \
+        https://raw.githubusercontent.com/v0re/dirb/master/wordlists/big.txt && \
+    curl -s -o /usr/share/wordlists/dirb/small.txt \
+        https://raw.githubusercontent.com/v0re/dirb/master/wordlists/small.txt && \
+    # Download DirBuster wordlists
+    curl -s -o /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt \
+        https://raw.githubusercontent.com/daviddias/node-dirbuster/master/lists/directory-list-2.3-medium.txt && \
+    # Verify the main wordlist exists
+    test -f /usr/share/wordlists/dirb/common.txt || echo "ERROR: Failed to download wordlists"
+
+# Install additional Python packages for cybersecurity tasks
+RUN pip install --no-cache-dir \
+    requests \
+    beautifulsoup4 \
+    urllib3 \
+    pycryptodome
+
+# Switch back to non-root user
+USER saber
+
+# Set environment variables for cybersecurity tools
+ENV PATH="/usr/bin:/bin:/usr/local/bin:${PATH}"

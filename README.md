@@ -1,31 +1,58 @@
-# oss_saber# oss_saber
+# oss_saber# oss_saber# oss_saber
 
 
 
-This repository contains open source security benchmarks designed for evaluation with the SABER agentic benchmarking framework. These benchmarks test AI agents on cybersecurity tasks including penetration testing, threat hunting, and security analysis.This repository contains open source security benchmarks designed for evaluation with the SABER agentic benchmarking framework. These benchmarks test AI agents on cybersecurity tasks including penetration testing, threat hunting, and security analysis.
+This repository contains open source security benchmarks designed for evaluation with the SABER agentic benchmarking framework. These benchmarks test AI agents on cybersecurity tasks including penetration testing, threat hunting, and security analysis.
 
 
 
-## Installation## Installation
+## InstallationThis repository contains open source security benchmarks designed for evaluation with the SABER agentic benchmarking framework. These benchmarks test AI agents on cybersecurity tasks including penetration testing, threat hunting, and security analysis.This repository contains open source security benchmarks designed for evaluation with the SABER agentic benchmarking framework. These benchmarks test AI agents on cybersecurity tasks including penetration testing, threat hunting, and security analysis.
 
 
 
-This project uses [uv](https://github.com/astral-sh/uv) for dependency management.This project uses [uv](https://github.com/astral-sh/uv) for dependency management.
+This project uses [uv](https://github.com/astral-sh/uv) for dependency management.
 
 
 
-### Install uv### Install uv
+### Install uv## Installation## Installation
 
 
 
-```bash```bash
+```bash
 
-# Install uv# Install uv
+# Install uv
+
+curl -LsSf https://astral.sh/uv/install.sh | shThis project uses [uv](https://github.com/astral-sh/uv) for dependency management.This project uses [uv](https://github.com/astral-sh/uv) for dependency management.
+
+source $HOME/.local/bin/env  # Add uv to PATH
+
+```
+
+
+
+### Install project dependencies### Install uv### Install uv
+
+
+
+```bash
+
+# Initialize git submodules (required for SABER framework)
+
+git submodule update --init --recursive```bash```bash
+
+
+
+# Install dependencies# Install uv# Install uv
+
+uv sync
 
 curl -LsSf https://astral.sh/uv/install.sh | shcurl -LsSf https://astral.sh/uv/install.sh | sh
 
-source $HOME/.local/bin/env  # Add uv to PATHsource $HOME/.local/bin/env  # Add uv to PATH
+# Install with development dependencies  
 
+uv sync --all-extrassource $HOME/.local/bin/env  # Add uv to PATHsource $HOME/.local/bin/env  # Add uv to PATH
+
+```
 ``````
 
 

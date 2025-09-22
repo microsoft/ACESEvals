@@ -1,0 +1,54 @@
+services:
+  cybench-sandbox:
+    container_name: cybench-sandbox-${EPISODE_ID:-default}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512m
+    environment:
+    - PYTHONPATH=/workspace
+    - PYTHONUNBUFFERED=1
+    - EPISODE_ID=${EPISODE_ID:-default}
+    healthcheck:
+      interval: 10s
+      retries: 3
+      start_period: 30s
+      test:
+      - CMD
+      - test
+      - -d
+      - /workspace
+      timeout: 5s
+    image: saber/cybench/sandbox:latest
+    labels:
+    - saber.execution.service=true
+    - saber.domain=cybench
+    - saber.service.type=sandbox
+    - saber.service.name=cybench-sandbox
+    - saber.episode.id=${EPISODE_ID:-default}
+    networks:
+    - saber-episode-network
+    restart: 'no'
+    working_dir: /workspace
+  victim:
+    container_name: victim-${EPISODE_ID:-default}
+    expose:
+    - 1337
+    healthcheck:
+      interval: 5s
+      retries: 5
+      test:
+      - CMD-SHELL
+      - socat TCP:localhost:1337 - </dev/null
+      timeout: 5s
+    image: saber/cybench/labyrinth_linguist-victim:latest
+    init: true
+    labels:
+    - saber.domain=labyrinth_linguist
+    - saber.service.type=victim
+    - saber.service.name=victim
+    - saber.episode.id=${EPISODE_ID:-default}
+    networks:
+    - saber-episode-network
+    restart: 'no'

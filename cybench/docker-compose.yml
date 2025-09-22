@@ -1,0 +1,72 @@
+services:
+  # SABER Server for cybench domain
+  saber-cybench-server:
+    image: saber/server:latest
+    container_name: saber-cybench-server
+    # user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"  # TODO: Fix this so it actually works # Run as host user to fix log permissions
+    group_add:
+      - "${DOCKER_GROUP_ID:-1001}"  # Add docker group for socket access
+    ports:
+      - "8000"  # REST API
+      - "8001"  # MCP API
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker-in-Docker for dynamic container creation
+      - ./server/config:/app/config  # Mount cybench config directory
+      - ../external/saber/src:/app/src  # Mount SABER source code
+      - ./server/logs:/app/logs:rw  # Mount logs directory for enhanced container debugging
+      - ./server/data/evaluations:/app/data/evaluations:rw  # Mount evaluation directory
+    environment:
+      - HOME=/app  # Set HOME to writable directory
+      - XDG_CACHE_HOME=/app/.cache  # Set cache directory to writable location
+      - SABER_DOMAIN=cybench
+      - SABER_CONFIG_DIR=/app/config
+      - SABER_HOST=0.0.0.0
+      - SABER_PORT=8000
+      - SABER_MCP_PORT=8001
+      - PYTHONPATH=/app/src
+      - SABER_LOG_LEVEL=DEBUG
+      - SABER_LOGS_DIRECTORY=/app/logs  # Enable enhanced container logging
+      - SABER_ENABLE_CONTAINER_LOGGING=true  # Enable container debug logging
+      # - SABER_DEBUG_MODE=true  # Uncomment to skip container cleanup for debugging
+    command: ["python", "-m", "saber.server", "--start", "--domain", "cybench", "--verbose"]
+    networks:
+      - saber-cybench-network
+
+  # Cybench Client for testing container functionality
+  saber-cybench-client:
+    image: saber/client:latest
+    container_name: saber-cybench-client
+    # user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}" #TODO: Commenting this out as it breaks soooo much  # Run as host user to fix log permissions
+    group_add:
+      - "${DOCKER_GROUP_ID:-1001}"  # Add docker group for socket access
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker-in-Docker for agent container creation
+      - ./client:/app/client  # Mount client code for development
+      - ../external/saber/src:/app/src  # Mount SABER source code for shared constants
+      - ../external/saber/external/inspect_ai:/app/client/external/inspect_ai  # Mount inspect_ai codebase for development
+      - ./client/logs:/app/logs:rw  # Mount logs directory for client-side container logging
+      - ./client/.cache:/app/.cache:rw  # Mount cache directory with proper permissions
+      - ./client/.local:/app/.local:rw  # Mount local directory with proper permissions
+      - ${HOME}/.azure:/app/.azure:rw  # Mount Azure CLI credentials aligned with HOME environment
+      - ${HOME}/.gitconfig:/app/.gitconfig:ro  # Mount git configuration for authentication
+    environment:
+      - HOME=/app  # Set HOME to writable directory
+      - XDG_CACHE_HOME=/app/.cache  # Set cache directory to writable location
+      - SABER_REST_URL=http://saber-cybench-server:8000
+      - SABER_MCP_URL=http://saber-cybench-server:8001
+      - PYTHONPATH=/app/src:/app/client/external/inspect_ai/src  # Fix path to match mount
+      - PYTHONDONTWRITEBYTECODE=1  # Prevent .pyc files that can cache old code
+      - DOCKER_SABER_SERVER=1  # Auto-detect Docker environment
+      - AZURE_CONFIG_DIR=/app/.azure  # Ensure Azure CLI uses mounted credentials aligned with HOME
+      - GIT_CONFIG_GLOBAL=/app/.gitconfig  # Use mounted git config
+      - SETUPTOOLS_SCM_PRETEND_VERSION_FOR_INSPECT_AI=0.3.44  # Fix setuptools-scm version detection issue
+      # - SABER_DEBUG_MODE=true  # Uncomment to keep agent containers for debugging
+    networks:
+      - saber-cybench-network
+    depends_on:
+      - saber-cybench-server
+    working_dir: /app/client
+    command: tail -f /dev/null  # Keep container running for manual execution
+networks:
+  saber-cybench-network:
+    driver: bridge

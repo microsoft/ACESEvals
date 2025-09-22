@@ -1,3 +1,9 @@
 [submodule "external/saber"]
 	path = external/saber
 	url = https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/SABER
+[submodule "external/inspect_evals"]
+	path = external/inspect_evals
+	url = https://github.com/UKGovernmentBEIS/inspect_evals.git
+[submodule "external/cybench"]
+	path = external/cybench
+	url = https://github.com/andyzorigin/cybench.git

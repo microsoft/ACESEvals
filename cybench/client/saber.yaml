@@ -1,0 +1,39 @@
+# SABER Configuration - Cybench Demo
+# Updated for unified eval_async architecture with proper nested configuration
+
+# Model configuration (inspect_ai format for Azure OpenAI)
+model: "openai/azure/gpt-4.1"
+
+# Server configuration (nested structure)
+server:
+  rest_url: "http://saber-cybench-server:8000"
+  mcp_url: "http://saber-cybench-server:8001"
+  client_id: "saber-client"
+
+# Task configuration
+tasks:
+  task_ids: ["labyrinth_linguist_task_hard"]
+
+# Agent configuration (use agent registry)
+agent:
+  id: "inspect_react"
+  debug_mode: false
+
+# Execution configuration
+log_level: "INFO"
+log_dir: "./logs"
+ui_enabled: true
+
+# Log upload configuration
+log_upload:
+  enabled: true  # Enable automatic upload of eval log files to server
+  max_retries: 3  # Maximum retry attempts for failed uploads
+  timeout: 30.0  # Upload timeout in seconds
+  fail_on_error: false  # Whether to fail evaluation if log upload fails
+
+# eval_async specific configuration
+max_samples: null  # null means no limit
+max_subprocesses: 1  # parallel execution
+parallel_execution: true
+max_parallel_tasks: 1  # Single task for demo
+container_timeout: 300
