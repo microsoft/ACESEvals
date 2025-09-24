@@ -14,10 +14,11 @@ server:
 tasks:
   task_ids: ["labyrinth_linguist_task_hard"]
 
-# Agent configuration (use agent registry)
-agent:
-  id: "inspect_react"
-  debug_mode: false
+# Agent configuration
+agents:
+  - id: "inspect_react"
+    model: "openai/azure/gpt-4.1"
+    tasks: ["*"]  # Wildcard assignment for all tasks
 
 # Execution configuration
 log_level: "INFO"
