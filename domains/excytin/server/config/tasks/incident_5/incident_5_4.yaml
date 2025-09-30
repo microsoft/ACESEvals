@@ -1,0 +1,424 @@
+tasks:
+  - task_id: incident_5_task_31
+    title: incident_5_task_31
+    description: What was the URL blocked due to Command and Control (C2) behavior in
+      this incident?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: A recent security incident involved multiple attempts to access
+        a Primary Refresh Token (PRT) which is a key artifact of Azure AD authentication
+        on various devices. During the investigation, it was observed that a suspicious
+        activity attempted to access PRT from the account associated with the user `tgs2z`,
+        possibly moving laterally within the organization. The IP address involved in
+        this incident was `107.224.99.179`, and one of the processes noted was `powershell.exe`.
+        This investigation further revealed a Command and Control (C2) behavior that
+        was blocked.
+      question: What was the URL blocked due to Command and Control (C2) behavior in
+        this incident?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - http://vectorsandarrows.com/
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: There was a possible attempt to access the Primary Refresh Token
+        (PRT) using the process `browsercore.exe`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: The account `dp5hn` was associated with a possible attempt to access
+        the Primary Refresh Token (PRT).
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_3
+      title: Checkpoint 3
+      description: Command and Control behavior was detected and blocked for the URL
+        `http://vectorsandarrows.com/`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_32
+    title: incident_5_task_32
+    description: Can you provide the command line of the process that was created using
+      WMI on the host?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: 'A possible attempt to access the Primary Refresh Token (PRT)
+        was detected on the host `vnevado-win11u` with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`.
+        The process involved in this attempt was `browsercore.exe` (ProcessId: 1640),
+        launched at `2024-06-20T09:32:12.1031042Z`. PRT is a key artifact of Azure AD
+        authentication used for single sign-on across applications, and attackers may
+        target it to move laterally or perform credential theft. For more information,
+        read the Activity profile: Midnight Blizzard credential attacks Threat Analytics
+        report on the Microsoft Security website.'
+      question: Can you provide the command line of the process that was created using
+        WMI on the host?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - vssblatemp.exe delete shadows /all
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: There was a possible attempt to access the Primary Refresh Token
+        (PRT) associated with the Azure AD user with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: There was a suspicious WMI process creation observed with the process
+        command line `vssblatemp.exe delete shadows /all` at `2024-06-20t09:29:40.8785892z`
+        with Process ID `1900`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_33
+    title: incident_5_task_33
+    description: Can you identify the SID of the account involved in the suspicious
+      remote activity on 2024-07-04 at 22:35:00.896765+00:00?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: A security incident involving 'CommandAndControl' malware detected
+        during lateral movement flagged a potential attacker trying to move laterally
+        to the device `vnevado-win10r` from another network device. The malware was
+        detected via the command line process `curl http://vectorsandarrows.com`, initiated
+        by the account `dp5hn` with Sid `S-1-5-21-1840191660-8534830288-125585561-1522`.
+      question: Can you identify the SID of the account involved in the suspicious remote
+        activity on 2024-07-04 at 22:35:00.896765+00:00?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - S-0-6-5
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: The user account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`
+        was involved in a lateral movement where 'CommandAndControl' malware was detected.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: Suspicious remote activities were observed initiated by the user
+        with SID `S-0-6-5`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_34
+    title: incident_5_task_34
+    description: As part of the Manatee Tempest activity group, what is the IP address
+      associated with their activity in this incident?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: During an investigation of a security incident, it was observed
+        that 'CommandAndControl' malware was detected on the host `vnevado-win10r`,
+        which might be an indication of an attacker attempting to move laterally from
+        another network device. The process was initiated via the command `curl http://vectorsandarrows.com`
+        with Process ID 1332. The incident is part of a larger campaign by the Manatee
+        Tempest activity group, which is known for various cyber-attacks including the
+        use of Cobalt Strike beacons for lateral movement and ransomware deployment.
+      question: As part of the Manatee Tempest activity group, what is the IP address
+        associated with their activity in this incident?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - 198.43.121.209
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: The 'CommandAndControl' malware was detected on a device. An attacker
+        might be attempting to move laterally to this device from another device on
+        the network. The associated user account has the SID `S-1-5-21-1840191660-8534830288-125585561-1522`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: Manatee Tempest, a Russia-based cybercriminal group active since
+        June 2014, was identified. This group was responsible for the Dridex banking
+        trojan and various other malvertising and infection methods. They have been
+        observed partnering with Mustard Tempest to facilitate initial access. They
+        use the IP address `198.43.121.209` for their activities.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_35
+    title: incident_5_task_35
+    description: Can you identify the AadUserId associated with the possible attempt
+      to access the Primary Refresh Token (PRT)?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: An active unknown malware was detected, which assigned higher
+        severity ratings due to its active state and potential persistence mechanisms.
+        This malware was running on an unspecified host and included processes involving
+        mimikatz.exe and cmd.exe, indicating credential theft activities. Following
+        this malware detection, a possible attempt to access Primary Refresh Token (PRT)
+        was identified, signifying that attackers could be trying to acquire this Azure
+        AD authentication artifact to perform lateral movements or credential theft.
+      question: Can you identify the AadUserId associated with the possible attempt
+        to access the Primary Refresh Token (PRT)?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - 731adb71-b11c-4bbf-850b-57989b350e96
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: Active malware was detected on the host `vnevado-win10v`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: There was a possible attempt to access a Primary Refresh Token (PRT)
+        using the process `browsercore.exe`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_3
+      title: Checkpoint 3
+      description: The account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`
+        was associated with a possible attempt to access a Primary Refresh Token (PRT).
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_36
+    title: incident_5_task_36
+    description: Following these activities, there was an indication of ransomware behavior
+      detected in the file system on a device. Can you determine the AadDeviceId of
+      the host where this ransomware activity was detected?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: A security incident involving system recovery setting tampering
+        was observed on the device with name `vnevado-win10r`. The incident involved
+        processes `vssblatemp.exe` and `bcdedit.exe` being executed on the host `vnevado-win10r`
+        to potentially disrupt recovery options. Additionally, suspicious hands-on keyboard
+        user behavior was detected around the same time, which might indicate that the
+        user has been compromised.
+      question: Following these activities, there was an indication of ransomware behavior
+        detected in the file system on a device. Can you determine the AadDeviceId of
+        the host where this ransomware activity was detected?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - e5799261-6720-4297-961e-bd9ca4275033
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: The account `dp5hn` was responsible for tampering with system recovery
+        settings.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: The same host device with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`
+        exhibited suspicious hands-on keyboard behavior, indicating a potential user
+        compromise.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_3
+      title: Checkpoint 3
+      description: Ransomware behavior was detected on the host with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`,
+        indicating potential mass encryption of files by ransomware.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_37
+    title: incident_5_task_37
+    description: From the subsequent alert, what was the name of the Windows Sysinternals
+      tool that was renamed before it was launched?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: An alert reported that the LSASS process memory was modified,
+        potentially to bypass security measures. During this incident, a suspicious
+        process `notepad.exe` was observed running on host `vnevado-win10v` with specific
+        command line arguments. Another alert was subsequently triggered indicating
+        that a Windows Sysinternals tool was renamed and executed.
+      question: From the subsequent alert, what was the name of the Windows Sysinternals
+        tool that was renamed before it was launched?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - mimikatz.exe
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: The LSASS process memory was modified from IP address `107.224.99.179`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: A Windows Sysinternals tool was renamed to `mimikatz.exe` and then
+        launched, which might indicate malicious activity.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_38
+    title: incident_5_task_38
+    description: What is the Azure Active Directory (AAD) device ID of the host where
+      the possible attempt to access the Primary Refresh Token (PRT) was detected?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: In this investigation, there is a possible attempt to access
+        Primary Refresh Token (PRT) that was detected as part of this incident. This
+        is related to Azure AD authentication security threats.
+      question: What is the Azure Active Directory (AAD) device ID of the host where
+        the possible attempt to access the Primary Refresh Token (PRT) was detected?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - bc00e484-d0e5-4da4-9472-95568cccc07e
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: All file snapshots and shadow copies have been deleted via WMI or
+        VSSAdmin using the account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`,
+        which is a common tactic during Ransomware infection.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: A possible attempt to access Primary Refresh Token (PRT) has been
+        detected on the host with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_39
+    title: incident_5_task_39
+    description: What was the URL associated with the command and control behavior detected
+      in the end alert?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: A security incident involving multiple malicious activities
+        was detected. It started with a known credential theft tool, `mimikatz.exe`,
+        being executed at two different times, indicating an attempt to dump users'
+        credentials. This activity led to lateral movement attempts to the jump server
+        and suspicious remote activities on the machine. Subsequent analysis revealed
+        command and control behavior of malware which was blocked.
+      question: What was the URL associated with the command and control behavior detected
+        in the end alert?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - http://vectorsandarrows.com/
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: A known credential theft tool execution was detected on the host
+        with AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_2
+      title: Checkpoint 2
+      description: There was lateral movement to the jump server from the IP address
+        `99.83.111.100` using PSExec.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_3
+      title: Checkpoint 3
+      description: Suspicious remote activity was observed on the account `dp5hn`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+    - subtask_id: checkpoint_4
+      title: Checkpoint 4
+      description: Command and Control behavior was blocked for the URL `http://vectorsandarrows.com/`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.
+
+  - task_id: incident_5_task_40
+    title: incident_5_task_40
+    description: Can you identify the AadDeviceId related to this alert?
+
+    sandbox_environment: excytin_sandbox
+
+    initial_context:
+      incident_context: A potential security incident involving a possible attempt to
+        access a Primary Refresh Token (PRT) was detected. A file `browsercore.exe`
+        was launched on the host `vnevado-win11t` by an account with the name `dp5hn`
+        and SID `S-1-5-21-1840191660-8534830288-125585561-1522`. The process ID for
+        this event was `7036`. This activity may have been an attempt by attackers to
+        access the PRT to move laterally within the organization or perform credential
+        theft. The Primary Refresh Token is a key artifact of Azure AD authentication
+        on various platforms and is essential for single sign-on (SSO) across applications.
+      question: Can you identify the AadDeviceId related to this alert?
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - e5799261-6720-4297-961e-bd9ca4275033
+      scoring:
+        max_score: 1.0
+    subtasks:
+    - subtask_id: checkpoint_1
+      title: Checkpoint 1
+      description: A possible attempt to access the Primary Refresh Token (PRT) was
+        detected on the host with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`.
+      objective: Identify key details related to the potential compromise that might
+        help in solving the main task.

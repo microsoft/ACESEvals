@@ -6,7 +6,29 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "SABER Team"}
+    {name = "MSEC AI Benchmarking Team", email = "kyledeprow@microsoft.com"}
+]
+keywords = [
+    "cybersecurity",
+    "security",
+    "agent-evaluation",
+    "benchmarking",
+    "penetration-testing",
+    "incident-response",
+    "mcp",
+    "inspect-ai"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 dependencies = [
@@ -19,7 +41,14 @@ dev = [
     "black>=23.0.0",
     "isort>=5.12.0",
     "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
 ]
+
+[project.urls]
+Homepage = "https://dev.azure.com/MSECAIModels/Benchmarking/_git/oss_saber"
+Documentation = "https://dev.azure.com/MSECAIModels/Benchmarking/_git/oss_saber"
+Repository = "https://dev.azure.com/MSECAIModels/Benchmarking/_git/oss_saber"
+Issues = "https://dev.azure.com/MSECAIModels/Benchmarking/_git/oss_saber"
 
 [tool.uv]
 package = false

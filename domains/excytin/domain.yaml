@@ -1,0 +1,90 @@
+schemaVersion: "1.0.0"
+
+domain:
+  slug: "excytin"
+  name: "Excytin Incident Response"
+  description: "Cybersecurity incident response scenarios with database forensics and SQL analysis capabilities"
+  version: "1.0.0"
+
+images:
+  server:
+    tag: "saber/excytin/server:latest"
+    dockerfile: "docker/Dockerfile.server"
+    buildArgs:
+      DOMAIN_NAME: "excytin"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "server"
+      saber.scenario: "incident-response"
+  
+  sandbox:
+    tag: "saber/excytin/sandbox:latest"
+    dockerfile: "docker/Dockerfile.sandbox"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "sandbox"
+  
+  incident_5_db:
+    tag: "saber/excytin/incident-5:latest"
+    dockerfile: "docker/db/Dockerfile.incident_5"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-5-database"
+
+# No profiles needed - server has full privileges by default
+
+ports:
+  rest:
+    container: 8000
+    public: false
+  
+  mcp:
+    container: 8001
+    public: false
+
+volumes:
+  - type: "bind"
+    source: "./server/data"
+    target: "/app/data"
+    readonly: false
+    description: "Incident response data and forensics artifacts"
+
+capabilities:
+  networking:
+    internet_access: false
+    custom_networks:
+      - "excytin-shared-network"
+  
+  filesystem:
+    host_access: false
+    writable_paths:
+      - "/app/logs"
+      - "/app/data"
+  
+  execution:
+    docker_socket: true
+    privileged: false
+    tools:
+      - "mysql-client"
+      - "postgresql-client"
+      - "python"
+      - "curl"
+      - "ncat"
+      - "dig"
+      - "wireshark-tools"
+
+resources:
+  cpu_limit: "2.0"
+  memory_limit: "4g"
+  storage_limit: "10g"
+
+metadata:
+  maintainer: "saber-team@security.com"
+  documentation: "https://github.com/saber-team/saber/tree/main/domains/excytin"
+  repository: "https://github.com/saber-team/saber"
+  tags:
+    - "incident-response"
+    - "database-forensics"
+    - "sql-analysis"
+    - "cybersecurity"

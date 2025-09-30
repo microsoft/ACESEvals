@@ -36,8 +36,155 @@ build/
 # Ignore binaries
 bin/
 
-# Ignore environment variable files
+# =========================================================================
+# SABER Repository .gitignore
+# =========================================================================
+
+# -------------------------------------------------------------------------
+# Environment & Secrets
+# -------------------------------------------------------------------------
+# CRITICAL: Never commit environment files with credentials
 .env
+.env.*
+!.env.template
+!.env.example
+
+# -------------------------------------------------------------------------
+# Python Virtual Environment
+# -------------------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -------------------------------------------------------------------------
+# Python Cache & Bytecode
+# -------------------------------------------------------------------------
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# -------------------------------------------------------------------------
+# Testing & Coverage
+# -------------------------------------------------------------------------
+.pytest_cache/
+**/.pytest_cache/
+**/*.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+test-results.xml
+**/test_output/
+.hypothesis/
+
+# -------------------------------------------------------------------------
+# Type Checking & Linting
+# -------------------------------------------------------------------------
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# -------------------------------------------------------------------------
+# IDEs & Editors
+# -------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# -------------------------------------------------------------------------
+# Logs
+# -------------------------------------------------------------------------
+*.log
+logs/
+**/*.log
+*.pot
+*.mo
+
+# -------------------------------------------------------------------------
+# Jupyter Notebooks
+# -------------------------------------------------------------------------
+.ipynb_checkpoints
+**/.ipynb_checkpoints/
+
+# -------------------------------------------------------------------------
+# Azure & Cloud
+# -------------------------------------------------------------------------
+**/.azure/
+.azure/
+
+# -------------------------------------------------------------------------
+# Docker & Containers
+# -------------------------------------------------------------------------
+# Keep docker files in repo, ignore runtime artifacts
+docker-compose.override.yml
+
+# -------------------------------------------------------------------------
+# SABER Specific
+# -------------------------------------------------------------------------
+# Evaluation logs and results
+logs/
+**/logs/
+*.eval
+client-logs/
+**/client-logs/
+
+# Domain-specific data (may contain sensitive info)
+domains/*/server/data/*
+!domains/*/server/data/.gitkeep
+domains/*/client/logs/
+domains/*/server/logs/
+
+# Temporary files
+*.tmp
+*.temp
+.scratch/
+scratch/
+
+# -------------------------------------------------------------------------
+# Other Python Tools
+# -------------------------------------------------------------------------
+*.pyo
+*.pyd
+*.pdb
+pip-log.txt
+pip-delete-this-directory.txt
+.pypirc
+
+# =========================================================================
+# Notes:
+# =========================================================================
+# 1. Always review before committing domain-specific data
+# 2. Keep .env.template but NEVER commit .env
+# 3. Evaluation logs may contain sensitive information
+# =========================================================================
 
 # Ignore linting cache
 **/.mypy_cache

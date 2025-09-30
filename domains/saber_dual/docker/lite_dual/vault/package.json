@@ -1,0 +1,16 @@
+{
+  "name": "vault-service",
+  "version": "1.0.0",
+  "description": "Secret Vault Service for SABER Cyber Simulation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "uuid": "^9.0.0"
+  },
+  "keywords": ["vault", "secrets", "cybersim"],
+  "author": "SABER Team",
+  "license": "MIT"
+}

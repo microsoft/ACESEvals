@@ -1,0 +1,21 @@
+# SABER Sandbox for Excytin Demo Domain
+# Extends the minimal SABER sandbox base with MySQL client for database testing
+FROM saber/sandbox:latest
+
+# Switch to root to install packages
+USER root
+
+# Install MySQL client for database connectivity testing
+RUN apt-get update && \
+    apt-get install -y \
+        default-mysql-client \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages needed for MySQL connectivity
+RUN pip install --no-cache-dir \
+    pymysql \
+    sqlalchemy
+
+# Domain-specific environment variables
+ENV MYSQL_HOST=saber-excytin-incident-5
+ENV MYSQL_PORT=3306

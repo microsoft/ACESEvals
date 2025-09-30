@@ -1,0 +1,37 @@
+# SABER Sandbox for SABER_dual Domain
+# Extends the minimal SABER sandbox base with penetration testing tools
+FROM saber/sandbox:latest
+
+# Switch to root for the entire container (red team needs full control)
+USER root
+
+# Install comprehensive penetration testing tools
+RUN apt-get update && \
+    apt-get install -y \
+        default-mysql-client \
+        nmap \
+        netcat-openbsd \
+        curl \
+        wget \
+        net-tools \
+        iputils-ping \
+        dnsutils \
+        telnet \
+        ncat \
+        masscan \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages needed for database and HTTP testing
+RUN pip install --no-cache-dir \
+    pymysql \
+    sqlalchemy \
+    requests \
+    beautifulsoup4 \
+    urllib3
+
+# Set working directory and ensure it's writable
+WORKDIR /workspace
+RUN chmod 755 /workspace
+
+# Container will run as root to support penetration testing tools
+# No user switching - red team agents need full privileges

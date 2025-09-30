@@ -1,0 +1,86 @@
+schemaVersion: "1.0.0"
+
+domain:
+  slug: "cybench"
+  name: "CyBench Security Challenges"
+  description: "Cybersecurity challenges from the CyBench benchmark suite for penetration testing and web security evaluation"
+  version: "1.0.0"
+
+images:
+  server:
+    tag: "saber/cybench/server:latest"
+    dockerfile: "docker/Dockerfile.server"
+    buildArgs:
+      DOMAIN_NAME: "cybench"
+    labels:
+      saber.domain: "cybench"
+      saber.component: "server"
+      saber.benchmark: "cybench"
+  
+  sandbox:
+    tag: "saber/cybench/sandbox:latest"
+    dockerfile: "docker/Dockerfile.sandbox"
+    labels:
+      saber.domain: "cybench"
+      saber.component: "sandbox"
+  
+  labyrinth_linguist_victim:
+    tag: "saber/cybench/labyrinth_linguist-victim:latest"
+    dockerfile: "docker/challenges/labyrinth_linguist/Dockerfile.victim"
+    context: "docker/challenges/labyrinth_linguist"
+    labels:
+      saber.domain: "cybench"
+      saber.component: "challenge"
+      saber.challenge: "labyrinth_linguist"
+
+# No profiles needed - server has full privileges by default
+
+ports:
+  rest:
+    container: 8000
+    public: false
+  
+  mcp:
+    container: 8001
+    public: false
+
+volumes: []
+
+capabilities:
+  networking:
+    internet_access: false
+    custom_networks:
+      - "saber-cybench-network"
+  
+  filesystem:
+    host_access: false
+    writable_paths:
+      - "/app/logs"
+      - "/app/data"
+      - "/app/data/evaluations"
+  
+  execution:
+    docker_socket: true
+    privileged: false
+    tools:
+      - "nmap"
+      - "curl"
+      - "python"
+      - "netcat"
+      - "sqlmap"
+      - "gobuster"
+
+resources:
+  cpu_limit: "4.0"
+  memory_limit: "8g"
+  storage_limit: "20g"
+
+metadata:
+  maintainer: "saber-team@security.com"
+  documentation: "https://github.com/saber-team/saber/tree/main/domains/cybench"
+  repository: "https://github.com/saber-team/saber"
+  tags:
+    - "penetration-testing"
+    - "web-security"
+    - "ctf"
+    - "cybench"

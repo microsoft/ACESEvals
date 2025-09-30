@@ -1,0 +1,36 @@
+# SABER Configuration - Cybench Domain
+# Auto-hydrated configuration for saber-domain test command
+
+# Server configuration (auto mode - URLs injected at runtime)
+server:
+  mode: auto  # URLs will be hydrated by saber-domain test command
+  client_id: "saber-client"
+
+# Task configuration
+tasks:
+  task_ids: ["*"]  # Wildcard - all available tasks
+
+# Agent configuration
+agents:
+  - id: "inspect_react"
+    model: "openai/azure/gpt-4.1"
+    tasks: ["*"]  # Wildcard assignment for all tasks
+
+# Execution configuration
+log_level: "INFO"
+log_dir: "logs/client-logs"
+ui_enabled: true
+
+# Log upload configuration
+log_upload:
+  enabled: true  # Enable automatic upload of eval log files to server
+  max_retries: 3  # Maximum retry attempts for failed uploads
+  timeout: 30.0  # Upload timeout in seconds
+  fail_on_error: false  # Whether to fail evaluation if log upload fails
+
+# eval_async specific configuration
+max_samples: null  # null means no limit
+max_subprocesses: 1  # parallel execution
+parallel_execution: true
+max_parallel_tasks: 2  # Reasonable default for cybench
+container_timeout: 300

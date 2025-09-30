@@ -1,0 +1,13 @@
+domain: saber_dual
+
+global_defaults:
+  execution_config:
+    allowed_executors:
+      - bash
+    timeout: 60  # Default timeout for all tasks
+
+  episode_config:
+    max_steps: 50
+
+  benchmark_config:
+    episode_attempts: 1

@@ -1,0 +1,55 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+  json:
+    format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: json
+    stream: ext://sys.stdout
+  
+  file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: json
+    filename: /var/log/siem/aggregator.log
+    mode: a
+
+  siem_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: json
+    filename: /var/log/siem/events.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 3
+
+loggers:
+  src:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+  
+  src.event_processor:
+    level: DEBUG
+    handlers: [console, siem_file]
+    propagate: false
+  
+  fastapi:
+    level: INFO
+    handlers: [console]
+    propagate: false
+  
+  uvicorn:
+    level: INFO
+    handlers: [console]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [console]

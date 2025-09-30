@@ -1,0 +1,20 @@
+# SABER Server for CyBench Domain
+# Extends the base SABER server with CyBench-specific configurations
+FROM saber/server:latest
+
+LABEL saber.domain="cybench"
+LABEL saber.component="server"
+LABEL saber.benchmark="cybench"
+
+# Copy domain-specific configuration
+COPY server/config/ /app/config/
+
+# Copy domain-specific data if it exists
+COPY server/data/ /app/data/
+
+# Set domain-specific environment variables
+ENV SABER_DOMAIN=cybench
+ENV SABER_CONFIG_DIR=/app/config
+
+# Default command for cybench domain
+CMD ["python", "-m", "saber.server", "--start", "--domain", "cybench", "--verbose"]
