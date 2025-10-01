@@ -9,9 +9,6 @@ LABEL saber.framework="dual-agent"
 # Copy domain-specific configuration
 COPY server/config/ /app/config/
 
-# Copy domain-specific data directory
-COPY server/data/ /app/data/
-
 # Set domain-specific environment variables
 ENV SABER_DOMAIN=saber_dual
 ENV SABER_CONFIG_DIR=/app/config

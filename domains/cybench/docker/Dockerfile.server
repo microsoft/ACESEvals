@@ -9,9 +9,6 @@ LABEL saber.benchmark="cybench"
 # Copy domain-specific configuration
 COPY server/config/ /app/config/
 
-# Copy domain-specific data if it exists
-COPY server/data/ /app/data/
-
 # Set domain-specific environment variables
 ENV SABER_DOMAIN=cybench
 ENV SABER_CONFIG_DIR=/app/config
