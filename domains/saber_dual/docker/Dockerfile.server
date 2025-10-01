@@ -17,4 +17,4 @@ ENV SABER_DOMAIN=saber_dual
 ENV SABER_CONFIG_DIR=/app/config
 
 # Set domain-specific command
-CMD ["python", "-m", "saber.server", "--start", "--domain", "saber_dual", "--verbose"]
+CMD ["python", "-m", "saber.server", "--start", "--domain", "saber_dual"]

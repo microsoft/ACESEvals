@@ -69,10 +69,13 @@ cd oss_saber
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source $HOME/.local/bin/env  # Add uv to PATH
 
-# 3. Install SABER dependencies
+# 3. Install SABER git submodule
+git submodule update --init external/saber
+
+# 4. Install SABER dependencies
 uv sync --all-extras
 
-# 4. Configure Azure OpenAI credentials
+# 5. Configure Azure OpenAI credentials
 cp .env.template .env
 # Edit .env with your Azure OpenAI credentials:
 #   AZUREAI_OPENAI_API_KEY=your-key-here
@@ -81,6 +84,9 @@ cp .env.template .env
 ```
 
 ### Run Your First Evaluation
+
+#### NOTE: Excytin cold start extra step
+If you are running excytin benchmark, you will need to reach out to Anand Mudgerikar or Kyle DeProw and get the excytin data. You will need to have a <>/csv_files and <>/sql_files directory at domains/excytin/server/data after this step.
 
 ```bash
 # Start a domain and run evaluation (all-in-one command)

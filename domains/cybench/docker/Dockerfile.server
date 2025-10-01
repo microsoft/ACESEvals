@@ -17,4 +17,4 @@ ENV SABER_DOMAIN=cybench
 ENV SABER_CONFIG_DIR=/app/config
 
 # Default command for cybench domain
-CMD ["python", "-m", "saber.server", "--start", "--domain", "cybench", "--verbose"]
+CMD ["python", "-m", "saber.server", "--start", "--domain", "cybench"]

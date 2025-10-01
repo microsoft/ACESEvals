@@ -17,4 +17,4 @@ ENV SABER_DOMAIN=excytin
 ENV SABER_CONFIG_DIR=/app/config
 
 # Set domain-specific command
-CMD ["python", "-m", "saber.server", "--start", "--domain", "excytin", "--verbose"]
+CMD ["python", "-m", "saber.server", "--start", "--domain", "excytin"]
