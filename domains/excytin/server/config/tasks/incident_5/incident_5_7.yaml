@@ -4,8 +4,7 @@ tasks:
     description: Regarding the system recovery setting tampering, which process was
       used to delete all volume shadow copies on the system?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A possible ransomware activity based on a known malicious extension
         has been observed on a device where numerous file system changes involved appending
@@ -44,8 +43,7 @@ tasks:
     description: In the context of this security incident, can you provide the command
       line that was used to delete all file snapshots and shadow copies?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident has been observed involving System recovery
         setting tampering on the device `vnevado-win11u` along with actions aimed at
@@ -87,8 +85,7 @@ tasks:
       all file backups were deleted. Can you determine the name of the process that
       executed this deletion?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: During a potential ransomware incident, several suspicious file
         modifications were detected on a device. These modifications involved appending
@@ -130,8 +127,7 @@ tasks:
     description: What is the IP address associated with the malicious Manatee Tempest
       activity?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent incident occurred where all file snapshots and shadow
         copies were deleted via WMI or VSSAdmin on the host `vnevado-win11u` using the
@@ -173,8 +169,7 @@ tasks:
     description: What was the command line of the process detected with the known credential
       theft tool execution?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A serious security incident involving the Mimikatz credential
         theft tool was detected on a device. Mimikatz is known for harvesting plaintext
@@ -217,8 +212,7 @@ tasks:
       what command line was executed by the process using `vssblatemp.exe` and what
       was the corresponding Process Id and creation time?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident was reported involving suspicious remote
         activity on a device named `vnevado-win11u` at IP address `99.83.111.100`. This
@@ -259,8 +253,7 @@ tasks:
     description: What IP address was involved in the ransomware payload that was remotely
       launched following the attempt to access the Primary Refresh Token (PRT)?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A possible attempt to access a Primary Refresh Token (PRT) was
         detected on host `vnevado-win11u`, which could be an indication of attackers
@@ -295,8 +288,7 @@ tasks:
     description: What is the host name of the device where 'CommandAndControl' malware
       was detected during lateral movement?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving the Manatee Tempest activity group
         was detected. This group is known for using drive-by downloads and other methods
@@ -344,8 +336,7 @@ tasks:
     description: Can you identify the process command used that might have tampered
       with the system recovery settings?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: An incident occurred involving the potential compromise of devices
         showing ransomware-like behavior. An IP address associated with this is `99.83.111.100`,
@@ -385,8 +376,7 @@ tasks:
     description: What is the hostname of the device where a possible attempt to access
       Primary Refresh Token (PRT) was detected?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident started with lateral movement detected from
         IP address `83.162.58.168`. The alert was flagged as 'Possible lateral movement'

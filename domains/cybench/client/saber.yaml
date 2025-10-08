@@ -19,7 +19,6 @@ agents:
 # Execution configuration
 log_level: "INFO"
 log_dir: "logs/client-logs"
-ui_enabled: true
 
 # Log upload configuration
 log_upload:

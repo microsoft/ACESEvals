@@ -4,8 +4,7 @@ tasks:
     description: In this incident, potentially compromised assets are exhibiting ransomware-like
       behavior. Can you identify the name of the file that has been impacted by ransomware?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident was detected involving a possible attempt
         to access a Primary Refresh Token (PRT), which is an important artifact for
@@ -43,8 +42,7 @@ tasks:
     description: Can you identify the malicious IP address associated with the Manatee
       Tempest group activities?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident related to the Manatee Tempest activity
         group was also identified. Manatee Tempest is known for using various methods
@@ -83,8 +81,7 @@ tasks:
       Refresh Token (PRT) was detected. Can you identify the file name of the process
       involved in this attempt?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: As part of the process leading to the discovery of an unknown
         malware, we found that components such as `cmd.exe`, `mimikatz.exe`, and `notepad.exe`
@@ -122,8 +119,7 @@ tasks:
     description: What is the AadDeviceId of the host connected to the end alert which
       involves the same Manatee Tempest activity group?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident related to the Manatee Tempest activity
         group has been detected. This actor, tracked by Microsoft and known to be a
@@ -165,8 +161,7 @@ tasks:
     description: Following this alert, we also detected malicious command and control
       behavior. Can you provide the URL associated with this command and control behavior?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'A security incident involving the deletion of all file snapshots
         and shadow copies via WMI or VSSAdmin, which is common during ransomware infection,
@@ -204,8 +199,7 @@ tasks:
     description: Can you identify the command line of the suspicious WMI process that
       was observed?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A 'CommandAndControl' malware was detected on the device `vnevado-win11u`
         during a security incident on July 4, 2024. This detection suggests an attempt
@@ -244,8 +238,7 @@ tasks:
       created on the machine. Can you find the command line used by this newly created
       WMI process?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A possible attempt to access Primary Refresh Token (PRT) was
         detected, indicating that attackers may be trying to move laterally within the
@@ -284,8 +277,7 @@ tasks:
     description: Can you identify the URL that was associated with the command and control
       behavior which was blocked?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: The Mimikatz credential theft tool was detected on this device,
         indicating a potential attempt to harvest credentials. Following this, we observed
@@ -338,8 +330,7 @@ tasks:
       This should be further scrutinized to confirm the activity related to PRT access
       attempt mentioned.
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A suspicious WMI process creation was observed on the machine.
         Malware frequently uses WMI to spawn new processes, breaking process trees and
@@ -382,8 +373,7 @@ tasks:
       event involving the renaming and launching of a Windows Sysinternals tool. What
       file name was used in this second alert?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident was detected on 2024-07-04 involving the
         execution of a known credential theft tool, indicated by a suspicious command

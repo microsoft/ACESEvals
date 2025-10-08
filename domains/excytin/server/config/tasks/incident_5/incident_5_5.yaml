@@ -5,8 +5,7 @@ tasks:
       identified. Can you provide the SID of the user account that may be operating
       with ransomware-like behavior?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: During a recent security investigation, it was found that a
         malicious credential theft tool `mimikatz.exe` was executed with the process
@@ -54,8 +53,7 @@ tasks:
       another device during lateral movement. What is the AadDeviceId of this affected
       device?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving an attempt to access a Primary
         Refresh Token (PRT) was detected. The PRT is a key artifact of Azure AD authentication
@@ -95,8 +93,7 @@ tasks:
       Can you identify the AadDeviceId of the host involved in this suspicious remote
       activity?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident was detected involving suspicious 'GenRansom'
         behavior on the host 'vnevado-win11t'. This malware can perform harmful actions
@@ -143,8 +140,7 @@ tasks:
       in this multi-stage incident, can you identify the file name of the tool that
       was executed?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident regarding System recovery setting tampering
         and possible attempts to access Primary Refresh Token (PRT) was reported. Specifically,
@@ -197,8 +193,7 @@ tasks:
     description: Can you provide the command line details of the suspicious WMI process
       observed on the machine?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving the Manatee Tempest activity group
         was reported. This Russia-based cybercriminal group, which has been active since
@@ -239,8 +234,7 @@ tasks:
     description: What is the name of the credential theft tool detected on the device
       `vnevado-win10v`?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent security incident involved the modification of the
         LSASS process memory. This process enforces security policy by verifying user
@@ -277,8 +271,7 @@ tasks:
       and control behavior blocked. Can you identify the URL associated with the blocked
       behavior?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving system recovery setting tampering
         has been observed where a file `vssblatemp.exe` was launched on host `vnevado-win10s`,
@@ -316,8 +309,7 @@ tasks:
     description: What is the AadDeviceId of the host where 'CommandAndControl' malware
       was detected during lateral movement at 2024-07-04 22:35:03.912589?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: On 2024-07-04 at 22:35:03.423858, a possible ransomware activity
         based on a known malicious extension was detected. Numerous file system changes
@@ -357,8 +349,7 @@ tasks:
       Primary Refresh Token (PRT). What is the AadDeviceId of the host involved in this
       attempt?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent security incident involved potentially compromised
         assets exhibiting ransomware-like behavior impacting multiple devices. The attacker
@@ -398,8 +389,7 @@ tasks:
     description: What is the IP address from which the ransomware payload was remotely
       launched?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: On 2024-07-04, there was a security incident involving suspicious
         WMI process creation on a machine. Malware often uses WMI to spawn new processes,

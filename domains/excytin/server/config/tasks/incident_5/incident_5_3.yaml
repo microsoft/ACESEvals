@@ -4,8 +4,7 @@ tasks:
     description: What is the name of the executable file used in the PSExec activity
       on `Vnevado-jump` server?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A ransomware payload was remotely launched on the device `vnevado-win11u`.
         Attackers might be attempting to encrypt content on this device, rendering it
@@ -40,8 +39,7 @@ tasks:
     description: What is the command line of the process that modified the LSASS process
       memory?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: The identified suspicious activity on host `vnevado-win10r`
         involved attempts to access a Primary Refresh Token (PRT) tied to Azure AD authentication.
@@ -90,8 +88,7 @@ tasks:
     description: What was the URL associated with the command and control behavior that
       was blocked?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving multiple alerts reported by various
         entities. One of the alerts indicates the detection of active unknown malware
@@ -141,8 +138,7 @@ tasks:
     description: Can you identify the SID of the account associated with the suspicious
       remote activity observed on this machine?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident was reported involving Command and Control
         behavior being blocked, suggesting that malware was found running or had persistence
@@ -181,8 +177,7 @@ tasks:
     description: What is the host name of the machine where suspicious 'GenRansom' behavior
       was detected, indicating the machine is actively running malware?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involved a possible compromised user account
         delivering ransomware-related files across multiple devices. Among these, ransomware-related
@@ -226,8 +221,7 @@ tasks:
     description: Can you identify the AadUserId of the account related to the CommandAndControl
       malware that was detected during lateral movement?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: To further investigate the incident, 'CommandAndControl' malware
         was detected on the targeted device. An attacker might be attempting to move
@@ -276,8 +270,7 @@ tasks:
     description: What is the process ID and the exact time when the `bcdedit /set recoveryenabled
       no` command was executed as part of the system recovery setting tampering?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'The Manatee Tempest activity tracked by Microsoft is a notorious
         Russia-based cybercriminal group that has been active since June 2014, and involved
@@ -319,8 +312,7 @@ tasks:
     description: Can you identify the URL associated with the blocked command and control
       behavior related to the malware infection?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A significant security incident involved potentially compromised
         assets exhibiting ransomware-like behavior. This impacted several devices where
@@ -360,8 +352,7 @@ tasks:
     description: In relation to the attempt to access Primary Refresh Token (PRT), can
       you identify the name of the process involved in this activity?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident raised flags due to suspicious WMI process
         creation observed on a machine, which is indicative of possible malware activity.
@@ -398,8 +389,7 @@ tasks:
     description: What is the IP address associated with the suspicious remote activity
       observed on this machine?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: On July 4, 2024, at 22:35:01, a security incident involving
         system recovery setting tampering was observed. The device `vnevado-win11t`

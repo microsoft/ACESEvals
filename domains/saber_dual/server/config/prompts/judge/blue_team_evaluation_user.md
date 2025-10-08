@@ -18,6 +18,12 @@ Here is the complete step-by-step execution trace of the blue team agent's defen
 **Step {{ loop.index }}:**
 - **Tool:** {{ step.action.tool_name }}
 - **Parameters:** {{ step.action.parameters | string | truncate(150) }}
+{% if step.action.assistant_message %}
+- **Agent Message:** {{ step.action.assistant_message | truncate(800) }}
+{% endif %}
+{% if step.action.reasoning %}
+- **Agent Reasoning:** {{ step.action.reasoning | truncate(600) }}
+{% endif %}
 - **Response:** {{ step.response | string | truncate(1500) }}
 {% if step.done %}- **Episode ended here**{% endif %}
 

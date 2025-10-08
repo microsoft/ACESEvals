@@ -55,3 +55,8 @@ package = false
 
 [tool.uv.sources]
 saber = { path = "./external/saber", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.2.0",
+]

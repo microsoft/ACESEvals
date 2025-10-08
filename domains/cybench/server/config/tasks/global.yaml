@@ -9,10 +9,10 @@ global_defaults:
     allowed_executors:
       - bash
       - python
-    timeout: 30
+    timeout: 60
 
   episode_config:
     max_steps: 50
 
   benchmark_config:
-    episode_attempts: 1
+    episode_attempts: 2

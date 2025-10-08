@@ -105,8 +105,8 @@ evaluation_config:
   criteria:
     golden_answer: "Agent should identify the IP address associated with the Manatee Tempest activity is 198.43.121.209"
     model: "openai/azure/gpt-4"
-    judge_system_template: "cybersecurity_incident_system.md"
-    judge_user_template: "cybersecurity_incident_user.md"
+    judge_system_template: "judge/cybersecurity_incident_system.md"
+    judge_user_template: "judge/cybersecurity_incident_user.md"
   scoring:
     max_score: 1.0
 ```

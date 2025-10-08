@@ -4,8 +4,7 @@ tasks:
     description: Can you identify the executable file name of the process that attempted
       to access the Primary Refresh Token (PRT) as part of the related alerts?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'A security incident involving suspected tampering with system
         recovery settings using various commands and processes, including `vssblatemp.exe`
@@ -48,8 +47,7 @@ tasks:
       ransomware-related files. Can you identify the name of the specific file associated
       with the ransomware activity?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A Mimikatz credential theft tool was detected on a device. Mimikatz
         is a credential theft tool that can harvest plaintext passwords, password hashes,
@@ -96,8 +94,7 @@ tasks:
     description: During this incident, what specific command line was observed that
       could indicate system recovery setting tampering on the device?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving suspicious 'GenRansom' behavior
         was detected on the host `vnevado-win11t` with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`.
@@ -143,8 +140,7 @@ tasks:
     description: What is the command line used by the process that tampered with the
       system recovery settings?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: There was a possible attempt to access the Primary Refresh Token
         (PRT) on a device via the process `browsercore.exe` with the Process ID 1640,
@@ -185,8 +181,7 @@ tasks:
     description: As part of this incident, a ransomware payload was also remotely launched.
       Can you identify the IP address involved in the ransomware activity?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent malware incident was detected and blocked which exhibited
         Command and Control behavior. The malware ran a `curl` command to fetch content
@@ -223,8 +218,7 @@ tasks:
     description: As per the recent alert, what is the name of the file that shows the
       potentially compromised assets exhibiting ransomware-like behavior?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident indicates that a possible compromised user
         account was observed delivering ransomware-related files like `ponceau.7z`,
@@ -262,8 +256,7 @@ tasks:
     description: Can you identify the command line details for the process that reflects
       the suspicious WMI process creation on the same machine `vnevado-win10s`?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: The security incident involves suspicious WMI process creation,
         which is a common tactic used by malware to break process trees and infect a
@@ -303,8 +296,7 @@ tasks:
     description: A related alert indicates possible ransomware activity involving a
       known malicious file extension. Can you identify the file involved in this activity?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: As part of a multi-stage ransomware incident detection, suspicious
         file system changes were observed on the host `vnevado-win11t`, indicating potential
@@ -341,8 +333,7 @@ tasks:
     description: Can you identify the Security Identifier (Sid) associated with the
       suspicious remote activity observed in this incident?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving a possible attempt to access Primary
         Refresh Token (PRT) was detected. The file `browsercore.exe` was launched with
@@ -382,8 +373,7 @@ tasks:
       Can you identify the command that was executed to disable the automatic Windows
       recovery features?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident was detected involving 'CommandAndControl'
         malware which attempted lateral movement on the host `vnevado-win10s` with AadDeviceId

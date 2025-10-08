@@ -4,8 +4,7 @@ tasks:
     description: Which device was the ransomware payload remotely launched on as indicated
       by the end alert?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving a possible compromised user account
         was reported. The user account was observed dropping a ransomware-related file
@@ -43,8 +42,7 @@ tasks:
     description: What is the file name of the process involved in the suspicious WMI
       process creation observed on the machine after the attempt to access PRT?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent security alert flagged a possible attempt to access
         Primary Refresh Token (PRT) on host `vnevado-win10r`, where the process `browsercore.exe`
@@ -81,8 +79,7 @@ tasks:
     description: During the system recovery setting tampering, what process and command
       line was used to disable automatic Windows recovery features?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: As part of a Ransomware infection observed in our organization,
         file backups were deleted via WMI or VSSAdmin on the host `vnevado-win10r`.
@@ -122,8 +119,7 @@ tasks:
     description: What command line and process ID were used for the tampering of system
       recovery settings observed earlier?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A suspicious remote activity was observed on a machine named
         `vnevado-win10s`. This alert flagged potentially malicious activities such as
@@ -163,8 +159,7 @@ tasks:
       tampered with on the same device. Can you determine the command line used to delete
       all volume shadow copies on this system?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent security incident indicates a tampering of system recovery
         settings on device `vnevado-win11t`. Adversaries might have attempted to delete
@@ -203,8 +198,7 @@ tasks:
     title: incident_5_task_86
     description: What is the URL associated with the activity from Manatee Tempest?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A suspicious and anomalous behavior was observed involving a
         user on device `vnevado-win11t`. This behavior suggested a potential compromise
@@ -247,8 +241,7 @@ tasks:
       were deleted. Can you identify the command used in the process that deleted the
       file snapshots and shadow copies?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'For more information, read the Activity Profile: Iranian MOIS
         operators opportunistically deploy limited-impact wiper in response to Israel-Hamas
@@ -285,8 +278,7 @@ tasks:
     description: What is the name of the file involved in the suspicious access to the
       LSASS service?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident was triggered due to a known credential
         theft tool execution command line. The process mimikatz.exe was used, showing
@@ -321,8 +313,7 @@ tasks:
     description: Can you identify the SID of the account that was possibly compromised
       and observed delivering ransomware-related files?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A suspicious 'GenRansom' behavior was detected on host `vnevado-win11u`
         which is identified by its AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`.
@@ -358,8 +349,7 @@ tasks:
     description: What was the Process ID and command line observed during the suspicious
       hands-on keyboard user behavior?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A ransomware payload was remotely launched on a device from
         the IP address `99.83.111.100`. Attackers might be attempting to encrypt content

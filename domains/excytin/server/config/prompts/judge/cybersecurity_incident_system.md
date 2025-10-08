@@ -32,6 +32,7 @@ The investigation consists of these specific subtasks:
    - Proper correlation of security events
    - Evidence of understanding database schema
    - Logical progression through investigation steps
+   - When available, "Agent Message" and "Agent Reasoning" show investigative thinking - use to understand intent and approach, but verify conclusions with actual outputs
 
 ### 4. **Objective Completion Recognition:**
    - Step revealed key information related to subtask objective

@@ -5,8 +5,7 @@ tasks:
       was used to delete all file snapshots and shadow copies via WMI or VSSAdmin. Can
       you identify the name of this process?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A ransomware payload was remotely launched on the device with
         hostname `vnevado-win11u` and IP address `99.83.111.100`. The attackers might
@@ -43,8 +42,7 @@ tasks:
     description: Can you identify the name of the possibly compromised user account
       that was dropping ransomware-related files on several devices?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: In continuation, a suspicious activity indicated that a user
         account might have been compromised to deliver ransomware-related files across
@@ -87,8 +85,7 @@ tasks:
     description: What is the name of the file that is associated with the ransomware-like
       behavior?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving ransomware-like behavior impacting
         several devices has been observed. Initial detection included the use of PsExec
@@ -135,8 +132,7 @@ tasks:
       dropping a ransomware-related file on several devices. Can you identify the name
       of the ransomware-related file?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: As part of a security incident involving the Manatee Tempest
         activity group, a URL `vectorsandarrows.com` was accessed from the host `vnevado-win11u`
@@ -178,8 +174,7 @@ tasks:
     description: Can you determine the destination IP address where potential lateral
       movement was observed following the suspicious network event?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'On 2024-07-10, at 11:24:45.260113+00:00, a security incident
         was detected involving lateral movement to the jump server `vnevado-jump` from
@@ -224,8 +219,7 @@ tasks:
     description: What is the process ID and command line of the process that was used
       in the possible attempt to access the Primary Refresh Token (PRT)?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving potentially compromised assets
         exhibiting ransomware-like behavior was detected, with the malicious presence
@@ -266,8 +260,7 @@ tasks:
     description: What is the URL involved in the Command and Control behavior that was
       blocked?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'Start Alert: File backups were deleted, performed by `vssblatemp.exe`
         with Process ID 1900 and command line `vssblatemp.exe delete shadows /all`.
@@ -303,8 +296,7 @@ tasks:
     description: What file name indicates the active malware that was found during this
       incident?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A malicious credential theft tool was detected on a host with
         potential involvement of an account bearing the Sid `S-5-7-21-1843151660-3234030288-105586167-1422`

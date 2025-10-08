@@ -18,6 +18,12 @@
 **Step {{ step.step_number }}** ({{ step.timestamp }})
 - Tool: {{ step.action.tool_name }}
 - Parameters: {{ step.action.parameters | string | truncate(150) }}
+{% if step.action.assistant_message %}
+- Agent Message: {{ step.action.assistant_message | truncate(800) }}
+{% endif %}
+{% if step.action.reasoning %}
+- Agent Reasoning: {{ step.action.reasoning | truncate(600) }}
+{% endif %}
 - Response: {{ step.response | string | truncate(1500) }}
 {% if step.done %}- **Episode ended here**{% endif %}
 

@@ -4,8 +4,7 @@ tasks:
     description: A related alert indicates the presence of a file associated with Mimikatz.
       Can you identify the name of this file that was detected?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent security incident was flagged due to the execution
         of a known credential theft tool, which was used to dump user's credentials.
@@ -40,8 +39,7 @@ tasks:
     description: Can you identify the malicious URL that was associated with the command
       and control behavior blocked during the incident on 2024-07-04?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: The context implies that the suspicious activity involved multiple
         process creations and communications that were likely related to malware. The
@@ -77,8 +75,7 @@ tasks:
     description: What is the command line of the process that was executed when the
       'CommandAndControl' malware was detected during lateral movement?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: On 2024-07-04, a ransomware payload was remotely launched on
         a device, which might have aimed to encrypt content and render it unusable.
@@ -116,8 +113,7 @@ tasks:
     description: What is the name of the account involved in the system recovery setting
       tampering incident?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: There was a detection of unknown malware being active in the
         environment, which was stopped by Windows Defender but it is recommended to
@@ -174,8 +170,7 @@ tasks:
     description: What is the hostname of the target device in the 'CommandAndControl'
       malware attempt?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: An alert indicated that 'CommandAndControl' malware was detected,
         suggesting an attempt to move laterally between devices.
@@ -210,8 +205,7 @@ tasks:
       host in this incident. Can you identify the Process ID and the command line of
       this process?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving the Manatee Tempest activity group
         was flagged, where the actor Manatee Tempest, known for its early malware campaigns
@@ -255,8 +249,7 @@ tasks:
     description: What is the Azure Active Directory (AAD) Device ID of the host involved
       in this suspicious WMI process creation event?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A suspicious WMI process creation was observed on the machine
         `vnevado-win11t`. Malware frequently uses WMI to spawn new processes, breaking
@@ -294,8 +287,7 @@ tasks:
     description: Can you identify the SID of the account which was involved in the suspicious
       remote activity?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'A ransomware payload was remotely launched on the host `vnevado-win11u`
         (AadDeviceId: bc00e484-d0e5-4da4-9472-95568cccc07e). Attackers might be attempting
@@ -335,8 +327,7 @@ tasks:
       Refresh Token (PRT). What is the file name of the process that was used in this
       attempt?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'On July 4th, 2024, a ransomware payload was remotely launched
         on device ''vnevado-win11t'' with IP address ''99.83.111.100''. Attackers might
@@ -374,8 +365,7 @@ tasks:
     description: As part of this investigation, could you identify the IP address of
       the device that the attacker possibly moved to laterally?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent security incident indicated a possible attempt to access
         the Primary Refresh Token (PRT) on host `vnevado-win10v` using the file `powershell.exe`.

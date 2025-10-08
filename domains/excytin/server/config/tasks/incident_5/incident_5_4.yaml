@@ -4,8 +4,7 @@ tasks:
     description: What was the URL blocked due to Command and Control (C2) behavior in
       this incident?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A recent security incident involved multiple attempts to access
         a Primary Refresh Token (PRT) which is a key artifact of Azure AD authentication
@@ -52,8 +51,7 @@ tasks:
     description: Can you provide the command line of the process that was created using
       WMI on the host?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: 'A possible attempt to access the Primary Refresh Token (PRT)
         was detected on the host `vnevado-win11u` with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`.
@@ -94,8 +92,7 @@ tasks:
     description: Can you identify the SID of the account involved in the suspicious
       remote activity on 2024-07-04 at 22:35:00.896765+00:00?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving 'CommandAndControl' malware detected
         during lateral movement flagged a potential attacker trying to move laterally
@@ -132,8 +129,7 @@ tasks:
     description: As part of the Manatee Tempest activity group, what is the IP address
       associated with their activity in this incident?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: During an investigation of a security incident, it was observed
         that 'CommandAndControl' malware was detected on the host `vnevado-win10r`,
@@ -176,8 +172,7 @@ tasks:
     description: Can you identify the AadUserId associated with the possible attempt
       to access the Primary Refresh Token (PRT)?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: An active unknown malware was detected, which assigned higher
         severity ratings due to its active state and potential persistence mechanisms.
@@ -223,8 +218,7 @@ tasks:
       detected in the file system on a device. Can you determine the AadDeviceId of
       the host where this ransomware activity was detected?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving system recovery setting tampering
         was observed on the device with name `vnevado-win10r`. The incident involved
@@ -271,8 +265,7 @@ tasks:
     description: From the subsequent alert, what was the name of the Windows Sysinternals
       tool that was renamed before it was launched?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: An alert reported that the LSASS process memory was modified,
         potentially to bypass security measures. During this incident, a suspicious
@@ -308,8 +301,7 @@ tasks:
     description: What is the Azure Active Directory (AAD) device ID of the host where
       the possible attempt to access the Primary Refresh Token (PRT) was detected?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: In this investigation, there is a possible attempt to access
         Primary Refresh Token (PRT) that was detected as part of this incident. This
@@ -345,8 +337,7 @@ tasks:
     description: What was the URL associated with the command and control behavior detected
       in the end alert?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A security incident involving multiple malicious activities
         was detected. It started with a known credential theft tool, `mimikatz.exe`,
@@ -395,8 +386,7 @@ tasks:
     title: incident_5_task_40
     description: Can you identify the AadDeviceId related to this alert?
 
-    sandbox_environment: excytin_sandbox
-
+    inherit_shared: true
     initial_context:
       incident_context: A potential security incident involving a possible attempt to
         access a Primary Refresh Token (PRT) was detected. A file `browsercore.exe`
