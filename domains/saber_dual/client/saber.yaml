@@ -16,6 +16,12 @@ agents:
     model: "openai/azure/gpt-4.1"
     tasks: ["*"]  # Wildcard assignment for all tasks
 
+# Endpoint configuration for model API requests
+endpoint_configuration:
+  timeout: null  # Model API request timeout in seconds (null = no timeout, use provider defaults)
+  max_retries: null  # Maximum number of retry attempts for model API (null = unlimited retries)
+  max_connections: null  # Maximum concurrent connections to model API (null = use default of 10)
+
 # Execution configuration
 log_level: "INFO"
 log_dir: "logs/client-logs"
