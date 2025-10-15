@@ -18,13 +18,14 @@ tasks:
         identified. Can you provide the SID of the user account that may be operating
         with ransomware-like behavior?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - S-1-5-21-1840191660-8534830288-125585561-1522
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -65,13 +66,14 @@ tasks:
         another device during lateral movement. What is the AadDeviceId of this affected
         device?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - bc00e484-d0e5-4da4-9472-95568cccc07e
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -106,13 +108,14 @@ tasks:
         Can you identify the AadDeviceId of the host involved in this suspicious remote
         activity?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - bc00e484-d0e5-4da4-9472-95568cccc07e
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -153,13 +156,14 @@ tasks:
         in this multi-stage incident, can you identify the file name of the tool that
         was executed?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - mimikatz.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -206,13 +210,14 @@ tasks:
       question: Can you provide the command line details of the suspicious WMI process
         observed on the machine?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 7332__2024-06-20t09:32:01.3894288z__bcdedit /set bootstatuspolicy ignoreallfailures
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -244,13 +249,14 @@ tasks:
       question: What is the name of the credential theft tool detected on the device
         `vnevado-win10v`?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - mimikatz.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -282,13 +288,14 @@ tasks:
         and control behavior blocked. Can you identify the URL associated with the blocked
         behavior?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -319,13 +326,14 @@ tasks:
       question: What is the AadDeviceId of the host where 'CommandAndControl' malware
         was detected during lateral movement at 2024-07-04 22:35:03.912589?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 9d4887ba-0b69-47d6-89bc-9b32787f379e
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -361,13 +369,14 @@ tasks:
         Primary Refresh Token (PRT). What is the AadDeviceId of the host involved in
         this attempt?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 9d4887ba-0b69-47d6-89bc-9b32787f379e
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -401,13 +410,14 @@ tasks:
       question: What is the IP address from which the ransomware payload was remotely
         launched?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 99.83.111.100
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

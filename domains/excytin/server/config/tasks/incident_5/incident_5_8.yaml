@@ -15,13 +15,14 @@ tasks:
       question: In this incident, potentially compromised assets are exhibiting ransomware-like
         behavior. Can you identify the name of the file that has been impacted by ransomware?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - unstreaming.xlsx.lockbit
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -53,13 +54,14 @@ tasks:
       question: Can you identify the malicious IP address associated with the Manatee
         Tempest group activities?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 198.43.121.209
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -92,13 +94,14 @@ tasks:
         Refresh Token (PRT) was detected. Can you identify the file name of the process
         involved in this attempt?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - browsercore.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -134,13 +137,14 @@ tasks:
       question: What is the AadDeviceId of the host connected to the end alert which
         involves the same Manatee Tempest activity group?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - e5799261-6720-4297-961e-bd9ca4275033
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -172,13 +176,14 @@ tasks:
       question: Following this alert, we also detected malicious command and control
         behavior. Can you provide the URL associated with this command and control behavior?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -209,13 +214,14 @@ tasks:
       question: Can you identify the command line of the suspicious WMI process that
         was observed?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - powershell -file c:\scripts\get-userprttoken.ps1
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -249,13 +255,14 @@ tasks:
         created on the machine. Can you find the command line used by this newly created
         WMI process?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - bcdedit /set bootstatuspolicy ignoreallfailures
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -288,13 +295,14 @@ tasks:
       question: Can you identify the URL that was associated with the command and control
         behavior which was blocked?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -344,13 +352,14 @@ tasks:
         This should be further scrutinized to confirm the activity related to PRT access
         attempt mentioned.
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 7036__2024-06-20t09:29:49.304018z__"browsercore.exe"
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -382,13 +391,14 @@ tasks:
         involving the renaming and launching of a Windows Sysinternals tool. What file
         name was used in this second alert?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - mimikatz.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

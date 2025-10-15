@@ -13,13 +13,14 @@ tasks:
       question: What is the name of the executable file used in the PSExec activity
         on `Vnevado-jump` server?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - notepad.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -48,7 +49,7 @@ tasks:
       question: What is the command line of the process that modified the LSASS process
         memory?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
@@ -57,6 +58,7 @@ tasks:
           /run:..\notepad.exe //vnevado-jump cmd.exe"
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -97,13 +99,14 @@ tasks:
       question: What was the URL associated with the command and control behavior that
         was blocked?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -150,13 +153,14 @@ tasks:
       question: Can you identify the SID of the account associated with the suspicious
         remote activity observed on this machine?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - S-0-6-5
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -189,13 +193,14 @@ tasks:
       question: What is the host name of the machine where suspicious 'GenRansom' behavior
         was detected, indicating the machine is actively running malware?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vnevado-win11t
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -229,13 +234,14 @@ tasks:
       question: Can you identify the AadUserId of the account related to the CommandAndControl
         malware that was detected during lateral movement?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 731adb71-b11c-4bbf-850b-57989b350e96
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -283,13 +289,14 @@ tasks:
       question: What is the process ID and the exact time when the `bcdedit /set recoveryenabled
         no` command was executed as part of the system recovery setting tampering?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 8136__2024-06-20t09:10:48.0438707z
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -325,13 +332,14 @@ tasks:
       question: Can you identify the URL associated with the blocked command and control
         behavior related to the malware infection?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -362,13 +370,14 @@ tasks:
       question: In relation to the attempt to access Primary Refresh Token (PRT), can
         you identify the name of the process involved in this activity?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - browsercore.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -400,13 +409,14 @@ tasks:
       question: What is the IP address associated with the suspicious remote activity
         observed on this machine?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 99.83.111.100
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

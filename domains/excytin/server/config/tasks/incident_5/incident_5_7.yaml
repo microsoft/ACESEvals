@@ -15,13 +15,14 @@ tasks:
       question: Regarding the system recovery setting tampering, which process was used
         to delete all volume shadow copies on the system?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -54,13 +55,14 @@ tasks:
       question: In the context of this security incident, can you provide the command
         line that was used to delete all file snapshots and shadow copies?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 5512__2024-06-20t09:10:50.2899021z__vssblatemp.exe delete shadows /all
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -98,13 +100,14 @@ tasks:
         all file backups were deleted. Can you determine the name of the process that
         executed this deletion?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -140,13 +143,14 @@ tasks:
       question: What is the IP address associated with the malicious Manatee Tempest
         activity?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 198.43.121.209
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -181,13 +185,14 @@ tasks:
       question: What was the command line of the process detected with the known credential
         theft tool execution?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 7948__2024-06-20t08:59:42.8455252z__conhost.exe 0xffffffff -forcev1
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -224,7 +229,7 @@ tasks:
         what command line was executed by the process using `vssblatemp.exe` and what
         was the corresponding Process Id and creation time?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
@@ -232,6 +237,7 @@ tasks:
           vssblatemp.exe delete shadows /all'
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -262,13 +268,14 @@ tasks:
       question: What IP address was involved in the ransomware payload that was remotely
         launched following the attempt to access the Primary Refresh Token (PRT)?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 99.83.111.100
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -300,13 +307,14 @@ tasks:
       question: What is the host name of the device where 'CommandAndControl' malware
         was detected during lateral movement?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vnevado-win10s
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -347,13 +355,14 @@ tasks:
       question: Can you identify the process command used that might have tampered with
         the system recovery settings?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe delete shadows /all
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -391,13 +400,14 @@ tasks:
       question: What is the hostname of the device where a possible attempt to access
         Primary Refresh Token (PRT) was detected?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vnevado-win10s
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

@@ -19,13 +19,14 @@ tasks:
       question: Can you identify the executable file name of the process that attempted
         to access the Primary Refresh Token (PRT) as part of the related alerts?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - browsercore.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -60,13 +61,14 @@ tasks:
         ransomware-related files. Can you identify the name of the specific file associated
         with the ransomware activity?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - get-userprttoken.ps1
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -105,13 +107,14 @@ tasks:
       question: During this incident, what specific command line was observed that could
         indicate system recovery setting tampering on the device?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 4312__2024-06-20t09:10:48.0676225z__bcdedit /set recoveryenabled no
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -154,13 +157,14 @@ tasks:
       question: What is the command line used by the process that tampered with the
         system recovery settings?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - bcdedit /set recoveryenabled no
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -191,13 +195,14 @@ tasks:
       question: As part of this incident, a ransomware payload was also remotely launched.
         Can you identify the IP address involved in the ransomware activity?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 99.83.111.100
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -229,13 +234,14 @@ tasks:
       question: As per the recent alert, what is the name of the file that shows the
         potentially compromised assets exhibiting ransomware-like behavior?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - unstreaming.xlsx
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -268,13 +274,14 @@ tasks:
       question: Can you identify the command line details for the process that reflects
         the suspicious WMI process creation on the same machine `vnevado-win10s`?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 4828__2024-06-20t09:31:59.6743318z__bcdedit /set recoveryenabled no
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -306,13 +313,14 @@ tasks:
       question: A related alert indicates possible ransomware activity involving a known
         malicious file extension. Can you identify the file involved in this activity?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - get-userprttoken.ps1
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -345,13 +353,14 @@ tasks:
       question: Can you identify the Security Identifier (Sid) associated with the suspicious
         remote activity observed in this incident?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - S-0-6-5
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -385,13 +394,14 @@ tasks:
         Can you identify the command that was executed to disable the automatic Windows
         recovery features?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - bcdedit /set recoveryenabled no
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

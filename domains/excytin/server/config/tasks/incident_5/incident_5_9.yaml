@@ -15,13 +15,14 @@ tasks:
       question: Which device was the ransomware payload remotely launched on as indicated
         by the end alert?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vnevado-win11u
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -52,13 +53,14 @@ tasks:
       question: What is the file name of the process involved in the suspicious WMI
         process creation observed on the machine after the attempt to access PRT?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -92,13 +94,14 @@ tasks:
       question: During the system recovery setting tampering, what process and command
         line was used to disable automatic Windows recovery features?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 'Process Id: 4828, Command Line: `bcdedit /set recoveryenabled no`'
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -130,13 +133,14 @@ tasks:
       question: What command line and process ID were used for the tampering of system
         recovery settings observed earlier?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 'Process Id: 1900, Command Line: vssblatemp.exe delete shadows /all'
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -170,13 +174,14 @@ tasks:
         tampered with on the same device. Can you determine the command line used to
         delete all volume shadow copies on this system?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe delete shadows /all
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -212,13 +217,14 @@ tasks:
         using domain fronting for command-and-control.
       question: What is the URL associated with the activity from Manatee Tempest?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vectorsandarrows.com
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -250,13 +256,14 @@ tasks:
         were deleted. Can you identify the command used in the process that deleted
         the file snapshots and shadow copies?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe delete shadows /all
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -287,13 +294,14 @@ tasks:
       question: What is the name of the file involved in the suspicious access to the
         LSASS service?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - cryptdll.dll
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -323,13 +331,14 @@ tasks:
       question: Can you identify the SID of the account that was possibly compromised
         and observed delivering ransomware-related files?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - S-1-5-21-1840191660-8534830288-125585561-1522
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -362,13 +371,14 @@ tasks:
       question: What was the Process ID and command line observed during the suspicious
         hands-on keyboard user behavior?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 'Process Id: 88, Command Line: curl http://vectorsandarrows.com'
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

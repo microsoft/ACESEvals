@@ -16,13 +16,14 @@ tasks:
         was used to delete all file snapshots and shadow copies via WMI or VSSAdmin.
         Can you identify the name of this process?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -51,13 +52,14 @@ tasks:
       question: Can you identify the name of the possibly compromised user account that
         was dropping ransomware-related files on several devices?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - dp5hn
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -97,13 +99,14 @@ tasks:
       question: What is the name of the file that is associated with the ransomware-like
         behavior?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - ponceau.7z
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -145,13 +148,14 @@ tasks:
         dropping a ransomware-related file on several devices. Can you identify the
         name of the ransomware-related file?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - characterical.zip.lockbit
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -185,13 +189,14 @@ tasks:
       question: Can you determine the destination IP address where potential lateral
         movement was observed following the suspicious network event?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 83.162.58.168
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -233,13 +238,14 @@ tasks:
       question: What is the process ID and command line of the process that was used
         in the possible attempt to access the Primary Refresh Token (PRT)?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 'Process Id: 7036, Command Line: "browsercore.exe"'
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -270,13 +276,14 @@ tasks:
       question: What is the URL involved in the Command and Control behavior that was
         blocked?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -305,13 +312,14 @@ tasks:
       question: What file name indicates the active malware that was found during this
         incident?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - mimikatz.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

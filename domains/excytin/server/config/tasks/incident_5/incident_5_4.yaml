@@ -17,13 +17,14 @@ tasks:
       question: What was the URL blocked due to Command and Control (C2) behavior in
         this incident?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -64,13 +65,14 @@ tasks:
       question: Can you provide the command line of the process that was created using
         WMI on the host?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vssblatemp.exe delete shadows /all
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -102,13 +104,14 @@ tasks:
       question: Can you identify the SID of the account involved in the suspicious remote
         activity on 2024-07-04 at 22:35:00.896765+00:00?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - S-0-6-5
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -141,13 +144,14 @@ tasks:
       question: As part of the Manatee Tempest activity group, what is the IP address
         associated with their activity in this incident?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 198.43.121.209
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -184,13 +188,14 @@ tasks:
       question: Can you identify the AadUserId associated with the possible attempt
         to access the Primary Refresh Token (PRT)?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 731adb71-b11c-4bbf-850b-57989b350e96
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -230,13 +235,14 @@ tasks:
         detected in the file system on a device. Can you determine the AadDeviceId of
         the host where this ransomware activity was detected?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - e5799261-6720-4297-961e-bd9ca4275033
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -275,13 +281,14 @@ tasks:
       question: From the subsequent alert, what was the name of the Windows Sysinternals
         tool that was renamed before it was launched?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - mimikatz.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -309,13 +316,14 @@ tasks:
       question: What is the Azure Active Directory (AAD) device ID of the host where
         the possible attempt to access the Primary Refresh Token (PRT) was detected?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - bc00e484-d0e5-4da4-9472-95568cccc07e
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -348,13 +356,14 @@ tasks:
       question: What was the URL associated with the command and control behavior detected
         in the end alert?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -398,13 +407,14 @@ tasks:
         on various platforms and is essential for single sign-on (SSO) across applications.
       question: Can you identify the AadDeviceId related to this alert?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - e5799261-6720-4297-961e-bd9ca4275033
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1

@@ -12,13 +12,14 @@ tasks:
       question: A related alert indicates the presence of a file associated with Mimikatz.
         Can you identify the name of this file that was detected?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - mimilib.dll
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -48,13 +49,14 @@ tasks:
       question: Can you identify the malicious URL that was associated with the command
         and control behavior blocked during the incident on 2024-07-04?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - http://vectorsandarrows.com/
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -85,13 +87,14 @@ tasks:
       question: What is the command line of the process that was executed when the 'CommandAndControl'
         malware was detected during lateral movement?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - curl http://vectorsandarrows.com
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -129,13 +132,14 @@ tasks:
       question: What is the name of the account involved in the system recovery setting
         tampering incident?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - dp5hn
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -177,13 +181,14 @@ tasks:
       question: What is the hostname of the target device in the 'CommandAndControl'
         malware attempt?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - vnevado-win11u
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -220,13 +225,14 @@ tasks:
         host in this incident. Can you identify the Process ID and the command line
         of this process?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 'Process Id: 1332, Command Line: `curl http://vectorsandarrows.com`'
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -260,13 +266,14 @@ tasks:
       question: What is the Azure Active Directory (AAD) Device ID of the host involved
         in this suspicious WMI process creation event?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - bc00e484-d0e5-4da4-9472-95568cccc07e
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -299,13 +306,14 @@ tasks:
       question: Can you identify the SID of the account which was involved in the suspicious
         remote activity?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - S-0-6-5
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -338,13 +346,14 @@ tasks:
         Refresh Token (PRT). What is the file name of the process that was used in this
         attempt?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - browsercore.exe
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
@@ -377,13 +386,14 @@ tasks:
       question: As part of this investigation, could you identify the IP address of
         the device that the attacker possibly moved to laterally?
 
-    evaluation_config:
+    submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
         - 38.142.109.10
       scoring:
         max_score: 1.0
+
     subtasks:
     - subtask_id: checkpoint_1
       title: Checkpoint 1
