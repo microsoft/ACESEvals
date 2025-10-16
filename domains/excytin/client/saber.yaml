@@ -8,13 +8,13 @@ server:
 
 # Task configuration
 tasks:
-  task_ids: ["incident_5_task_1"]
+  task_ids: ["*"]
 
 # Agent configuration
 agents:
   - id: "inspect_react"
     model: "openai/azure/gpt-4.1"
-    tasks: ["incident_5_task_1"]  # Specific task assignment
+    tasks: ["*"]  # Specific task assignment
 
 # Execution configuration
 log_level: "INFO"
@@ -34,8 +34,7 @@ log_upload:
   fail_on_error: false  # Whether to fail evaluation if log upload fails
 
 # eval_async specific configuration
-max_samples: null  # null means no limit
-max_subprocesses: 1  # parallel execution
 parallel_execution: true
-max_parallel_tasks: 4  # Reasonable default for excytin
+max_parallel_samples: 4  # Maximum number of samples to run in parallel (controls concurrency)
+# max_subprocesses defaults to os.cpu_count() if not specified - usually best to leave it unset
 container_timeout: 300
