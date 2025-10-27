@@ -1,0 +1,19 @@
+# Custom MySQL image for excytin_demo domain
+# Includes SQL initialization files to work around Docker-in-Docker volume mounting limitations
+
+FROM mysql:8.0
+
+# Copy SQL initialization files and CSV data
+COPY server/data/sql_files/incident_166.sql /docker-entrypoint-initdb.d/
+COPY server/data/csv_files/incident_166/*.csv /var/lib/mysql-files/
+
+# Copy health check script
+COPY docker/db/healthcheck.sh /usr/local/bin/healthcheck.sh
+
+# Set proper permissions
+RUN chmod 644 /docker-entrypoint-initdb.d/incident_166.sql && \
+    chmod 644 /var/lib/mysql-files/*.csv && \
+    chmod +x /usr/local/bin/healthcheck.sh
+
+# Use the same default configuration as base image
+EXPOSE 3306
