@@ -9,7 +9,7 @@ domain:
 images:
   server:
     tag: "saber/cybench/server:latest"
-    dockerfile: "docker/Dockerfile.server"
+    dockerfile: "server/docker/Dockerfile.server"
     buildArgs:
       DOMAIN_NAME: "cybench"
     labels:
@@ -19,15 +19,15 @@ images:
   
   sandbox:
     tag: "saber/cybench/sandbox:latest"
-    dockerfile: "docker/Dockerfile.sandbox"
+    dockerfile: "server/docker/Dockerfile.sandbox"
     labels:
       saber.domain: "cybench"
       saber.component: "sandbox"
   
   labyrinth_linguist_victim:
     tag: "saber/cybench/labyrinth_linguist-victim:latest"
-    dockerfile: "docker/challenges/labyrinth_linguist/Dockerfile.victim"
-    context: "docker/challenges/labyrinth_linguist"
+    dockerfile: "server/docker/challenges/labyrinth_linguist/Dockerfile.victim"
+    context: "server/docker/challenges/labyrinth_linguist"
     labels:
       saber.domain: "cybench"
       saber.component: "challenge"

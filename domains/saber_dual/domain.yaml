@@ -9,7 +9,7 @@ domain:
 images:
   server:
     tag: "saber/saber_dual/server:latest"
-    dockerfile: "docker/Dockerfile.server"
+    dockerfile: "server/docker/Dockerfile.server"
     buildArgs:
       DOMAIN_NAME: "saber_dual"
     labels:
@@ -19,55 +19,55 @@ images:
   
   sandbox:
     tag: "saber/saber_dual/sandbox:latest"
-    dockerfile: "docker/Dockerfile.sandbox"
+    dockerfile: "server/docker/Dockerfile.sandbox"
     labels:
       saber.domain: "saber_dual"
       saber.component: "sandbox"
   
   webapp:
     tag: "saber/saber_dual/webapp:latest"
-    dockerfile: "docker/lite_dual/webapp/Dockerfile"
-    context: "docker/lite_dual/webapp"
+    dockerfile: "server/docker/lite_dual/webapp/Dockerfile"
+    context: "server/docker/lite_dual/webapp"
     labels:
       saber.domain: "saber_dual"
       saber.component: "web-application"
   
   api_gateway:
     tag: "saber/saber_dual/api-gateway:latest"
-    dockerfile: "docker/lite_dual/api_gateway/Dockerfile"
-    context: "docker/lite_dual/api_gateway"
+    dockerfile: "server/docker/lite_dual/api_gateway/Dockerfile"
+    context: "server/docker/lite_dual/api_gateway"
     labels:
       saber.domain: "saber_dual"
       saber.component: "api-gateway"
   
   vault:
     tag: "saber/saber_dual/vault:latest"
-    dockerfile: "docker/lite_dual/vault/Dockerfile"
-    context: "docker/lite_dual/vault"
+    dockerfile: "server/docker/lite_dual/vault/Dockerfile"
+    context: "server/docker/lite_dual/vault"
     labels:
       saber.domain: "saber_dual"
       saber.component: "vault"
   
   siem:
     tag: "saber/saber_dual/siem:latest"
-    dockerfile: "docker/lite_dual/siem_aggregator/Dockerfile"
-    context: "docker/lite_dual/siem_aggregator"
+    dockerfile: "server/docker/lite_dual/siem_aggregator/Dockerfile"
+    context: "server/docker/lite_dual/siem_aggregator"
     labels:
       saber.domain: "saber_dual"
       saber.component: "siem-aggregator"
   
   database:
     tag: "saber/saber_dual/database:latest"
-    dockerfile: "docker/lite_dual/database/Dockerfile"
-    context: "docker/lite_dual/database"
+    dockerfile: "server/docker/lite_dual/database/Dockerfile"
+    context: "server/docker/lite_dual/database"
     labels:
       saber.domain: "saber_dual"
       saber.component: "database"
   
   external_traffic:
     tag: "saber/saber_dual/external-traffic:latest"
-    dockerfile: "docker/lite_dual/traffic/external_traffic_sim/Dockerfile"
-    context: "docker/lite_dual/traffic/external_traffic_sim"
+    dockerfile: "server/docker/lite_dual/traffic/external_traffic_sim/Dockerfile"
+    context: "server/docker/lite_dual/traffic/external_traffic_sim"
     labels:
       saber.domain: "saber_dual"
       saber.component: "traffic-simulator"
@@ -75,8 +75,8 @@ images:
   
   internal_traffic:
     tag: "saber/saber_dual/internal-traffic:latest"
-    dockerfile: "docker/lite_dual/traffic/internal_traffic_sim/Dockerfile"
-    context: "docker/lite_dual/traffic/internal_traffic_sim"
+    dockerfile: "server/docker/lite_dual/traffic/internal_traffic_sim/Dockerfile"
+    context: "server/docker/lite_dual/traffic/internal_traffic_sim"
     labels:
       saber.domain: "saber_dual"
       saber.component: "traffic-simulator"

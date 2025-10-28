@@ -96,10 +96,11 @@ uv run saber-domain test excytin \
 
 # What this does:
 # 1. Validates domain configuration
-# 2. Builds Docker images (if --build specified)
+# 2. Builds missing Docker images (--build = incremental build)
+#    Options: --build (missing only), --rebuild-all (all), --rebuild <prefix> (specific)
 # 3. Starts SABER server + required services
 # 4. Runs inspect_ai evaluation with configured agent
-# 5. Stops services when complete
+# 5. Stops services when complete (with --stop-after flag)
 ```
 
 ## 📚 Available Domains
@@ -173,6 +174,11 @@ uv run saber-domain validate excytin --verbose
 # Build domain images only
 uv run saber-domain build excytin
 
+# Build options:
+# (default)      - Build only missing images (incremental, fastest)
+# --rebuild-all  - Rebuild all images (clean slate)
+# --rebuild <prefix> - Rebuild specific images (e.g., server, cookie)
+
 # Start domain services (manual control)
 uv run saber-domain start excytin \
   --rest-port 8000 \
@@ -185,11 +191,16 @@ uv run saber-domain status
 # Stop domain services
 uv run saber-domain stop excytin
 
-# Test domain (automated: build + start + eval + stop)
+# Test domain (automated: validate + build/rebuild + start + eval + optional stop)
 uv run saber-domain test excytin \
   --saber-yaml domains/excytin/client/saber.yaml \
   --build \
   --stop-after  # Stop services after evaluation
+
+# Build options for test command:
+# --build        - Build only missing images (incremental, fastest)
+# --rebuild-all  - Rebuild all images before testing
+# --rebuild <prefix> - Rebuild specific images (e.g., --rebuild server)
 ```
 
 ### Manual Evaluation Workflow
@@ -451,7 +462,6 @@ print('✓ Connection successful')
 - **[Domain CLI Reference](external/saber/src/saber/domain/README.md)** - Complete CLI documentation
 - **[Client Architecture](external/saber/docs/client/README.md)** - Agent integration patterns
 - **[Server Architecture](external/saber/docs/server/)** - Server implementation details
-- **[Excytin Domain Guide](domains/excytin/README.md)** - Incident response scenarios
 
 ### Architecture Documentation
 
@@ -460,40 +470,9 @@ print('✓ Connection successful')
 - **Docker Sandbox**: Secure command execution with allowlist validation
 - **Episode Management**: Stateful task execution with resource cleanup
 
-### Design Principles
-
-This codebase follows **SABER best practices**:
-
-- ✅ **FAIL FAST**: Upfront validation with clear error messages
-- ✅ **NO BACKWARDS COMPATIBILITY**: Clean modern API without legacy constraints
-- ✅ **TYPE SAFETY**: Strict Pydantic models throughout
-- ✅ **NO DEFENSIVE PROGRAMMING**: Hard failures instead of silent fallbacks
-- ✅ **ASYNC PATTERNS**: Proper resource management with context managers
-- ✅ **SEPARATION OF CONCERNS**: Clean component boundaries
-
 ---
 
 ## 🧪 Testing
-
-### Run Tests
-
-```bash
-# Run all tests
-uv run pytest tests/ -v
-
-# Run specific test file
-uv run pytest tests/unit/test_domain_orchestrator.py -v
-
-# Run with coverage
-uv run pytest --cov=src --cov-report=html
-
-# Type checking
-uv run mypy src/
-
-# Code formatting
-uv run black src/ tests/
-uv run isort src/ tests/
-```
 
 ### Domain Validation
 
@@ -505,102 +484,3 @@ done
 ```
 
 ---
-
-## 🤝 Contributing
-
-### Development Setup
-
-```bash
-# 1. Fork and clone
-git clone https://github.com/your-fork/oss_saber.git
-cd oss_saber
-
-# 2. Install development dependencies
-uv sync --all-extras
-
-# 3. Install pre-commit hooks
-uv run pre-commit install
-
-# 4. Create feature branch
-git checkout -b feature/your-feature-name
-```
-
-### Code Quality Standards
-
-- **Type hints required** for all functions and methods
-- **Pydantic models** for all configuration and data structures
-- **Async context managers** for resource management
-- **Fail-fast validation** with clear error messages
-- **Tests required** for new functionality
-- **Documentation updates** for API changes
-
-### Pull Request Process
-
-1. Create feature branch from `main`
-2. Make changes following code quality standards
-3. Run tests and validation: `uv run pre-commit run --all-files`
-4. Submit PR with clear description of changes
-5. Address review feedback
-
----
-
-## 📊 Performance Considerations
-
-### Parallel Execution
-
-Configure parallel task execution in `client/saber.yaml`:
-
-```yaml
-max_parallel_tasks: 4  # Concurrent task evaluations
-max_subprocesses: 2    # Concurrent inspect_ai processes
-```
-
-### Resource Limits
-
-Domain resource limits in `domain.yaml`:
-
-```yaml
-resources:
-  cpu_limit: "4.0"      # CPU cores per container
-  memory_limit: "8g"    # Memory per container
-  storage_limit: "20g"  # Disk space per container
-```
-
-### Timeout Configuration
-
-Task timeout settings in `server/config/tasks/global.yaml`:
-
-```yaml
-global_defaults:
-  execution_config:
-    timeout: 30  # Command timeout in seconds
-  episode_config:
-    max_steps: 50  # Maximum agent steps per task
-```
-
----
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) for details.
-
----
-
-## 🙏 Acknowledgments
-
-Built on top of:
-- **[inspect_ai](https://github.com/UKGovernmentBEIS/inspect_ai)** - AI evaluation framework
-- **[Model Context Protocol](https://modelcontextprotocol.io/)** - Tool communication standard
-- **[CyBench](https://github.com/andyzorigin/cybench)** - Cybersecurity benchmark suite
-
----
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/your-org/oss_saber/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/oss_saber/discussions)
-- **Documentation**: [docs/](docs/)
-
----
-
-**SABER Development Team** | [Architecture Docs](external/saber/docs/README.md) | [Domain Examples](domains/)

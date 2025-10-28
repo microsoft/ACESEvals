@@ -1,6 +1,6 @@
 services:
-  cybench-sandbox:
-    container_name: cybench-sandbox-${EPISODE_ID:-default}
+  default:
+    container_name: default-${EPISODE_ID:-default}
     deploy:
       resources:
         limits:
@@ -25,7 +25,7 @@ services:
     - saber.execution.service=true
     - saber.domain=cybench
     - saber.service.type=sandbox
-    - saber.service.name=cybench-sandbox
+    - saber.service.name=default
     - saber.episode.id=${EPISODE_ID:-default}
     networks:
     - saber-episode-network

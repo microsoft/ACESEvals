@@ -30,7 +30,7 @@ echo "============================="
 
 # Get the directory of this script and go to project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." &> /dev/null && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../.." &> /dev/null && pwd)"
 cd "$PROJECT_ROOT"
 
 # Ensure base SABER images are built first if needed
@@ -54,40 +54,40 @@ echo "📦 Building SABER_dual specific images..."
 
 # Build SABER components for dual environment
 echo "📦 Building SABER_dual server..."
-docker build -f Dockerfile.server -t saber/saber_dual/server:latest ../
+docker build -f domains/saber_dual/server/data/docker/Dockerfile.server -t saber/saber_dual/server:latest domains/saber_dual
 
 echo "📦 Building SABER_dual client..."  
-docker build -f Dockerfile.client -t saber/saber_dual/client:latest ../
+docker build -f domains/saber_dual/server/data/docker/Dockerfile.client -t saber/saber_dual/client:latest domains/saber_dual
 
 echo "📦 Building SABER_dual sandbox..."
-docker build -f Dockerfile.sandbox -t saber/saber_dual/sandbox:latest ../
+docker build -f domains/saber_dual/server/data/docker/Dockerfile.sandbox -t saber/saber_dual/sandbox:latest domains/saber_dual
 
 echo ""
 echo "📦 Building cyber simulation environment images..."
 
 # Build cyber simulation components
 echo "📦 Building vulnerable webapp..."
-docker build -f lite_dual/webapp/Dockerfile -t saber/saber_dual/webapp:latest lite_dual/webapp/
+docker build -f domains/saber_dual/server/data/docker/lite_dual/webapp/Dockerfile -t saber/saber_dual/webapp:latest domains/saber_dual/server/data/docker/lite_dual/webapp/
 
 echo "📦 Building internal API gateway..."
-docker build -f lite_dual/api_gateway/Dockerfile -t saber/saber_dual/api-gateway:latest lite_dual/api_gateway/
+docker build -f domains/saber_dual/server/data/docker/lite_dual/api_gateway/Dockerfile -t saber/saber_dual/api-gateway:latest domains/saber_dual/server/data/docker/lite_dual/api_gateway/
 
 echo "📦 Building vault service..."
-docker build -f lite_dual/vault/Dockerfile -t saber/saber_dual/vault:latest lite_dual/vault/
+docker build -f domains/saber_dual/server/data/docker/lite_dual/vault/Dockerfile -t saber/saber_dual/vault:latest domains/saber_dual/server/data/docker/lite_dual/vault/
 
 echo "📦 Building SIEM aggregator..."
-docker build -f lite_dual/siem_aggregator/Dockerfile -t saber/saber_dual/siem:latest lite_dual/siem_aggregator/
+docker build -f domains/saber_dual/server/data/docker/lite_dual/siem_aggregator/Dockerfile -t saber/saber_dual/siem:latest domains/saber_dual/server/data/docker/lite_dual/siem_aggregator/
 
 echo "📦 Building database..."
-docker build -f lite_dual/database/Dockerfile -t saber/saber_dual/database:latest lite_dual/database/
+docker build -f domains/saber_dual/server/data/docker/lite_dual/database/Dockerfile -t saber/saber_dual/database:latest domains/saber_dual/server/data/docker/lite_dual/database/
 
 echo "📦 Building traffic simulation containers..."
 
 echo "📦 Building external traffic simulator..."
-docker build -f lite_dual/traffic/external_traffic_sim/Dockerfile -t saber/saber_dual/external-traffic:latest lite_dual/traffic/external_traffic_sim/
+docker build -f domains/saber_dual/server/data/docker/lite_dual/traffic/external_traffic_sim/Dockerfile -t saber/saber_dual/external-traffic:latest domains/saber_dual/server/data/docker/lite_dual/traffic/external_traffic_sim/
 
 echo "📦 Building internal traffic simulator..."
-docker build -f lite_dual/traffic/internal_traffic_sim/Dockerfile -t saber/saber_dual/internal-traffic:latest lite_dual/traffic/internal_traffic_sim/
+docker build -f domains/saber_dual/server/data/docker/lite_dual/traffic/internal_traffic_sim/Dockerfile -t saber/saber_dual/internal-traffic:latest domains/saber_dual/server/data/docker/lite_dual/traffic/internal_traffic_sim/
 
 # Verify images were built
 echo ""

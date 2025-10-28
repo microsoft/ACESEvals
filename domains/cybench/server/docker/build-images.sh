@@ -42,13 +42,13 @@ cd "$SCRIPT_DIR"
 # Ensure base images are built first
 if [ "$FULL_BUILD" = true ]; then
     echo "🔄 Full build requested - rebuilding base SABER images..."
-    cd ../../docker
+    cd ../../../../external/saber/docker
     ./build-images.sh
     cd "$SCRIPT_DIR"
 elif ! docker images | grep -q 'saber/server'; then
     echo "🔍 Checking for SABER base images..."
     echo "⚠️  Base images not found. Building base images first..."
-    cd ../../docker
+    cd ../../../../external/saber/docker
     ./build-images.sh
     cd "$SCRIPT_DIR"
 else
@@ -57,7 +57,7 @@ fi
 
 # Build Cybench sandbox
 echo "📦 Building Cybench sandbox..."
-docker build -f Dockerfile.sandbox -t saber/cybench/sandbox:latest ../
+docker build -f Dockerfile.sandbox -t saber/cybench/sandbox:latest ../../..
 
 echo ""
 echo "🕵️ Scanning challenges directory for challenge-specific images..."

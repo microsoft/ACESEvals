@@ -35,6 +35,6 @@ log_upload:
 
 # eval_async specific configuration
 parallel_execution: true
-max_parallel_samples: 4  # Maximum number of samples to run in parallel (controls concurrency)
+max_parallel_samples: 8  # Maximum number of samples to run in parallel (controls concurrency)
 # max_subprocesses defaults to os.cpu_count() if not specified - usually best to leave it unset
 container_timeout: 300

@@ -9,7 +9,7 @@ domain:
 images:
   server:
     tag: "saber/excytin/server:latest"
-    dockerfile: "docker/Dockerfile.server"
+    dockerfile: "server/docker/Dockerfile.server"
     buildArgs:
       DOMAIN_NAME: "excytin"
     labels:
@@ -19,14 +19,14 @@ images:
   
   sandbox:
     tag: "saber/excytin/sandbox:latest"
-    dockerfile: "docker/Dockerfile.sandbox"
+    dockerfile: "server/docker/Dockerfile.sandbox"
     labels:
       saber.domain: "excytin"
       saber.component: "sandbox"
   
   incident_5_db:
     tag: "saber/excytin/incident-5:latest"
-    dockerfile: "docker/db/Dockerfile.incident_5"
+    dockerfile: "server/docker/db/Dockerfile.incident_5"
     labels:
       saber.domain: "excytin"
       saber.component: "permanent-service"

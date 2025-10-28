@@ -8,7 +8,7 @@ COPY server/data/sql_files/incident_5.sql /docker-entrypoint-initdb.d/
 COPY server/data/csv_files/incident_5/*.csv /var/lib/mysql-files/
 
 # Copy health check script
-COPY docker/db/healthcheck.sh /usr/local/bin/healthcheck.sh
+COPY server/docker/db/healthcheck.sh /usr/local/bin/healthcheck.sh
 
 # Set proper permissions
 RUN chmod 644 /docker-entrypoint-initdb.d/incident_5.sql && \

@@ -121,8 +121,9 @@ Ensure you have:
 From the SABER_dual root directory:
 
 ```bash
-cd /path/to/SABER_dual/saber_dual/docker
-./build-images.sh --full-build
+# Use saber-domain CLI to build images
+cd /path/to/oss_saber
+uv run saber-domain build saber_dual
 ```
 
 This builds:
