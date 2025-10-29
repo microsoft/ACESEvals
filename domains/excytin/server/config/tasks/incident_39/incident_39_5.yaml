@@ -1,0 +1,273 @@
+tasks:
+  - task_id: incident_39_task_41
+    title: incident_39_task_41
+    description: "Besides the suspicious service activity observed, there were multiple dual-purpose tools dropped on the device. Can you identify one of the tools that were dropped?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious service was started on the device `vnevado-dc`, which might allow attackers to maintain persistence or elevate privileges. The service was launched by the user `lucasb` using a PowerShell command to stop and start the `ntds` service while adding a specific SID history for the account `bdadmin`. The file involved in the process was `net.exe`."
+      question: "Besides the suspicious service activity observed, there were multiple dual-purpose tools dropped on the device. Can you identify one of the tools that were dropped?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "mimikatz.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious service was launched using the process `powershell.exe`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Multiple dual-purpose tools, including `mimikatz.exe`, were dropped on this device."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_42
+    title: incident_39_task_42
+    description: "Related to this alert, a known credential theft tool was executed. Can you identify the account SID that was associated with the tool's execution?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "On 2024-07-04, multiple known public tools, which could also be used for malicious reasons, were dropped on this device. These tools might be used for various attack stages including credential theft, privilege escalation, and lateral movement. As part of investigating this incident, we found that multiple PowerShell scripts and executables such as `get-krbticket.ps1`, `domaindominance27.ps1`, and `mimikatz.exe` were executed."
+      question: "Related to this alert, a known credential theft tool was executed. Can you identify the account SID that was associated with the tool's execution?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "S-5-7-21-1843151660-3234030288-105586167-1422"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "Multiple dual-purpose tools were dropped on the device associated with the account SID `S-5-7-21-1843151660-3234030288-105586167-1422`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A malicious credential theft tool execution was detected on the device associated with the account SID `S-5-7-21-1843151660-3234030288-105586167-1422`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_43
+    title: incident_39_task_43
+    description: "What is the name and command line of the process that was used to execute the Mimikatz credential theft tool during the incident?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "As part of our investigation into a recent security incident, a suspicious service was launched on a device. Attackers might use such services to start malicious commands or programs to maintain persistence or elevate privileges on the target device. During the incident, a process `psexesvc.exe` was observed running with Process ID 5912 on 2024-06-27 and `services.exe` was observed with Process ID 684 on 2024-06-26."
+      question: "What is the name and command line of the process that was used to execute the Mimikatz credential theft tool during the incident?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Name: mimikatz.exe, Command Line: \"mimikatz.exe\" \"lsadump::dcsync /domain:vnevado.alpineskihouse.co /user:xfbzkp\" exit"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious service was started on the host `vnevado-win10b`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "An active 'Kekeo' malware was detected with the file `rubeus.exe`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "The process `powershell.exe` was launched on a remote device using PsExec."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: "The Mimikatz credential theft tool was detected with the command line `mimikatz.exe lsadump::dcsync /domain:vnevado.alpineskihouse.co /user:xfbzkp exit` on `2024-06-27t14:33:38.0249949z` with Process ID `4748`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_44
+    title: incident_39_task_44
+    description: "In connection with this incident, suspicious remote activity was observed on 2024-07-04. Can you identify the Azure Active Directory (AAD) user ID associated with this suspicious remote activity?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "In a recent incident, a suspicious service was discovered on the device 'vnevado-dc'. The 'services.exe' process was started with command line details `652__2024-06-19t12:56:00.7201251z__services.exe` and `7668__2024-06-27t14:34:10.0201983z__psexesvc.exe`. Attackers may use services to launch malicious commands or programs, maintaining persistence or elevating privileges on the target device."
+      question: "In connection with this incident, suspicious remote activity was observed on 2024-07-04. Can you identify the Azure Active Directory (AAD) user ID associated with this suspicious remote activity?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "97e6a954-b6bd-48a5-808c-bd8464cce677"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious service named `psexesvc.exe` was launched on the device."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious remote activity was observed involving an account with AadUserId `97e6a954-b6bd-48a5-808c-bd8464cce677`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_45
+    title: incident_39_task_45
+    description: "Can you specify the name of the file detected as a credential theft tool in this incident?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "As part of a recent security investigation, a known credential theft tool execution was identified. The tool, associated with the account `tgs2z` and the host `vnevado-win10v`, was utilized with the command line intended to dump user credentials and other sensitive information."
+      question: "Can you specify the name of the file detected as a credential theft tool in this incident?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "mimikatz.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A credential theft tool was executed by a user with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "The Mimikatz tool, detected on the device, attempted to harvest credentials by running `mimikatz.exe`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_46
+    title: incident_39_task_46
+    description: "During the investigation of this incident, a suspicious sequence of exploration activities was detected. Can you provide the name of the account involved in these suspicious activities?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During a recent incident, a malicious email containing a URL (`https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/`) was sent by `k1pt7ez@vnevado.alpineskihouse.co` and delivered to Ethan Brooks (`Ethan Brooks@vnevado.alpineskihouse.co`). This email was later removed. The sender IP was `118.254.65.186`. This is part of a larger incident, and further investigation is underway."
+      question: "During the investigation of this incident, a suspicious sequence of exploration activities was detected. Can you provide the name of the account involved in these suspicious activities?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "tgs2z"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The email account with SID `S-5-7-21-1843151660-3234030288-105586167-1422` received an email with a malicious URL that was delivered and later removed."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious sequence of exploration activities was performed by the user account named `tgs2z`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_47
+    title: incident_39_task_47
+    description: "What is the name of the file involved in the suspicious remote activity that followed the lateral movement attempt?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A potential lateral movement was observed in our network, triggered by a Microsoft Defender for Endpoint alert. The suspicious network event involved the IP address `35.202.74.47`, suggesting an attacker might be attempting to move laterally across devices to gather data or elevate privileges."
+      question: "What is the name of the file involved in the suspicious remote activity that followed the lateral movement attempt?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "psexesvc.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "Lateral movement was observed on the host `vnevado-win10b`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious remote activity involving the file `psexesvc.exe` was noted on the host."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_48
+    title: incident_39_task_48
+    description: "Related to this investigation, there is a suspected overpass-the-hash attack (Kerberos). Can you provide the email of the helpdesk administrator who attempted to authenticate against VNEVADO-DC from VNEVADO-Win10V?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident was detected involving a deceptive user account `kyleg` on the host `vnevado-win10b`. This device has the AadDeviceId `fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb` and the IP address `141.216.110.153`. A sign-in attempt was made using this deceptive account, which could indicate a potential attacker is trying to use it for malicious activities including accessing sensitive data. Further investigation revealed a sequence of alerts indicating potential human-operated malicious activity on the same device, which might lead to ransomware or other harmful payloads."
+      question: "Related to this investigation, there is a suspected overpass-the-hash attack (Kerberos). Can you provide the email of the helpdesk administrator who attempted to authenticate against VNEVADO-DC from VNEVADO-Win10V?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Emma Clark@vnevado.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A sign-in attempt was detected using a deceptive user account with the name `kyleg`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A sequence of alerts indicated potential human-operated malicious activity associated with AadUserId `97e6a954-b6bd-48a5-808c-bd8464cce677`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "Helpdesk Administrator `Emma Clark` attempted to authenticate against VNEVADO-DC from VNEVADO-Win10V, indicating a suspected overpass-the-hash attack."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_49
+    title: incident_39_task_49
+    description: "As part of the same incident, a suspicious remote activity was observed. Can you identify the file name associated with this remote activity?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident was detected involving suspicious activities. During this incident, a file `rubeus.exe` was dropped and launched from a remote location with the command line `rubeus.exe dump /service:xfbzkp /user:lucasb`. This could indicate that an attacker or malware is attempting to move laterally or propagate within the network."
+      question: "As part of the same incident, a suspicious remote activity was observed. Can you identify the file name associated with this remote activity?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "psexesvc.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The account `fk8mq` established a remote session and dropped a file, then executed it."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious remote activity involving the file `psexesvc.exe` was observed on the machine."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_39_task_50
+    title: incident_39_task_50
+    description: "Who was the IT director suspected of performing the DCSync attack on VNEVADO-Win10V?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A recent security incident involved suspicions of processes stopping services on a device, which is often an attacker strategy to avoid detection or to disrupt operations. One of the suspicious processes involved was `net.exe` with ProcessId `6428`, and it was executed on host `vnevado-dc` by an account with the name `lucasb`. This incident was part of a larger pattern of malicious activities that included stopping services running on the device and manipulating user privileges in the network. The process `powershell.exe` was also executed in this context with ProcessId `3780`."
+      question: "Who was the IT director suspected of performing the DCSync attack on VNEVADO-Win10V?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Julian Burke"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A process on the device was suspiciously stopped by a user with AadUserId `7fcf9695-68fc-4258-864d-e1e5b166c66f`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Julian Burke (IT director) on VNEVADO-Win10V sent 1 replication request to VNEVADO-DC, which is suspected to be part of a DCSync attack."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."

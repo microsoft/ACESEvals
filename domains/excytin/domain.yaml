@@ -31,6 +31,62 @@ images:
       saber.domain: "excytin"
       saber.component: "permanent-service"
       saber.service: "incident-5-database"
+  
+  incident_34_db:
+    tag: "saber/excytin/incident-34:latest"
+    dockerfile: "docker/db/Dockerfile.incident_34"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-34-database"
+  
+  incident_38_db:
+    tag: "saber/excytin/incident-38:latest"
+    dockerfile: "docker/db/Dockerfile.incident_38"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-38-database"
+  
+  incident_39_db:
+    tag: "saber/excytin/incident-39:latest"
+    dockerfile: "docker/db/Dockerfile.incident_39"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-39-database"
+  
+  incident_55_db:
+    tag: "saber/excytin/incident-55:latest"
+    dockerfile: "docker/db/Dockerfile.incident_55"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-55-database"
+  
+  incident_134_db:
+    tag: "saber/excytin/incident-134:latest"
+    dockerfile: "docker/db/Dockerfile.incident_134"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-134-database"
+  
+  incident_166_db:
+    tag: "saber/excytin/incident-166:latest"
+    dockerfile: "docker/db/Dockerfile.incident_166"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-166-database"
+  
+  incident_322_db:
+    tag: "saber/excytin/incident-322:latest"
+    dockerfile: "docker/db/Dockerfile.incident_322"
+    labels:
+      saber.domain: "excytin"
+      saber.component: "permanent-service"
+      saber.service: "incident-322-database"
 
 # No profiles needed - server has full privileges by default
 

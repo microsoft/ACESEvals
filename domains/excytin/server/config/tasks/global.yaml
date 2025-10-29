@@ -1,5 +1,13 @@
 domain: excytin
-permanent_environment: incident_5
+permanent_environments:
+  - incident_5
+  - incident_34
+  - incident_38
+  - incident_39
+  - incident_55
+  - incident_134
+  - incident_166
+  - incident_322
 
 global_defaults:
   prompts:

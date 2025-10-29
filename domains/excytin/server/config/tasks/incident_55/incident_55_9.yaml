@@ -1,0 +1,289 @@
+tasks:
+  - task_id: incident_55_task_81
+    title: incident_55_task_81
+    description: "Can you identify the user involved in the suspicious system hardware discovery? What is the name of the account?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving an ADFS private key extraction attempt with a suspicious LDAP query launched from user account `gsmith` was reported. The incident occurred on host `mb-adfs` through a process with command line `iy2orr1e.rrg.exe`. Notably, attackers might be attempting to steal ADFS private keys or move laterally on the network. There were subsequent alerts suggesting ongoing hands-on-keyboard attacks and suspicious system hardware discovery activities which likely indicate further attempts of reconnaissance and lateral movement across the network."
+      question: "Can you identify the user involved in the suspicious system hardware discovery? What is the name of the account?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "pwilson"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious LDAP query was launched by the user with AAD User ID `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`, potentially attempting to steal ADFS private keys or move laterally on the network."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A hands-on-keyboard attack via the Impacket toolkit was detected, with `powershell.exe` being executed on the device to explore network shares and execute commands."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "The user account `pwilson` was involved in suspicious system hardware discovery, which may be an attempt to gather information for future attacks."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_82
+    title: incident_55_task_82
+    description: "As part of the investigation, there was a suspicious LDAP query that might indicate an attempt to steal ADFS private keys. Can you provide the AadUserId of the account involved in this suspicious LDAP query?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious Task Scheduler activity was reported, where a process involved in earlier malicious activities used Task Scheduler to create, modify, or delete a task, potentially attempting to automatically launch malicious code and establish persistence. The process ID and command line details are given for `schtasks.exe` and `powershell.exe` indicating this suspicious behavior. For instance, `schtasks.exe` was used with specific command line parameters."
+      question: "As part of the investigation, there was a suspicious LDAP query that might indicate an attempt to steal ADFS private keys. Can you provide the AadUserId of the account involved in this suspicious LDAP query?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A process with the extracted file name `iy2orr1e.rrg.exe` used Task Scheduler to create, modify, or delete a task. This indicates a potential attempt to launch malicious code and establish persistence."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious LDAP query was initiated by a user with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`, which might be an attempt to steal ADFS private keys or move laterally on the network."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_83
+    title: incident_55_task_83
+    description: "A subsequent alert reported the removal of emails containing malicious URLs after delivery. Can you identify the email address associated with this alert?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious command execution via the Impacket toolkit was observed, indicating a hands-on-keyboard attack. The attackers might be attempting to perform lateral movements across the network. The related incident started with suspicious usage of Impacket on `mb-adfs` and included a powershell.exe command launched with encoded arguments. Following this, another alert reported suspicious system hardware discovery, highlighting attackers' efforts to gather information about the target device or network for subsequent attacks."
+      question: "A subsequent alert reported the removal of emails containing malicious URLs after delivery. Can you identify the email address associated with this alert?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Lucas Grey@niseko.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A command via Impacket toolkit was executed with `powershell.exe` indicating a potential hands-on-keyboard attack."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious system hardware discovery was conducted using an account with SID `S-1-5-21-561436748-3867387497-1732241745-3701`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "The email account `Lucas Grey@niseko.alpineskihouse.co` received an email containing a malicious URL, which was later removed."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_84
+    title: incident_55_task_84
+    description: "As part of the suspicious sequence of exploration activities, which IP address was used by the attacker?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "An internal phishing campaign was observed to have been carried out by sending phishing emails from a compromised device. The user account involved could have possibly been compromised by an attacker for lateral movement within the organization. This alert was initially triggered based on a Microsoft Defender for Office 365 alert. One of the connected entities has an unspecified SID."
+      question: "As part of the suspicious sequence of exploration activities, which IP address was used by the attacker?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "72.5.72.208"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A user with SID `S-1-5-21-561436748-3867387497-1732241745-3701` was observed sending phishing emails within the organization, indicating a potential account compromise."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious exploration activities originating from the IP address `72.5.72.208` were identified, potentially indicating reconnaissance or lateral movement efforts post-compromise."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_85
+    title: incident_55_task_85
+    description: "What is the SID of the account involved in the suspicious sequence of exploration activities noted in the alert?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious sequence of exploration activities was detected on 2024-07-04. The alerts mentioned a process executing a set of windows commands, which can be used by attackers to identify assets of value and coordinate lateral movement after compromising a machine. The process involved included a suspicious filename `iy2orr1e.rrg.exe` and commands like `whoami.exe` and `powershell.exe`."
+      question: "What is the SID of the account involved in the suspicious sequence of exploration activities noted in the alert?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "S-1-5-21-561436748-3867387497-1732241745-3701"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A process `whoami.exe` was run, which can be used by attackers to identify assets of value."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "The account with SID `S-1-5-21-561436748-3867387497-1732241745-3701` executed these suspicious commands."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_86
+    title: incident_55_task_86
+    description: "During the investigation of this incident, a malicious PowerShell Cmdlet was invoked. Can you identify the user account name associated with this malicious activity?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident was detected where an attempt to hide the use of a dual-purpose tool was observed. An unexpected file `iy2orr1e.rrg.exe` was launched on the host `mb-adfs`, and it might indicate malicious activity. The process details are: Process ID 3116, created on 2024-07-02 at 09:48:23. This incident might have involved renaming and launching a system executable to avoid detection technologies."
+      question: "During the investigation of this incident, a malicious PowerShell Cmdlet was invoked. Can you identify the user account name associated with this malicious activity?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "bjenkins"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A known public tool named `iy2orr1e.rrg.exe` was observed and may have been used for malicious purposes."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A Windows executable `powershell.exe` was renamed and launched, potentially for malicious activities."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "A malicious PowerShell Cmdlet was invoked by the user account `bjenkins` on the machine."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_87
+    title: incident_55_task_87
+    description: "Which machine executed the operation to read the DKM key of the ADFS object?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident has been detected involving a malicious PowerShell Cmdlet that was executed on a machine, potentially associated with activities such as credential theft or network reconnaissance. Days later, an unusual DCSync attack was observed where a replication request was sent from a certain machine to another. Following this, the recipient machine performed a key read operation on an ADFS object."
+      question: "Which machine executed the operation to read the DKM key of the ADFS object?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "MB-DC1"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A malicious PowerShell Cmdlet was invoked on the machine by the account with SID `S-1-5-21-551436448-9871687716-9837441745-1903`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "There was a suspected DCSync attack where Luciano Herrera (CIO) on MB-WINCLIENT sent a replication request to host `MB-DC1`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "There was a suspected AD FS DKM key read on host `MB-DC1`, specifically for the ADFS object id `4cac49d3-29d3-407e-8c9b-b7ebb21541b2`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_88
+    title: incident_55_task_88
+    description: "What is the URL linked to the phishing campaign?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "As part of a recent security incident, attempts to hide a known public tool under an unexpected filename were observed. Following this, several suspicious activities were detected including renaming and launching a system executable and injecting code into another process. Eventually, an internal phishing campaign was identified, likely using these compromised processes."
+      question: "What is the URL linked to the phishing campaign?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There was an attempt to hide the use of a dual-purpose tool on the host `mb-adfs`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A renamed system executable `powershell.exe` was launched, which might be used for malicious activities."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "A process was injected with potentially malicious code by a user with AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: "An internal phishing campaign occurred, involving the URL `http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_89
+    title: incident_55_task_89
+    description: "In connection with this incident, an attempt was made to hide the use of a dual-purpose tool on 2024-07-06. Can you identify the Security Identifier (Sid) for the account involved?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving a suspicious service registration was observed, where the system program `services.exe` was registered as a service on 2024-07-04. This can indicate malicious intent to establish persistence or gain system privileges."
+      question: "In connection with this incident, an attempt was made to hide the use of a dual-purpose tool on 2024-07-06. Can you identify the Security Identifier (Sid) for the account involved?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "S-2-5-21-571436798-3864380397-1837441745-3206"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious service registration was detected on host `mb-adfs`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "An attempt to hide the use of a dual-purpose tool was detected by an account with SID `S-2-5-21-571436798-3864380397-1837441745-3206`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_55_task_90
+    title: incident_55_task_90
+    description: "Can you identify the suspicious file related to the access of the LSASS service which could be indicative of credential extraction activity?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident was reported when the user Luciano Herrera (pwilson@niseko.alpineskihouse.co) performed an unusual addition of credentials to the application SimulandApp, suggesting a potential compromise. This user added a credential of type Password, which is alarming. Additionally, a suspicious LDAP query action was performed which might indicate reconnaissance activity. Attackers often use LDAP queries to gather information about the organization's structure."
+      question: "Can you identify the suspicious file related to the access of the LSASS service which could be indicative of credential extraction activity?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "winscard.dll"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The user Luciano Herrera (pwilson@niseko.alpineskihouse.co) added a credential of type Password to the application SimulandApp, which is unusual and suggests a potential compromise of the app. The user's AadUserId is `2de70991-2799-4a95-b734-8e3df3a50118`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious LDAP query was executed on the host `mb-winclient`, which may indicate reconnaissance activity aimed at learning the organization's structure."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "There was suspicious access to the LSASS service with the file `winscard.dll`, which could be an attempt to obtain clear-text passwords for lateral movement activities."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."

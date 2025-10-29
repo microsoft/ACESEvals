@@ -63,9 +63,15 @@ docker build -f ./Dockerfile.client -t saber/excytin/client:latest ../../../
 echo "📦 Building Excytin Demo sandbox..."
 docker build -f Dockerfile.sandbox -t saber/excytin/sandbox:latest ../
 
-# Build custom MySQL image with SQL files
-echo "📦 Building custom MySQL image with SQL data..."
-docker build -f db/Dockerfile.incident_5 -t saber/excytin/incident-5:latest ../
+# Build custom MySQL images with SQL files for all incidents
+echo "📦 Building custom MySQL images with SQL data..."
+for dockerfile in db/Dockerfile.incident_*; do
+    if [ -f "$dockerfile" ]; then
+        incident_num=$(basename "$dockerfile" | sed 's/Dockerfile.incident_//')
+        echo "  🗄️  Building incident-${incident_num} database..."
+        docker build -f "$dockerfile" -t "saber/excytin/incident-${incident_num}:latest" ../
+    fi
+done
 
 # Verify images were built
 echo "✅ Verifying built images..."
@@ -78,7 +84,7 @@ echo "Available images:"
 echo "  • saber/excytin/server:latest     - SABER server for excytin domain"
 echo "  • saber/excytin/client:latest     - Demo client for testing enhanced logging"
 echo "  • saber/excytin/sandbox:latest    - Sandbox execution environment with mysql client"
-echo "  • saber/excytin/incident-5:latest - Custom MySQL with SQL data (Docker-in-Docker workaround)"
+echo "  • saber/excytin/incident-*:latest - Custom MySQL images with SQL data for all incidents"
 echo ""
 echo "Next steps:"
 echo "  • Run: docker-compose up -d"

