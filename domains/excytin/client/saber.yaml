@@ -8,13 +8,13 @@ server:
 
 # Task configuration
 tasks:
-  task_ids: ["*"]
+  task_ids: ["incident_34_task_1"]
 
 # Agent configuration
 agents:
   - id: "inspect_react"
     model: "openai/azure/gpt-4.1"
-    tasks: ["*"]  # Specific task assignment
+    tasks: ["incident_34_task_1"]  # Specific task assignment
 
 # Execution configuration
 log_level: "INFO"

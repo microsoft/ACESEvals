@@ -63,22 +63,55 @@ docker build -f ./Dockerfile.client -t saber/excytin/client:latest ../../../../.
 echo "📦 Building Excytin Demo sandbox..."
 docker build -f Dockerfile.sandbox -t saber/excytin/sandbox:latest ../../..
 
-# Build custom MySQL image with SQL files
-echo "📦 Building custom MySQL image with SQL data..."
-docker build -f db/Dockerfile.incident_5 -t saber/excytin/incident-5:latest ../../..
+# Build custom MySQL images with SQL files for all incidents
+echo ""
+echo "📦 Building custom MySQL images with SQL data..."
+echo "================================================"
+
+# Array of incidents to build
+INCIDENTS=(5 34 38 39 55 134 166 322)
+INCIDENT_BUILD_FAILED=false
+
+for incident in "${INCIDENTS[@]}"; do
+    echo "  🗄️  Building incident-${incident} database..."
+    if docker build -f db/Dockerfile.incident_${incident} -t saber/excytin/incident-${incident}:latest ../../..; then
+        echo "     ✅ incident-${incident} built successfully"
+    else
+        echo "     ❌ incident-${incident} build failed"
+        INCIDENT_BUILD_FAILED=true
+    fi
+done
+
+if [ "$INCIDENT_BUILD_FAILED" = true ]; then
+    echo ""
+    echo "⚠️  Some incident database images failed to build"
+    echo "   Check the errors above for details"
+    exit 1
+fi
+
+echo ""
+echo "✅ All incident database images built successfully!"
 
 # Verify images were built
+echo ""
 echo "✅ Verifying built images..."
 docker images | grep 'saber/excytin'
 
 echo ""
-echo "🎉 SABER Excytin Demo images built successfully!"
+echo "🎉 SABER Excytin images built successfully!"
 echo ""
 echo "Available images:"
-echo "  • saber/excytin/server:latest     - SABER server for excytin domain"
-echo "  • saber/excytin/client:latest     - Demo client for testing enhanced logging"
-echo "  • saber/excytin/sandbox:latest    - Sandbox execution environment with mysql client"
-echo "  • saber/excytin/incident-5:latest - Custom MySQL with SQL data (Docker-in-Docker workaround)"
+echo "  • saber/excytin/server:latest       - SABER server for excytin domain"
+echo "  • saber/excytin/client:latest       - Demo client for testing enhanced logging"
+echo "  • saber/excytin/sandbox:latest      - Sandbox execution environment with mysql client"
+echo "  • saber/excytin/incident-5:latest   - MySQL database for Incident 5 (port 3306)"
+echo "  • saber/excytin/incident-34:latest  - MySQL database for Incident 34 (port 3307)"
+echo "  • saber/excytin/incident-38:latest  - MySQL database for Incident 38 (port 3308)"
+echo "  • saber/excytin/incident-39:latest  - MySQL database for Incident 39 (port 3309)"
+echo "  • saber/excytin/incident-55:latest  - MySQL database for Incident 55 (port 3310)"
+echo "  • saber/excytin/incident-134:latest - MySQL database for Incident 134 (port 3311)"
+echo "  • saber/excytin/incident-166:latest - MySQL database for Incident 166 (port 3312)"
+echo "  • saber/excytin/incident-322:latest - MySQL database for Incident 322 (port 3313)"
 echo ""
 echo "Next steps:"
 echo "  • Run: docker-compose up -d"

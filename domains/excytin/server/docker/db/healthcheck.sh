@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Incident-5 Database Health Check Script
+# Excytin Incident Database Health Check Script
 # Validates that the MySQL database is ready for application use
 # Performs comprehensive checks including connectivity, authentication, and query execution
+# This script is shared across all incident databases (5, 34, 38, 39, 55, 134, 166, 322)
 
 set -euo pipefail
 
@@ -59,21 +60,30 @@ test_admin_credentials() {
     return 0
 }
 
-# Verify critical tables exist and are accessible
+# Verify that tables exist and database is properly initialized
 test_required_tables() {
-    log_info "Testing critical table accessibility..."
+    log_info "Testing database initialization and table accessibility..."
     
-    # Check for key Azure AD log tables that are critical for incident analysis
-    local tables=("AADManagedIdentitySignInLogs" "AADNonInteractiveUserSignInLogs" "AADProvisioningLogs" "AADRiskyUsers")
+    # Check that database has tables (any tables indicate successful initialization)
+    local table_count=$(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -D "$DB_NAME" -e "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema='$DB_NAME';" -s -N 2>/dev/null || echo "0")
     
-    for table in "${tables[@]}"; do
-        if ! mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -D "$DB_NAME" -e "SELECT COUNT(*) FROM \`$table\`;" > /dev/null 2>&1; then
-            log_error "Table '$table' is not accessible or does not exist"
+    if [ "$table_count" -eq 0 ]; then
+        log_error "Database has no tables - initialization may have failed"
+        return 1
+    fi
+    
+    # Check that common Azure AD tables exist and are accessible
+    # Note: Different incidents have different table schemas, so we check for tables that are common
+    local common_tables=("AADManagedIdentitySignInLogs" "AADNonInteractiveUserSignInLogs")
+    
+    for table in "${common_tables[@]}"; do
+        if ! mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -D "$DB_NAME" -e "SELECT COUNT(*) FROM \`$table\` LIMIT 1;" > /dev/null 2>&1; then
+            log_error "Common table '$table' is not accessible or does not exist"
             return 1
         fi
     done
     
-    log_info "✅ All critical tables are accessible"
+    log_info "✅ Database initialized with $table_count tables and common tables are accessible"
     return 0
 }
 
@@ -81,19 +91,22 @@ test_required_tables() {
 test_data_integrity() {
     log_info "Testing data integrity and complex query functionality..."
     
-    # Test a join query across multiple tables to ensure full functionality
+    # Test a union query across common tables that exist in all incidents
     local query="SELECT COUNT(*) FROM (
         SELECT 'ManagedIdentity' as log_type, COUNT(*) as count FROM AADManagedIdentitySignInLogs 
         UNION ALL 
         SELECT 'NonInteractive' as log_type, COUNT(*) as count FROM AADNonInteractiveUserSignInLogs
-        UNION ALL
-        SELECT 'Provisioning' as log_type, COUNT(*) as count FROM AADProvisioningLogs
-        UNION ALL
-        SELECT 'RiskyUsers' as log_type, COUNT(*) as count FROM AADRiskyUsers
     ) as log_summary;"
     
     if ! mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -D "$DB_NAME" -e "$query" > /dev/null 2>&1; then
         log_error "Failed to execute complex query - data integrity issue"
+        return 1
+    fi
+    
+    # Test that we can query metadata about all tables
+    local metadata_query="SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema='$DB_NAME' LIMIT 5;"
+    if ! mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -D "$DB_NAME" -e "$metadata_query" > /dev/null 2>&1; then
+        log_error "Failed to query table metadata - database integrity issue"
         return 1
     fi
     
@@ -142,7 +155,13 @@ test_file_operations() {
 
 # Main health check function
 main() {
-    log_info "Starting Incident-5 database health check..."
+    # Try to detect incident number from hostname or container name
+    local incident_info=""
+    if [ -n "${HOSTNAME:-}" ]; then
+        incident_info=" (${HOSTNAME})"
+    fi
+    
+    log_info "Starting Excytin incident database health check${incident_info}..."
     
     local retry_count=0
     
@@ -155,7 +174,7 @@ main() {
            test_permissions && \
            test_file_operations; then
             
-            log_info "🎉 Incident-5 database is fully operational and ready for cybersecurity analysis!"
+            log_info "🎉 Excytin incident database is fully operational and ready for cybersecurity analysis!"
             exit 0
         fi
         
@@ -166,7 +185,7 @@ main() {
         fi
     done
     
-    log_error "❌ Incident-5 database health check failed after $MAX_RETRIES attempts"
+    log_error "❌ Excytin incident database health check failed after $MAX_RETRIES attempts"
     log_error "Database is not ready for cybersecurity incident analysis operations"
     exit 1
 }
