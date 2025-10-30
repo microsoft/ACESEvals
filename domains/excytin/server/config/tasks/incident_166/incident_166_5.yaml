@@ -1,0 +1,253 @@
+tasks:
+  - task_id: incident_166_task_41
+    title: incident_166_task_41
+    description: "Can you identify the IP address used by the anonymous sign-in which was part of the same incident involving the account Jordan P?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving possible financial fraud through business email compromise (BEC) characteristics was reported. Suspicious events were observed involving the account with the name Jordan P and email Jordan P@vnevado.alpineskihouse.co. This may be an attempt by an attacker to conduct a fraud attack against our organization."
+      question: "Can you identify the IP address used by the anonymous sign-in which was part of the same incident involving the account Jordan P?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "192.238.237.190"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There is a possible business email compromise (BEC) financial fraud involving an account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "There was a sign-in from an anonymous IP address `192.238.237.190`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_42
+    title: incident_166_task_42
+    description: "During the continued investigation, it was discovered that a suspicious SAP authentication was performed. Can you find out the AppId used for the SAP application during this suspicious authentication?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "As part of a recent security incident, there was a sign-in from an anonymous IP address (192.238.237.190), which could be associated with tools such as Tor browser or anonymizer VPNs. This indication might show an initial access attempt by an attacker."
+      question: "During the continued investigation, it was discovered that a suspicious SAP authentication was performed. Can you find out the AppId used for the SAP application during this suspicious authentication?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "100"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "Suspicious sign-in from an anonymous IP address detected with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A risky user account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` signed in to SAP cloud application with AppId `100`, indicating possible account compromise."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_43
+    title: incident_166_task_43
+    description: "Identify the IP address associated with the financial fraud attempt described in the alert."
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "Start Alert: Suspicious activity in SAP linked to business email compromise, traced to IP address 107.253.5.27. End Alert: Detected financial fraud attempt through business email compromise, involving a suspicious inbox rule created in an Azure Active Directory session."
+      question: "Identify the IP address associated with the financial fraud attempt described in the alert."
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "255.246.85.58"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The account `Jordan P` signed in to SAP in a suspicious manner, potentially as part of a business email compromise-related attack."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious inbox rule was created from IP address `255.246.85.58`, indicating an attempt at BEC financial fraud."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_44
+    title: incident_166_task_44
+    description: "What is the IP address associated with the business email compromise (BEC) financial fraud incident?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious SAP authentication incident was reported where a user account with a risky sign-in alert in Microsoft Entra ID signed in to SAP, potentially allowing an attacker to record or modify sensitive financial information. The cloud application has AppId `100` and a related IP address `107.253.5.27`. This incident might be connected to another alert involving financial fraud through business email compromise (BEC), where a suspicious inbox rule that hides incoming emails was created in a risky Azure Active Directory session."
+      question: "What is the IP address associated with the business email compromise (BEC) financial fraud incident?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "255.246.85.58"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A user account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` had a risky sign-in alert and accessed SAP, potentially to gather or modify sensitive financial information."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious inbox rule that hides incoming email messages was created from the IP address `255.246.85.58`, indicating an attempt at business email compromise (BEC) financial fraud."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_45
+    title: incident_166_task_45
+    description: "Can you identify the IP address used in the suspicious SAP authentication event?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving BEC (business email compromise) fraud attempts. Suspicious emails were sent by a possibly compromised user account with the email address `tony@avoriaz.alpineskihouse.co`, originating from the IP address `255.246.85.58`. These emails were sent by `laylaw@vnevado.alpineskihouse.co` also from IP address `255.246.85.58`. Following this, there was suspicious SAP authentication using a user account with a risky sign-in alert in Microsoft Entra ID. An attacker might have taken control of a user account to search through SAP with the intention of recording or modifying sensitive financial information, which could be used later for phishing or social engineering."
+      question: "Can you identify the IP address used in the suspicious SAP authentication event?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "107.253.5.27"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A possibly compromised user account with the name `Jordan P` sent suspicious emails related to an ongoing BEC fraud attempt."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A user account with a risky sign-in alert signed in to SAP from IP address `107.253.5.27`, possibly by an attacker intending to search, record, or modify sensitive financial information."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_46
+    title: incident_166_task_46
+    description: "There was also a sign-in from an anonymous IP address connected to this incident. Can you provide the IP address that was used?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving a possible BEC financial fraud was detected where suspicious events with business email compromise characteristics were observed. This was linked to an account with the name `Jordan P` and email `Jordan P@vnevado.alpineskihouse.co`. The incidents might involve someone attempting to conduct a fraud attack against your organization."
+      question: "There was also a sign-in from an anonymous IP address connected to this incident. Can you provide the IP address that was used?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "95.202.65.202"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "Suspicious activities with business email compromise (BEC) characteristics were detected from the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "There was a sign-in attempt from an anonymous IP address `95.202.65.202`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_47
+    title: incident_166_task_47
+    description: "Can you identify the IP address that was associated with the earlier similar sign-in from an anonymous IP address?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident indicated a sign-in from an anonymous IP address, potentially using Tor browser or anonymizer VPNs. The associated IP address with this alert was `192.238.237.190` and the incident was logged at 2024-07-22 09:11:31.290020+00:00."
+      question: "Can you identify the IP address that was associated with the earlier similar sign-in from an anonymous IP address?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "95.202.65.202"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There is a sign-in from an anonymous IP address `95.202.65.202`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "The sign-in was associated with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_48
+    title: incident_166_task_48
+    description: "Can you identify the email address associated with the account that might be involved in the BEC financial fraud?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "As part of a potential Business Email Compromise (BEC) financial fraud incident, an alert for suspicious events was triggered. The alert mentioned that an attacker might be attempting to conduct fraud against the organization, and it involved an account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` and Sid `S-1-5-21-1740051960-3534030288-108486866-1602`."
+      question: "Can you identify the email address associated with the account that might be involved in the BEC financial fraud?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Jordan P@vnevado.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious event with business email compromise (BEC) characteristics was observed on the email account `Jordan P@vnevado.alpineskihouse.co`. An attacker might be attempting to conduct a financial fraud attack against the organization."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_49
+    title: incident_166_task_49
+    description: "What is the name of the account that was involved in creating the suspicious inbox rule in this BEC financial fraud incident?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving BEC financial fraud has been reported, indicating that a suspicious inbox rule that hides incoming email messages was created during a risky Azure Active Directory session. The account associated has the Sid: S-1-5-21-1740051960-3534030288-108486866-1602 and the IP address: 255.246.85.58 among other identifiers."
+      question: "What is the name of the account that was involved in creating the suspicious inbox rule in this BEC financial fraud incident?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Jordan P"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious inbox rule that hides incoming email messages was created in the email account `Jordan P` as part of a potential BEC financial fraud attempt."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_166_task_50
+    title: incident_166_task_50
+    description: "In relation to this alert and the connected suspicious inbox manipulation rule, what is the IP address associated with the creation of the suspicious inbox rule?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious SAP authentication alert was triggered because a user account with a risky sign-in in Microsoft Entra ID accessed the SAP enterprise application software. An attacker might be using compromised credentials to search through SAP with the aim of recording or modifying sensitive financial information. The cloud application involved has an AppId of `100` and the IP address used was `107.253.5.27`."
+      question: "In relation to this alert and the connected suspicious inbox manipulation rule, what is the IP address associated with the creation of the suspicious inbox rule?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "255.246.85.58"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The user account with SID `S-1-5-21-1740051960-3534030288-108486866-1602` was used to sign in to SAP, triggering a suspicious SAP authentication alert due to a risky sign-in."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A suspicious inbox rule manipulation was detected on the inbox of the user Jordan P (laylaw@vnevado.alpineskihouse.co), originating from the IP address `255.246.85.58`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
