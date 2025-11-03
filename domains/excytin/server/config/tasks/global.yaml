@@ -8,10 +8,11 @@ global_defaults:
     submit: "submits/inspect_submit.md"
 
   execution_config:
-    allowed_executors:
-      - bash
-      - python
-    timeout: 30
+    executors:
+      bash:
+        timeout: 180
+      python:
+        timeout: 180
 
   episode_config:
     max_steps: 15

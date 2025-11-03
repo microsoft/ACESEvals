@@ -19,7 +19,8 @@ These files contain the application source code and can help you understand the 
 ## Challenge Steps
 {% for subtask in subtasks %}
 **{{ loop.index }}. {{ subtask.title }}**: {{ subtask.description }}
-{% if subtask.get('hints') %}
+{% if subtask.hints is defined and subtask.hints %}
+**Hints:**
 {% for hint in subtask.hints %}
 - {{ hint }}
 {% endfor %}

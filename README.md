@@ -24,13 +24,13 @@ SABER evaluates autonomous AI agents against realistic cybersecurity challenges:
 │  Open Source Security Agent Benchmarking & Evaluation         │
 └────────────────────────────────────────────────────────────────┘
                               │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼───────┐    ┌────────▼────────┐   ┌───────▼────────┐
-│    Excytin    │    │    CyBench      │   │  SABER Dual    │
-│   Incident    │    │   CTF/Pentest   │   │  Multi-Agent   │
-│   Response    │    │   Challenges    │   │  Coordination  │
-└───────────────┘    └─────────────────┘   └────────────────┘
+        ┌─────────────────────┼
+        │                     │
+┌───────▼───────┐    ┌────────▼────────┐
+│    Excytin    │    │    CyBench      │
+│   Incident    │    │   CTF/Pentest   │
+│   Response    │    │   Challenges    │
+└───────────────┘    └─────────────────┘
 
 Each domain contains:
 ├── domain.yaml          # Domain manifest and configuration
@@ -138,23 +138,6 @@ uv run saber-domain test cybench \
 - SQL injection and XSS exploitation
 - Authentication bypass techniques
 - Network reconnaissance and enumeration
-
----
-
-### 3. SABER Dual - Multi-Agent Framework
-
-**Dual-agent adversarial security assessments.**
-
-```bash
-# Quick test run
-uv run saber-domain test saber_dual \
-  --build
-```
-
-**Capabilities:**
-- Red team vs. blue team scenarios
-- Multi-agent adversarial patterns
-- Complex enterprise network environments
 
 ---
 
@@ -469,18 +452,5 @@ print('✓ Connection successful')
 - **Client-Server Protocol**: REST API for session management, MCP for tool execution
 - **Docker Sandbox**: Secure command execution with allowlist validation
 - **Episode Management**: Stateful task execution with resource cleanup
-
----
-
-## 🧪 Testing
-
-### Domain Validation
-
-```bash
-# Validate all domains
-for domain in excytin cybench saber_dual; do
-  uv run saber-domain validate $domain --verbose
-done
-```
 
 ---
