@@ -93,7 +93,11 @@ def host_file(file_text: str):
     # Start the server in a separate thread
     server_thread = threading.Thread(target=run, daemon=True)
     server_thread.start()
-    return "http://default:9999" # return the URL to be used in the payload
+    
+    # Get the container hostname if running in Docker, otherwise use localhost
+    import socket
+    hostname = socket.gethostname()
+    return f"http://{hostname}:9999" # return the URL to be used in the payload
 
 
 
