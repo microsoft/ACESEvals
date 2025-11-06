@@ -1,0 +1,261 @@
+tasks:
+  - task_id: incident_134_task_11
+    title: incident_134_task_11
+    description: "During the investigation, a potentially malicious URL click by a user was detected. Can you identify the recipient of the email that contained the malicious URL?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A security incident involving a BEC (Business Email Compromise) financial fraud has been identified. A suspicious inbox rule that hides incoming email messages was created in a risky Azure Active Directory session. The activity was traced back to the IP address `237.7.81.122`."
+      question: "During the investigation, a potentially malicious URL click by a user was detected. Can you identify the recipient of the email that contained the malicious URL?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "raphaelt@vnevado.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The account `Nina Park` was involved in a risky Azure Active Directory session where a suspicious inbox rule was created, potentially indicative of a business email compromise (BEC) aimed at financial fraud."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "The user with the email `raphaelt@vnevado.alpineskihouse.co` clicked on a potentially malicious URL."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_12
+    title: incident_134_task_12
+    description: "Can you identify the email address of the account associated with the email messages containing malicious URLs that were later removed?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious sign-in attempt from a known malicious IP address `170.54.121.63` was detected. This IP address was used during or around the time of sign-in. This is part of a wider investigation that includes email messages containing malicious URLs that were later removed."
+      question: "Can you identify the email address of the account associated with the email messages containing malicious URLs that were later removed?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "Nina Park@vnevado.alpineskihouse.co"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The user account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` signed-in from a known malicious IP address."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "The email account `Nina Park@vnevado.alpineskihouse.co` received an email with a malicious URL that was later removed."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_13
+    title: incident_134_task_13
+    description: "What is the IP address that was identified as malicious during the sign-in attempt?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "An email containing a malicious URL was sent from `alyssat@vnevado.alpineskihouse.co` to `raphaelt@vnevado.alpineskihouse.co` and was later removed. This email was associated with Nina Park who has the email address `Nina Park@vnevado.alpineskihouse.co` and the SID `S-1-5-21-1874151667-3554330288-105586563-1715`. The sender IP was `254.241.243.229`, and the recipient accessed the URL `https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/` contained in the email."
+      question: "What is the IP address that was identified as malicious during the sign-in attempt?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "170.54.121.63"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The email account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` received an email with a malicious URL."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A sign-in attempt was made from a known malicious IP address `170.54.121.63`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_14
+    title: incident_134_task_14
+    description: "Related to this incident, a malicious IP address was detected around the time of sign-in. Can you identify the IP address known to be malicious?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During a recent security incident, a user's inbox rules were found to be manipulated suspiciously. The user identified was Nina Park (email: Nina Park@vnevado.alpineskihouse.co), and the involved IP address was 237.7.81.122. This has raised concerns about possible unauthorized access and data exfiltration attempts."
+      question: "Related to this incident, a malicious IP address was detected around the time of sign-in. Can you identify the IP address known to be malicious?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "170.54.121.63"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There has been suspicious inbox manipulation involving the user with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A sign-in occurred from a known malicious IP address `170.54.121.63`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_15
+    title: incident_134_task_15
+    description: "A day later, a password spray attack was detected. Can you identify the IP address from which the password spray attack originated?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "An incident involving a sign-in from an anonymous IP address associated with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` was detected on 2024-07-17. This sign-in was done using methods like Tor browser or anonymizer VPNs."
+      question: "A day later, a password spray attack was detected. Can you identify the IP address from which the password spray attack originated?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "170.54.121.63"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There was a sign-in attempt from an anonymous IP address `170.54.121.63` at `2024-07-17 11:01:27.633644+00:00`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A password spray attack was detected from the same IP address `170.54.121.63` at `2024-07-18 14:36:59.143748+00:00`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_16
+    title: incident_134_task_16
+    description: "Related to this suspicious inbox rule creation, there was also an alert of suspicious emails sent by the BEC-related user. Can you identify the sender IP for these suspicious emails?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A suspicious inbox rule that hides incoming email messages was created in a risky Azure Active Directory session by the account associated with `Nina Park` (Nina Park@vnevado.alpineskihouse.co, Sid: S-1-5-21-1874151667-3554330288-105586563-1715). This could indicate a potential business email compromise (BEC), a form of financial fraud."
+      question: "Related to this suspicious inbox rule creation, there was also an alert of suspicious emails sent by the BEC-related user. Can you identify the sender IP for these suspicious emails?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "237.7.81.122"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "A suspicious inbox rule that hides incoming email messages was created in a risky Azure Active Directory session by a user with SID `S-1-5-21-1874151667-3554330288-105586563-1715`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious emails were sent by a possibly compromised account from IP address `237.7.81.122`, related to an ongoing BEC (business email compromise) fraud attempt."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_17
+    title: incident_134_task_17
+    description: "A Password Spray attack was detected in this incident. Can you identify the IP address that was used during this Password Spray attack?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "A malicious email with the URL `https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/` was sent to `raphaelt@vnevado.alpineskihouse.co` from `alyssat@vnevado.alpineskihouse.co`. The recipient, `raphaelt@vnevado.alpineskihouse.co`, and their mailbox were involved in the incident. This email was delivered but subsequently removed, indicating a potential threat. Additionally, this relates to an incident where Nina Park's account (`Nina Park@vnevado.alpineskihouse.co`) was involved, showing signs of possible user compromise, such as a Password Spray attack."
+      question: "A Password Spray attack was detected in this incident. Can you identify the IP address that was used during this Password Spray attack?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "170.54.121.63"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The email account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` received an email with a malicious URL that was later removed."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A password spray attack was detected from IP address `170.54.121.63`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_18
+    title: incident_134_task_18
+    description: "Can you identify the IP address involved in the suspicious manipulation of inbox rules?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "An email incident involved emails containing a malicious URL `https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/` delivered to and later removed from the mailbox of raphaelt@vnevado.alpineskihouse.co. The email was sent from alyssat@vnevado.alpineskihouse.co with the sender IP 254.241.243.229. There was also a suspicious manipulation of inbox rules."
+      question: "Can you identify the IP address involved in the suspicious manipulation of inbox rules?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "237.7.81.122"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "The email account `Nina Park@vnevado.alpineskihouse.co` received an email with a malicious URL."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "Suspicious manipulation of inbox rules detected from IP address `237.7.81.122`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_19
+    title: incident_134_task_19
+    description: "What is the IP address associated with the anonymous sign-in attempt?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During a security incident involving business email compromise (BEC), suspicious emails were sent by a potentially compromised user account. The emails were sent to the mailbox `Nathan@avoriaz.alpineskihouse.co`. The sender's email address was `raphaelt@vnevado.alpineskihouse.co`.  As part of this incident, there was a sign-in attempt from an anonymous IP address which might be related to the ongoing BEC fraud attempt."
+      question: "What is the IP address associated with the anonymous sign-in attempt?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "170.54.121.63"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There are suspicious emails sent by a potentially compromised user account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`, which may be related to an ongoing business email compromise fraud attempt."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "A sign-in was detected from an anonymous IP address `170.54.121.63`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+  - task_id: incident_134_task_20
+    title: incident_134_task_20
+    description: "Around the time of the incident, what was the anonymous IP address involved in the sign-in attempts?"
+
+    inherit_shared: true
+
+    initial_context:
+      incident_context: "During a security incident, there was a sign-in from an IP address known to be malicious, linked to the user with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`. This was noticed during the sign-in at 2024-07-18 13:48:02.042756+00:00."
+      question: "Around the time of the incident, what was the anonymous IP address involved in the sign-in attempts?"
+
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+        - "170.54.121.63"
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: "There was a sign-in from a malicious IP address `170.54.121.63`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: "There was a sign-in from an anonymous IP address `170.54.121.63`."
+        objective: "Identify key details related to the potential compromise that might help in solving the main task."

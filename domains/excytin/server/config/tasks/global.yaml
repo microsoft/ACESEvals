@@ -1,5 +1,6 @@
 domain: excytin
-permanent_environment: incident_5
+# Permanent environment with all 8 incident databases
+permanent_environment: all_incidents
 
 global_defaults:
   prompts:
