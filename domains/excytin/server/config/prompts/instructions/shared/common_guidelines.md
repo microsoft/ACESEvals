@@ -7,11 +7,11 @@ DATABASE ANALYSIS GUIDELINES:
 - Many returned logs may be extensive - focus on relevant security indicators
 
 DATABASE CONNECTION GUIDELINES:
-- Use the MySQL database at hostname: saber-excytin-incident-5
-- Connect with username: admin, password: admin
-- Target database: env_monitor_db
-- Always use --skip-ssl flag to disable SSL: mysql -h saber-excytin-incident-5 --skip-ssl -u admin -padmin env_monitor_db
-- Example connection test: mysql -h saber-excytin-incident-5 --skip-ssl -u admin -padmin -e 'SHOW TABLES;' env_monitor_db
+- Use the MySQL database at hostname: {{ initial_context.database_connection.hostname }}
+- Connect with username: {{ initial_context.database_connection.username }}, password: {{ initial_context.database_connection.password }}
+- Target database: {{ initial_context.database_connection.database }}
+- Always use --skip-ssl flag to disable SSL: mysql -h {{ initial_context.database_connection.hostname }} --skip-ssl -u {{ initial_context.database_connection.username }} -p{{ initial_context.database_connection.password }} {{ initial_context.database_connection.database }}
+- Example connection test: mysql -h {{ initial_context.database_connection.hostname }} --skip-ssl -u {{ initial_context.database_connection.username }} -p{{ initial_context.database_connection.password }} -e 'SHOW TABLES;' {{ initial_context.database_connection.database }}
 
 SHELL COMMAND BEST PRACTICES:
 - Always properly escape special characteads to prevent shell interpretation: curl 'http://example.com/path?param=value'
