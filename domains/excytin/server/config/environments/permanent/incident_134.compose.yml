@@ -13,7 +13,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
     networks:
       - excytin-database
     restart: unless-stopped

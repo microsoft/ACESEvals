@@ -5,14 +5,14 @@ FROM mysql:8.0
 
 # Copy SQL initialization files and CSV data
 COPY server/data/sql_files/incident_55.sql /docker-entrypoint-initdb.d/
-COPY server/data/csv_files/incident_55/*.csv /var/lib/mysql-files/
+COPY server/data/csv_files/incident_55/ /var/lib/mysql-files/
 
 # Copy health check script
 COPY server/docker/db/healthcheck.sh /usr/local/bin/healthcheck.sh
 
 # Set proper permissions
 RUN chmod 644 /docker-entrypoint-initdb.d/incident_55.sql && \
-    chmod 644 /var/lib/mysql-files/*.csv && \
+    find /var/lib/mysql-files/ -type f -name "*.csv" -exec chmod 644 {} \; && \
     chmod +x /usr/local/bin/healthcheck.sh
 
 # Use the same default configuration as base image
