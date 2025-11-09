@@ -3,7 +3,7 @@ name = "oss-saber"
 version = "0.1.0"
 description = "Open source security benchmarks for the SABER agentic benchmarking framework"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 license = {text = "MIT"}
 authors = [
     {name = "MSEC AI Benchmarking Team", email = "kyledeprow@microsoft.com"}

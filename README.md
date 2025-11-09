@@ -88,20 +88,48 @@ cp .env.template .env
 #### NOTE: Excytin cold start extra step
 If you are running excytin benchmark, you will need to reach out to Anand Mudgerikar or Kyle DeProw and get the excytin data. You will need to have a <>/csv_files and <>/sql_files directory at domains/excytin/server/data after this step.
 
-```bash
-# Start a domain and run evaluation (all-in-one command)
-uv run saber-domain test excytin \
-  --saber-yaml domains/excytin/client/saber.yaml \
-  --build
+**All domain evaluations now use `inspect eval` commands.** The SABER server is automatically managed - started on first evaluation and kept running for faster subsequent runs.
 
-# What this does:
-# 1. Validates domain configuration
-# 2. Builds missing Docker images (--build = incremental build)
-#    Options: --build (missing only), --rebuild-all (all), --rebuild <prefix> (specific)
-# 3. Starts SABER server + required services
-# 4. Runs inspect_ai evaluation with configured agent
-# 5. Stops services when complete (with --stop-after flag)
+```bash
+# List available domains
+uv run inspect list tasks
+
+# Basic evaluation (server auto-starts and stays running)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4
+
+# Build images automatically before evaluation
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T build=true
+
+# Rebuild all images (clean slate)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T rebuild_all=true
+
+# Rebuild only server image
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T rebuild=server
+
+# Stop server after evaluation completes
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T stop_saber_after=true
+
+# Filter to specific tasks
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T task_filter="incident_5*"
+
+# Combine options
+uv run inspect eval domains/cybench --model openai/azure/gpt-4 \
+  -T build=true \
+  -T task_filter="labyrinth_*" \
+  --limit 5
+
+# Clean run with server cleanup
+uv run inspect eval domains/cybench --model openai/azure/gpt-4 \
+  -T rebuild_all=true \
+  -T stop_saber_after=true
 ```
+
+**What happens automatically:**
+1. Server validation and startup with health checks
+2. Docker image building (if `-T build=true` or rebuild flags)
+3. Task loading from SABER server
+4. Evaluation execution
+5. Server stays running for faster re-runs (use `-T stop_saber_after=true` to stop)
 
 ## 📚 Available Domains
 
@@ -110,9 +138,14 @@ uv run saber-domain test excytin \
 **Cybersecurity incident response with database forensics.**
 
 ```bash
-# Quick test run
-uv run saber-domain test excytin \
-  --build
+# Quick evaluation
+uv run inspect eval domains/excytin --model openai/azure/gpt-4
+
+# With image build and cleanup
+uv run inspect eval domains/excytin \
+  --model openai/azure/gpt-4 \
+  -T build=true \
+  -T stop_saber_after=true
 ```
 
 **Capabilities:**
@@ -128,9 +161,14 @@ uv run saber-domain test excytin \
 **Web application penetration testing and CTF scenarios.**
 
 ```bash
-# Quick test run
-uv run saber-domain test cybench \
-  --build
+# Quick evaluation
+uv run inspect eval domains/cybench --model openai/azure/gpt-4
+
+# With image build and task filtering
+uv run inspect eval domains/cybench \
+  --model openai/azure/gpt-4 \
+  -T build=true \
+  -T task_filter="labyrinth_*"
 ```
 
 **Capabilities:**
@@ -143,69 +181,96 @@ uv run saber-domain test cybench \
 
 ## 🛠️ Development Workflow
 
-### Domain CLI Commands
+### Evaluation Commands
 
-The `saber-domain` CLI provides comprehensive domain management:
+All domain operations use `inspect eval` with task parameters (`-T`) to control SABER behavior:
 
 ```bash
-# List available domains
-uv run saber-domain list --verbose
+# List available domains and tasks
+uv run inspect list tasks
 
-# Validate domain configuration
-uv run saber-domain validate excytin --verbose
+# Basic evaluation (server auto-starts and stays running)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4
 
-# Build domain images only
-uv run saber-domain build excytin
+# Build options (mutually exclusive):
+# 1. Incremental build - build only missing images (fastest)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T build=true
 
-# Build options:
-# (default)      - Build only missing images (incremental, fastest)
-# --rebuild-all  - Rebuild all images (clean slate)
-# --rebuild <prefix> - Rebuild specific images (e.g., server, cookie)
+# 2. Complete rebuild - rebuild all images (clean slate)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T rebuild_all=true
 
-# Start domain services (manual control)
-uv run saber-domain start excytin \
-  --rest-port 8000 \
-  --mcp-port 8001 \
-  --log-level DEBUG
+# 3. Selective rebuild - rebuild specific images by prefix
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T rebuild=server
+uv run inspect eval domains/cybench --model openai/azure/gpt-4 -T rebuild=cookie
 
-# Check domain status
-uv run saber-domain status
+# Server lifecycle management:
+# Keep running (default, faster re-runs)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4
 
-# Stop domain services
-uv run saber-domain stop excytin
+# Stop after evaluation
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T stop_saber_after=true
 
-# Test domain (automated: validate + build/rebuild + start + eval + optional stop)
-uv run saber-domain test excytin \
-  --saber-yaml domains/excytin/client/saber.yaml \
-  --build \
-  --stop-after  # Stop services after evaluation
+# Task filtering:
+# Filter to specific tasks (exact match)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T task_filter=incident_5_task_1
 
-# Build options for test command:
-# --build        - Build only missing images (incremental, fastest)
-# --rebuild-all  - Rebuild all images before testing
-# --rebuild <prefix> - Rebuild specific images (e.g., --rebuild server)
+# Filter with glob patterns
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T task_filter="incident_5_*"
+
+# Custom ports (for running multiple domains):
+uv run inspect eval domains/excytin \
+  --model openai/azure/gpt-4 \
+  -T rest_port=9000 \
+  -T mcp_port=9001
+
+# Combined options:
+uv run inspect eval domains/cybench \
+  --model openai/azure/gpt-4 \
+  -T rebuild=server \
+  -T task_filter="labyrinth_*" \
+  -T stop_saber_after=true \
+  --limit 5
 ```
 
-### Manual Evaluation Workflow
+### Programmatic Evaluation
 
-For more control over the evaluation process:
+For programmatic control, use the standard `inspect eval()` API:
+
+```python
+from inspect_ai import eval
+
+# Evaluate a domain task
+results = eval(
+    "domains/excytin",
+    model="openai/azure/gpt-4",
+    task_args={
+        "task_filter": "incident_5_*",
+        "build": True,
+        "stop_saber_after": False  # Keep server running
+    }
+)
+
+# Or import the task function directly
+from domains.excytin.excytin import excytin
+
+task = excytin(
+    task_filter="incident_5_task_1",
+    rest_port=8000,
+    mcp_port=8001,
+    build=True
+)
+
+results = eval(task, model="openai/azure/gpt-4")
+```
+
+### Viewing Results
 
 ```bash
-# 1. Start domain services
-uv run saber-domain start excytin --build
+# Inspect AI provides built-in log viewing
+uv run inspect view
 
-# 2. Run evaluation from client config
-uv run python -m saber.client run \
-  --config domains/excytin/client/saber.yaml
-
-# 3. View results
-uv run python -m saber.client inspect view \
-  --log-dir logs/client-logs \
-  --host 0.0.0.0 \
-  --port 7575
-
-# 4. Stop services when done
-uv run saber-domain stop excytin
+# View specific log file
+uv run inspect view logs/<timestamp>_excytin_<id>.eval
 ```
 
 ### Configuration Files
@@ -243,12 +308,12 @@ capabilities:
     privileged: false
 ```
 
-#### Client Configuration (`domains/*/client/saber.yaml`)
+**Client Configuration** (`domains/*/client/saber.yaml`):
 
 Configures agent behavior and evaluation parameters:
 
 ```yaml
-# Server connection (auto-hydrated by saber-domain test)
+# Server connection (auto-configured by inspect_ai task)
 server:
   mode: auto  # URLs injected at runtime
   client_id: "saber-client"
@@ -332,13 +397,12 @@ AZUREAI_OPENAI_API_KEY=your-key-here
 AZUREAI_OPENAI_BASE_URL=https://your-endpoint.openai.azure.com
 AZUREAI_OPENAI_API_VERSION=2024-12-01-preview
 
-# Domain Configuration (auto-generated by saber-domain CLI)
-DOMAIN=excytin
-DOMAINS_ROOT=/path/to/oss_saber/domains
-SERVER_IMAGE=saber/excytin/server:latest
-REST_PORT=8000
-MCP_PORT=8001
-LOG_LEVEL=INFO
+# Domain Configuration (auto-configured by inspect_ai task)
+# These are set via -T task parameters:
+#   -T rest_port=8000
+#   -T mcp_port=8001
+#   -T log_level=INFO
+# No environment variables needed for domain-specific settings
 ```
 
 ---
@@ -349,16 +413,19 @@ LOG_LEVEL=INFO
 
 ```bash
 # Use custom ports
-uv run saber-domain start excytin \
-  --rest-port 9000 \
-  --mcp-port 9001
+uv run inspect eval domains/excytin \
+  --model openai/azure/gpt-4 \
+  -T rest_port=9000 \
+  -T mcp_port=9001
 ```
 
 ### Docker Image Issues
 
 ```bash
 # Rebuild images from scratch
-uv run saber-domain build excytin
+uv run inspect eval domains/excytin \
+  --model openai/azure/gpt-4 \
+  -T rebuild_all=true
 
 # Check image existence
 docker images | grep saber/excytin
@@ -393,10 +460,10 @@ curl http://localhost:8001/tools  # Should list available tools
 
 ### Common Errors
 
-**"Domain not found"**
+**"Domain not found" or "Task not found"**
 ```bash
-# Verify domain exists
-uv run saber-domain list
+# List available tasks
+uv run inspect list tasks
 
 # Check domains directory structure
 ls -la domains/
@@ -405,7 +472,9 @@ ls -la domains/
 **"Image not found"**
 ```bash
 # Build domain images
-uv run saber-domain build excytin
+uv run inspect eval domains/excytin \
+  --model openai/azure/gpt-4 \
+  -T build=true
 ```
 
 **"Port already in use"**
@@ -414,7 +483,10 @@ uv run saber-domain build excytin
 lsof -i :8000
 
 # Use different ports
-uv run saber-domain start excytin --rest-port 9000 --mcp-port 9001
+uv run inspect eval domains/excytin \
+  --model openai/azure/gpt-4 \
+  -T rest_port=9000 \
+  -T mcp_port=9001
 ```
 
 **"Azure OpenAI authentication failed"**
@@ -441,9 +513,9 @@ print('✓ Connection successful')
 
 ### Quick Links
 
-- **[SABER Framework Documentation](external/saber/README.md)** - Core framework architecture
-- **[Domain CLI Reference](external/saber/src/saber/domain/README.md)** - Complete CLI documentation
-- **[Client Architecture](external/saber/docs/client/README.md)** - Agent integration patterns
+- **[SABER Framework Documentation](external/saber/README.md)** - Core framework architecture and inspect_ai integration
+- **[Excytin Demo Domain](external/saber/domains/excytin_demo/README.md)** - Example domain with incident response tasks
+- **[Inspect AI Sandboxing Documentation](external/inspect_ai/docs/sandboxing.qmd)** - SABER sandbox configuration guide
 - **[Server Architecture](external/saber/docs/server/)** - Server implementation details
 
 ### Architecture Documentation

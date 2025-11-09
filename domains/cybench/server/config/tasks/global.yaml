@@ -13,7 +13,7 @@ global_defaults:
         timeout: 180
 
   episode_config:
-    max_steps: 50
+    max_steps: 3
 
   benchmark_config:
-    episode_attempts: 2
+    episode_attempts: 10
