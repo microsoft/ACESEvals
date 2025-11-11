@@ -231,6 +231,19 @@ uv run inspect eval domains/cybench \
   -T stop_saber_after=true \
   --limit 5
 ```
+**Enable detailed logging for debugging:**
+
+The `INSPECT_LOG_LEVEL` environment variable is extremely helpful for debugging SABER evaluations:
+
+```bash
+# Enable detailed logging to see server communication, tool calls, and execution details
+INSPECT_LOG_LEVEL=info uv run inspect eval domains/excytin --model openai/gpt-4
+
+# Combine with other options for comprehensive debugging
+INSPECT_LOG_LEVEL=info uv run inspect eval domains/excytin \
+    --model openai/azure/gpt-4.1 \
+    -T max_concurrent_episodes=12 \
+    -T task_filter="incident_*"
 
 ### Programmatic Evaluation
 

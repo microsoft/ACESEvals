@@ -35,7 +35,11 @@ def excytin(**kwargs):
     Args:
         rest_port: REST API port (default: 8000)
         mcp_port: MCP API port (default: 8001)
-        task_filter: Optional task filter (exact match or glob pattern)
+        task_filter: Optional task filter (exact match, glob pattern, or comma-separated)
+            - Single exact: "xss_0_flag_capture"
+            - Single glob: "xss_*"
+            - Multiple patterns (OR logic): "xss_*,sql_*"
+            - Mixed: "xss_0_flag_capture,sql_*,cmd_*"
         log_level: Logging level for domain services (default: "INFO")
         build: Build missing images before starting (default: False)
         rebuild: Remove and rebuild images matching this prefix (e.g., 'server')
