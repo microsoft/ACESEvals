@@ -148,12 +148,6 @@ uv run inspect eval domains/excytin \
   -T stop_saber_after=true
 ```
 
-**Capabilities:**
-- Digital forensics investigation of compromised systems
-- SQL-based analysis of security logs and artifacts
-- Threat actor attribution and IOC extraction
-- Multi-table database correlation
-
 ---
 
 ### 2. CyBench - CTF Challenges
@@ -170,12 +164,6 @@ uv run inspect eval domains/cybench \
   -T build=true \
   -T task_filter="labyrinth_*"
 ```
-
-**Capabilities:**
-- Web application vulnerability assessment
-- SQL injection and XSS exploitation
-- Authentication bypass techniques
-- Network reconnaissance and enumeration
 
 ---
 
@@ -244,36 +232,6 @@ INSPECT_LOG_LEVEL=info uv run inspect eval domains/excytin \
     --model openai/azure/gpt-4.1 \
     -T max_concurrent_episodes=12 \
     -T task_filter="incident_*"
-
-### Programmatic Evaluation
-
-For programmatic control, use the standard `inspect eval()` API:
-
-```python
-from inspect_ai import eval
-
-# Evaluate a domain task
-results = eval(
-    "domains/excytin",
-    model="openai/azure/gpt-4",
-    task_args={
-        "task_filter": "incident_5_*",
-        "build": True,
-        "stop_saber_after": False  # Keep server running
-    }
-)
-
-# Or import the task function directly
-from domains.excytin.excytin import excytin
-
-task = excytin(
-    task_filter="incident_5_task_1",
-    rest_port=8000,
-    mcp_port=8001,
-    build=True
-)
-
-results = eval(task, model="openai/azure/gpt-4")
 ```
 
 ### Viewing Results
@@ -321,32 +279,6 @@ capabilities:
     privileged: false
 ```
 
-**Client Configuration** (`domains/*/client/saber.yaml`):
-
-Configures agent behavior and evaluation parameters:
-
-```yaml
-# Server connection (auto-configured by inspect_ai task)
-server:
-  mode: auto  # URLs injected at runtime
-  client_id: "saber-client"
-
-# Task selection
-tasks:
-  task_ids: ["incident_5_task_1"]  # Or ["*"] for all tasks
-
-# Agent configuration
-agents:
-  - id: "inspect_react"
-    model: "openai/azure/gpt-4.1"
-    tasks: ["incident_5_task_1"]
-
-# Execution settings
-log_level: "INFO"
-max_parallel_tasks: 2
-container_timeout: 300
-```
-
 #### Task Definitions (`domains/*/server/config/tasks/`)
 
 Define individual evaluation scenarios:
@@ -388,17 +320,7 @@ mkdir -p domains/my_domain/{server,client,docker}
 4. Create Dockerfiles in `docker/`
 5. Configure client in `client/saber.yaml`
 
-See [Domain Development Guide](docs/DOMAIN_DEVELOPMENT.md) *(coming soon)*
-
-### Custom Agent Integration
-
-SABER uses inspect_ai for agent integration. Create custom agents by:
-
-1. Implementing inspect_ai agent interface
-2. Configuring in `client/saber.yaml`
-3. Registering with agent manager
-
-See [Agent Integration Guide](external/saber/docs/client/README.md)
+See [Domain Development Guide](docs/DOMAIN_DEVELOPMENT.md)
 
 ### Environment Variables
 
