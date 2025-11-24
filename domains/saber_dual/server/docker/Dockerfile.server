@@ -1,0 +1,17 @@
+# SABER Server for SABER Dual Domain
+# Extends the generic SABER server base
+FROM saber/server:latest
+
+LABEL saber.domain="saber_dual"
+LABEL saber.component="server"
+LABEL saber.framework="dual-agent"
+
+# Copy domain-specific configuration
+COPY server/config/ /app/config/
+
+# Set domain-specific environment variables
+ENV SABER_DOMAIN=saber_dual
+ENV SABER_CONFIG_DIR=/app/config
+
+# Set domain-specific command
+CMD ["python", "-m", "saber.server", "--start", "--domain", "saber_dual"]

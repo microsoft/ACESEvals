@@ -1,0 +1,13 @@
+domain: saber_dual
+
+global_defaults:
+  execution_config:
+    executors:
+      bash:
+        timeout: 180
+
+  episode_config:
+    max_steps: 50
+
+  benchmark_config:
+    episode_attempts: 1

