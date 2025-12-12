@@ -1,0 +1,12 @@
+schemaVersion: 1.0.0
+providers:
+- provider: InventoryAsCode
+  version: 1.0.0
+  metadata:
+    isProduction: false
+    accountableOwners:
+      service: d64c33a9-ab10-4af5-94c7-e881e87a95d1
+    routing:
+      defaultAreaPath:
+        org: msecaimodels
+        path: Benchmarking
