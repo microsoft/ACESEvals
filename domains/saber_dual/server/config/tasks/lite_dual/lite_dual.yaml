@@ -11,8 +11,18 @@ tasks:
       instruction: "instructions/saber_dual_blue_team.md"
       assistant: "assistants/inspect_assistant.md"
       submit: "submits/blue_team_monitor.md"
+      continue: "continues/blue_team_continue.md"
 
     sandbox_environment: "blue_team_sandbox"
+
+    # Blue team enables pull to receive red team activity/injections
+    episode_config:
+      transcript_config:
+        websocket:
+          push:
+            enabled: true
+          pull:
+            enabled: true
 
     execution_config:
       executors:
@@ -93,6 +103,10 @@ tasks:
       instruction: "instructions/saber_dual_red_team.md"
       assistant: "assistants/inspect_assistant.md"
       submit: "submits/inspect_submit.md"
+      continue: "continues/red_team_continue.md"
+
+    # Red team uses default transcript_config (push enabled, pull disabled)
+    # Inherits from global.yaml
     
     initial_context:
       target_services:

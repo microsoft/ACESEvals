@@ -9,5 +9,15 @@ global_defaults:
   episode_config:
     max_steps: 50
 
+    # Transcript coordination configuration
+    # Default: push enabled, pull disabled (red team / single-agent behavior)
+    # Blue team tasks override pull.enabled=true to receive injections
+    transcript_config:
+      websocket:
+        push:
+          enabled: true
+        pull:
+          enabled: false
+
   benchmark_config:
     episode_attempts: 1

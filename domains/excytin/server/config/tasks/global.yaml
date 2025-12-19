@@ -7,6 +7,7 @@ global_defaults:
     instruction: "instructions/excytin_demo.md"
     assistant: "assistants/inspect_assistant.md"
     submit: "submits/inspect_submit.md"
+    continue: "continues/inspect_continue.md"
 
   execution_config:
     executors:
@@ -17,6 +18,15 @@ global_defaults:
 
   episode_config:
     max_steps: 15
+
+    # Transcript coordination configuration
+    # Single-agent tasks use default settings (push enabled, pull disabled)
+    transcript_config:
+      websocket:
+        push:
+          enabled: true
+        pull:
+          enabled: false
 
   benchmark_config:
     episode_attempts: 3
