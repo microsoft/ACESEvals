@@ -17,7 +17,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -47,7 +47,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -76,7 +76,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -105,7 +105,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -134,7 +134,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -163,7 +163,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -192,7 +192,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
@@ -221,7 +221,7 @@ services:
       interval: 20s
       timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 300s
     deploy:
       resources:
         limits:
