@@ -56,7 +56,7 @@ package = false
 
 [tool.uv.sources]
 saber = { path = "./external/saber", editable = true }
-inspect-ai = { path = "./external/inspect_ai", editable = true }
+inspect-ai = { git = "https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/inspect_ai", branch = "dev/saber_integration" }
 
 [dependency-groups]
 dev = [
