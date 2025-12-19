@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11, <3.14"
 
 [[package]]
@@ -421,14 +421,14 @@ wheels = [
 
 [[package]]
 name = "click"
-version = "8.3.0"
+version = "8.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/46/61/de6cd827efad202d7057d93e0fed9294b96952e188f7384832791c7b2254/click-8.3.0.tar.gz", hash = "sha256:e7b8232224eba16f4ebe410c25ced9f7875cb5f3263ffc93cc3e8da705e229c4", size = 276943, upload-time = "2025-09-18T17:32:23.696Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/6c/8ca2efa64cf75a977a0d7fac081354553ebe483345c734fb6b6515d96bbc/click-8.2.1.tar.gz", hash = "sha256:27c491cc05d968d271d5a1db13e3b5a184636d9d930f148c50b038f0d0646202", size = 286342, upload-time = "2025-05-20T23:19:49.832Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/d3/9dcc0f5797f070ec8edf30fbadfb200e71d9db6b84d211e3b2085a7589a0/click-8.3.0-py3-none-any.whl", hash = "sha256:9b9f285302c6e3064f4330c05f05b81945b2a39544279343e6e7c5f27a9baddc", size = 107295, upload-time = "2025-09-18T17:32:22.42Z" },
+    { url = "https://files.pythonhosted.org/packages/85/32/10bb5764d90a8eee674e9dc6f4db6a0ab47c8c4d0d83c27f7c39ac415a4d/click-8.2.1-py3-none-any.whl", hash = "sha256:61a3265b914e850b85317d0b3109c7f8cd35a670f963866005d6ef1d5175a12b", size = 102215, upload-time = "2025-05-20T23:19:47.796Z" },
 ]
 
 [[package]]
@@ -666,6 +666,15 @@ wheels = [
 ]
 
 [[package]]
+name = "frozendict"
+version = "2.4.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/b2/2a3d1374b7780999d3184e171e25439a8358c47b481f68be883c14086b4c/frozendict-2.4.7.tar.gz", hash = "sha256:e478fb2a1391a56c8a6e10cc97c4a9002b410ecd1ac28c18d780661762e271bd", size = 317082, upload-time = "2025-11-11T22:40:14.251Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/74/f94141b38a51a553efef7f510fc213894161ae49b88bffd037f8d2a7cb2f/frozendict-2.4.7-py3-none-any.whl", hash = "sha256:972af65924ea25cf5b4d9326d549e69a9a4918d8a76a9d3a7cd174d98b237550", size = 16264, upload-time = "2025-11-11T22:40:12.836Z" },
+]
+
+[[package]]
 name = "frozenlist"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -892,8 +901,7 @@ wheels = [
 
 [[package]]
 name = "inspect-ai"
-version = "0.3.130.dev322+g197f80e5"
-source = { git = "https://dev.azure.com/MSECAIModels/Benchmarking/_git/inspect_ai?branch=dev%2Fsaber_integration#197f80e50a5a904980681c39b2de3fb3b986b1fe" }
+source = { editable = "external/inspect_ai" }
 dependencies = [
     { name = "aioboto3" },
     { name = "aiohttp" },
@@ -903,6 +911,7 @@ dependencies = [
     { name = "click" },
     { name = "debugpy" },
     { name = "docstring-parser" },
+    { name = "frozendict" },
     { name = "fsspec" },
     { name = "httpx" },
     { name = "ijson" },
@@ -930,6 +939,107 @@ dependencies = [
     { name = "universal-pathlib" },
     { name = "zipp" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "aioboto3", specifier = ">=13.0.0" },
+    { name = "aiohttp", specifier = ">=3.9.0" },
+    { name = "anthropic", marker = "extra == 'dev'", specifier = ">=0.62.0" },
+    { name = "anyio", specifier = ">=4.8.0" },
+    { name = "azure-ai-inference", marker = "extra == 'dev'" },
+    { name = "azure-identity", marker = "extra == 'dev'" },
+    { name = "beautifulsoup4", specifier = ">=4.10.0" },
+    { name = "boto3" },
+    { name = "build", marker = "extra == 'dist'" },
+    { name = "click", specifier = ">=8.1.3,!=8.2.0,<8.2.2" },
+    { name = "click", marker = "extra == 'doc'", specifier = ">=8.2.0" },
+    { name = "debugpy" },
+    { name = "docstring-parser", specifier = ">=0.16" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'", specifier = ">=1.0.2" },
+    { name = "fastapi", marker = "extra == 'dev'" },
+    { name = "frozendict", specifier = ">=2.4.6" },
+    { name = "fsspec", specifier = ">=2023.1.0,<=2025.9.0" },
+    { name = "google-genai", marker = "extra == 'dev'" },
+    { name = "griffe", marker = "extra == 'dev'" },
+    { name = "griffe", marker = "extra == 'doc'" },
+    { name = "groq", marker = "extra == 'dev'" },
+    { name = "httpx" },
+    { name = "ijson", specifier = ">=3.2.0" },
+    { name = "inspect-scout", marker = "extra == 'dev'", specifier = ">=0.2.2" },
+    { name = "ipython", marker = "extra == 'dev'" },
+    { name = "jsonlines", specifier = ">=3.0.0" },
+    { name = "jsonpatch", specifier = ">=1.32" },
+    { name = "jsonpath-ng", specifier = ">=1.7.0" },
+    { name = "jsonpath-ng", marker = "extra == 'dev'" },
+    { name = "jsonref", specifier = ">=1.1.0" },
+    { name = "jsonschema", specifier = ">3.1.1" },
+    { name = "jupyter", marker = "extra == 'doc'" },
+    { name = "markdown", marker = "extra == 'dev'" },
+    { name = "markdown", marker = "extra == 'doc'" },
+    { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.10.0" },
+    { name = "mcp-server-fetch", marker = "extra == 'dev-mcp-tests'" },
+    { name = "mcp-server-git", marker = "extra == 'dev-mcp-tests'" },
+    { name = "mistralai", marker = "extra == 'dev'" },
+    { name = "mmh3", specifier = ">3.1.0" },
+    { name = "moto", extras = ["server"], marker = "extra == 'dev'" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.0" },
+    { name = "nbformat", marker = "extra == 'dev'" },
+    { name = "nest-asyncio" },
+    { name = "numpy" },
+    { name = "openai", marker = "extra == 'dev'" },
+    { name = "pandas", marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "pandas-stubs", marker = "extra == 'dev'" },
+    { name = "panflute", marker = "extra == 'dev'" },
+    { name = "panflute", marker = "extra == 'doc'" },
+    { name = "pip", marker = "extra == 'dev'" },
+    { name = "platformdirs", specifier = ">=2.3.0" },
+    { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "psutil" },
+    { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=10.0.1" },
+    { name = "pyarrow-stubs", marker = "extra == 'dev'" },
+    { name = "pydantic", specifier = ">=2.11.4" },
+    { name = "pylint", marker = "extra == 'dev'" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'" },
+    { name = "pytest-cov", marker = "extra == 'dev'" },
+    { name = "pytest-dotenv", marker = "extra == 'dev'" },
+    { name = "pytest-mock", marker = "extra == 'dev'" },
+    { name = "pytest-watcher", marker = "extra == 'dev'" },
+    { name = "pytest-xdist", marker = "extra == 'dev'" },
+    { name = "python-dotenv", specifier = ">=0.16.0" },
+    { name = "pyyaml" },
+    { name = "quarto-cli", marker = "extra == 'doc'", specifier = "==1.7.32" },
+    { name = "rich", specifier = ">=13.3.3,!=14.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = "==0.9.6" },
+    { name = "s3fs", specifier = ">=2023" },
+    { name = "semver", specifier = ">=3.0.0" },
+    { name = "shortuuid" },
+    { name = "sniffio" },
+    { name = "tenacity" },
+    { name = "textual", specifier = ">=2.1.0" },
+    { name = "textual-dev", marker = "extra == 'dev'", specifier = ">=0.86.2" },
+    { name = "together", marker = "extra == 'dev'" },
+    { name = "trio", marker = "extra == 'dev'" },
+    { name = "twine", marker = "extra == 'dist'" },
+    { name = "types-aioboto3", marker = "extra == 'dev'" },
+    { name = "types-beautifulsoup4", marker = "extra == 'dev'" },
+    { name = "types-boto3", marker = "extra == 'dev'" },
+    { name = "types-botocore", marker = "extra == 'dev'" },
+    { name = "types-grpcio", marker = "extra == 'dev'" },
+    { name = "types-jsonpatch", marker = "extra == 'dev'" },
+    { name = "types-jsonschema", marker = "extra == 'dev'" },
+    { name = "types-markdown", marker = "extra == 'dev'" },
+    { name = "types-protobuf", marker = "extra == 'dev'" },
+    { name = "types-psutil", marker = "extra == 'dev'" },
+    { name = "types-python-dateutil", marker = "extra == 'dev'" },
+    { name = "types-pyyaml", marker = "extra == 'dev'" },
+    { name = "typing-extensions", specifier = ">=4.9.0" },
+    { name = "universal-pathlib", specifier = ">=0.2.6" },
+    { name = "uvicorn", marker = "extra == 'dev'" },
+    { name = "xai-sdk", marker = "extra == 'dev'" },
+    { name = "zipp", specifier = ">=3.19.1" },
+]
+provides-extras = ["dev", "dev-mcp-tests", "doc", "dist"]
 
 [[package]]
 name = "isort"
@@ -1610,6 +1720,7 @@ name = "oss-saber"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "inspect-ai" },
     { name = "saber" },
 ]
 
@@ -1630,6 +1741,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
+    { name = "inspect-ai", editable = "external/inspect_ai" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
@@ -2327,7 +2439,7 @@ requires-dist = [
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "httpx", specifier = ">=0.24.0" },
     { name = "httpx-sse", specifier = ">=0.4.0" },
-    { name = "inspect-ai", git = "https://dev.azure.com/MSECAIModels/Benchmarking/_git/inspect_ai?branch=dev%2Fsaber_integration" },
+    { name = "inspect-ai", editable = "external/inspect_ai" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
@@ -2337,6 +2449,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.10.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.28.0" },
