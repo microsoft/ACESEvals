@@ -1,0 +1,55 @@
+domain: cti_realm
+permanent_environment: cti_realm_services
+
+global_defaults:
+  prompts:
+    instruction: "instructions/cti_realm.md"
+    assistant: "assistants/inspect_assistant.md"
+    submit: "submits/inspect_submit.md"
+    continue: "continues/inspect_continue.md"
+
+  execution_config:
+    executors:
+      bash:
+        timeout: 180
+      python:
+        timeout: 180
+      search_sigma_rules:
+        timeout: 120
+      search_mitre_techniques:
+        timeout: 120
+      list_kusto_tables:
+        timeout: 120
+      get_table_schema:
+        timeout: 120
+      sample_table_data:
+        timeout: 120
+      execute_kql_query:
+        timeout: 120
+      list_cti_report_tags:
+        timeout: 120
+      get_cti_reports_by_tag:
+        timeout: 120
+      validate_output_json:
+        timeout: 120
+
+  episode_config:
+    max_steps: 30
+
+    # Transcript coordination configuration
+    # Single-agent tasks use default settings (push enabled, pull disabled)
+    transcript_config:
+      websocket:
+        push:
+          enabled: true
+        pull:
+          enabled: false
+
+  benchmark_config:
+    episode_attempts: 1
+
+  # Dependency resolution configuration
+  dependency_config:
+    wait_seconds: 30.0               # Maximum time to wait for episode dependencies
+    retry_interval: 1.0              # Initial retry interval in seconds
+    max_retry_interval: 5.0          # Maximum retry interval for exponential backoff

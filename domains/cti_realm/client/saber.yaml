@@ -1,0 +1,47 @@
+# SABER Configuration - CTI Realm Domain
+# Auto-hydrated configuration for saber-domain test command
+#
+# This file is used by the SABER client to connect to the CTI Realm domain server
+# and execute threat intelligence analysis evaluations.
+
+# Server configuration (auto mode - URLs injected at runtime)
+server:
+  mode: auto  # URLs will be hydrated by saber-domain test command
+  client_id: "saber-client"
+
+# Agent configuration
+agents:
+  default: react
+
+# Logging configuration
+logging:
+  enabled: true  # Enable automatic upload of eval log files to server
+  upload_on_completion: true
+
+# CTI Realm specific configuration
+domain:
+  name: "cti_realm"
+  description: "Cyber Threat Intelligence Detection Rule Development"
+
+# Task selection and filtering
+tasks:
+  enabled: true
+  # task_filter: "cti_*"  # Uncomment to filter specific tasks
+
+# Evaluation configuration
+evaluation:
+  max_attempts: 1
+  timeout_seconds: 1800  # 30 minutes per task
+
+# Tool configuration for CTI analysis
+tools:
+  # Enable CTI-specific tools
+  cti_analysis: true
+  kusto_access: true
+  mitre_api: true
+  sigma_tools: true
+
+# Network and connectivity
+network:
+  kusto_cluster_url: "auto"  # Auto-configured by domain
+  mitre_service_url: "auto"  # Auto-configured by domain

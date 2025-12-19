@@ -1,0 +1,64 @@
+# SABER Sandbox for CTI Realm domain
+# CTI analysis environment with Kusto client and security tools
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3-pip \
+    curl \
+    wget \
+    jq \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Azure CLI
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# Install Python dependencies for CTI analysis
+RUN pip3 install --no-cache-dir \
+    azure-kusto-data \
+    azure-kusto-ingest \
+    azure-identity \
+    pysigma \
+    requests \
+    httpx \
+    pyyaml \
+    jsonschema \
+    pandas \
+    stix2
+
+# Copy CTI Realm tools and data
+COPY server/data/core/ /opt/cti_realm/core/
+COPY server/docker/sandbox_tools/ /opt/cti_realm/tools/
+COPY server/data/cti_reports/ /opt/cti_realm/data/cti_reports/
+COPY server/docker/kusto_init/ /opt/cti_realm/data/kusto_init/
+ENV PYTHONPATH="/opt/cti_realm:/opt/cti_realm/tools:$PYTHONPATH"
+
+# Create non-root user for SABER sandbox
+RUN useradd -m -u 1001 -s /bin/bash saber
+
+# Create working directories
+RUN mkdir -p /workspace/input /workspace/output /workspace/.cache && \
+    chown -R saber:saber /workspace
+
+# Set up environment for SABER
+ENV PYTHONPATH=/workspace:/opt/cti_realm
+ENV HOME=/workspace
+ENV USER=saber
+
+# Domain-specific labels
+LABEL saber.domain="cti_realm"
+LABEL saber.component="sandbox"
+LABEL saber.scenario="threat-intelligence"
+
+# Switch to non-root user
+USER saber
+WORKDIR /workspace
+
+# Default command for SABER sandbox
+CMD ["tail", "-f", "/dev/null"]

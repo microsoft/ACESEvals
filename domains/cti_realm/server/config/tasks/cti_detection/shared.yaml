@@ -1,0 +1,17 @@
+# Shared configuration for all cti_detection tasks
+# This configuration will be merged into all tasks in this directory
+
+sandbox_environment: "cti_realm_sandbox"
+
+initial_context:
+  kusto_connection:
+    cluster_url: "http://saber-cti-kusto-emulator:8080"
+    database: "NetDefaultDB"
+    connection_example: "Use the kusto_query tool to execute KQL queries"
+
+  mitre_service:
+    url: "http://saber-cti-mitre-service:8081"
+    endpoints:
+      - "/techniques" # Get MITRE ATT&CK techniques
+      - "/groups" # Get threat actor groups
+      - "/software" # Get malware/tool information
