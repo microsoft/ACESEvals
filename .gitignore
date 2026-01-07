@@ -203,3 +203,6 @@ pip-delete-this-directory.txt
 # Ignore .cache and .local for client startups
 .cache/
 .local/
+
+# Local copies of external tools (not submodules)
+external/inspect_ai/

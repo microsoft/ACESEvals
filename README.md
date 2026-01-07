@@ -4,18 +4,6 @@
 
 SABER is a modern distributed system for benchmarking AI security agents using the inspect_ai framework with Model Context Protocol (MCP) integration. This repository contains open-source security domains for penetration testing, incident response, and multi-agent coordination scenarios.
 
----
-
-## 🎯 What is SABER?
-
-SABER evaluates autonomous AI agents against realistic cybersecurity challenges:
-
-- **🔐 Security Domains**: Penetration testing, incident response, threat hunting
-- **🤖 Agent Evaluation**: Multi-step workflows with real-world security tools
-- **🐳 Isolated Execution**: Docker sandbox environments with secure command validation
-- **📊 MCP Integration**: Industry-standard Model Context Protocol for tool communication
-- **⚡ Modern Architecture**: Async Python with fail-fast design and type safety
-
 ### Architecture Overview
 
 ```
@@ -49,7 +37,7 @@ Each domain contains:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -189,7 +177,7 @@ uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T rebuild_all=tr
 
 # 3. Selective rebuild - rebuild specific images by prefix
 uv run inspect eval domains/excytin --model openai/azure/gpt-4 -T rebuild=server
-uv run inspect eval domains/cybench --model openai/azure/gpt-4 -T rebuild=cookie
+uv run inspect eval domains/cybench --model openai/azure/gpt-4 -T rebuild=labryinth
 
 # Server lifecycle management:
 # Keep running (default, faster re-runs)
@@ -218,6 +206,23 @@ uv run inspect eval domains/cybench \
   -T task_filter="labyrinth_*" \
   -T stop_saber_after=true \
   --limit 5
+
+# Concurrency control:
+# --max-connections: Limits concurrent API calls to the LLM (default 10)
+#                    Use this to avoid rate limiting from your model provider
+# --max-samples:     Limits how many samples/episodes run in parallel (default 8)
+#                    Each sample is an independent evaluation episode
+
+# Reduce LLM API concurrency (useful for rate-limited endpoints)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 --max-connections 5
+
+# Run samples sequentially (one at a time)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 --max-samples 1
+
+# Run 4 samples in parallel with 20 concurrent LLM connections
+uv run inspect eval domains/excytin --model openai/azure/gpt-4 \
+  --max-samples 4 \
+  --max-connections 20
 ```
 **Enable detailed logging for debugging:**
 
@@ -230,7 +235,7 @@ INSPECT_LOG_LEVEL=info uv run inspect eval domains/excytin --model openai/gpt-4
 # Combine with other options for comprehensive debugging
 INSPECT_LOG_LEVEL=info uv run inspect eval domains/excytin \
     --model openai/azure/gpt-4.1 \
-    -T max_concurrent_episodes=12 \
+    --max-samples 12 \
     -T task_filter="incident_*"
 ```
 
@@ -306,7 +311,7 @@ global_defaults:
 
 ---
 
-## 🔧 Advanced Topics
+## Advanced Topics
 
 ### Building Custom Domains
 
@@ -321,38 +326,6 @@ mkdir -p domains/my_domain/{server,client,docker}
 5. Configure client in `client/saber.yaml`
 
 See [Domain Development Guide](docs/DOMAIN_DEVELOPMENT.md)
-
-### Environment Variables
-
-Key environment variables (auto-configured by CLI):
-
-```bash
-# LLM Configuration (required in .env)
-AZUREAI_OPENAI_API_KEY=your-key-here
-AZUREAI_OPENAI_BASE_URL=https://your-endpoint.openai.azure.com
-AZUREAI_OPENAI_API_VERSION=2024-12-01-preview
-
-# Domain Configuration (auto-configured by inspect_ai task)
-# These are set via -T task parameters:
-#   -T rest_port=8000
-#   -T mcp_port=8001
-#   -T log_level=INFO
-# No environment variables needed for domain-specific settings
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Port Conflicts
-
-```bash
-# Use custom ports
-uv run inspect eval domains/excytin \
-  --model openai/azure/gpt-4 \
-  -T rest_port=9000 \
-  -T mcp_port=9001
-```
 
 ### Docker Image Issues
 
@@ -378,86 +351,3 @@ docker logs saber-excytin-server
 # Check server health
 curl http://localhost:8000/health
 ```
-
-### Agent Evaluation Issues
-
-```bash
-# Enable debug logging
-# Edit domains/*/client/saber.yaml:
-log_level: "DEBUG"
-
-# Check agent logs
-tail -f logs/client-logs/*/saber_client.log
-
-# Verify MCP connection
-curl http://localhost:8001/tools  # Should list available tools
-```
-
-### Common Errors
-
-**"Domain not found" or "Task not found"**
-```bash
-# List available tasks
-uv run inspect list tasks
-
-# Check domains directory structure
-ls -la domains/
-```
-
-**"Image not found"**
-```bash
-# Build domain images
-uv run inspect eval domains/excytin \
-  --model openai/azure/gpt-4 \
-  -T build=true
-```
-
-**"Port already in use"**
-```bash
-# Find process using port
-lsof -i :8000
-
-# Use different ports
-uv run inspect eval domains/excytin \
-  --model openai/azure/gpt-4 \
-  -T rest_port=9000 \
-  -T mcp_port=9001
-```
-
-**"Azure OpenAI authentication failed"**
-```bash
-# Verify credentials in .env
-cat .env
-
-# Test connection
-uv run python -c "
-from openai import AzureOpenAI
-import os
-client = AzureOpenAI(
-    api_key=os.getenv('AZUREAI_OPENAI_API_KEY'),
-    api_version=os.getenv('AZUREAI_OPENAI_API_VERSION'),
-    azure_endpoint=os.getenv('AZUREAI_OPENAI_BASE_URL')
-)
-print('✓ Connection successful')
-"
-```
-
----
-
-## 📖 Documentation
-
-### Quick Links
-
-- **[SABER Framework Documentation](external/saber/README.md)** - Core framework architecture and inspect_ai integration
-- **[Excytin Demo Domain](external/saber/domains/excytin_demo/README.md)** - Example domain with incident response tasks
-- **[Inspect AI Sandboxing Documentation](external/inspect_ai/docs/sandboxing.qmd)** - SABER sandbox configuration guide
-- **[Server Architecture](external/saber/docs/server/)** - Server implementation details
-
-### Architecture Documentation
-
-- **System Overview**: Modern async architecture with inspect_ai integration
-- **Client-Server Protocol**: REST API for session management, MCP for tool execution
-- **Docker Sandbox**: Secure command execution with allowlist validation
-- **Episode Management**: Stateful task execution with resource cleanup
-
----
