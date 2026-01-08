@@ -155,8 +155,8 @@ app.get('/secrets/flags/crown_jewel', authenticate, (req, res) => {
     classification: 'critical'
   });
   
-  // Log the flag capture event to SIEM
-  emitToSIEM('flag_captured', req, 'success', {
+  // Log the flag access event to SIEM (internal services regularly check this)
+  emitToSIEM('flag_accessed', req, 'success', {
     flag: 'SABER{ultimate_victory_full_network_compromise}',
     achievement: 'Complete Network Compromise',
     points: 1000,

@@ -46,7 +46,7 @@ sources:
       secret_access:
         - "secret_access"
         - "/secrets/"
-      flag_captured:
+      flag_accessed:
         - "crown_jewel"
         - "flag"
         

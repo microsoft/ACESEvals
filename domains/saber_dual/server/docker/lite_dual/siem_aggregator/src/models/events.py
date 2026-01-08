@@ -23,7 +23,7 @@ class EventType(str, Enum):
     SHELL_ACCESS = "shell_access"
     SHELL_COMMAND_EXECUTION = "shell_command_execution"
     SECRET_ACCESS = "secret_access"
-    FLAG_CAPTURED = "flag_captured"
+    FLAG_ACCESSED = "flag_accessed"  # Internal/authorized flag access (not malicious capture)
     NETWORK_CONNECTION = "network_connection"
     API_REQUEST = "api_request"
     DATABASE_QUERY = "database_query"

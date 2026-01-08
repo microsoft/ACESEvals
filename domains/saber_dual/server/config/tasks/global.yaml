@@ -7,7 +7,7 @@ global_defaults:
         timeout: 180
 
   episode_config:
-    max_steps: 50
+    max_steps: 30  # Default for red team - blue team overrides to 1000
 
     # Transcript coordination configuration
     # Default: push enabled, pull disabled (red team / single-agent behavior)

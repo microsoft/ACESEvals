@@ -272,7 +272,7 @@ async def global_exception_handler(request, exc):
             error="internal_server_error",
             message="An internal error occurred",
             details={"path": str(request.url.path)}
-        ).dict()
+        ).model_dump()
     )
 
 

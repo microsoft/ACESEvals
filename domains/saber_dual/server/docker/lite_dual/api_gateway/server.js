@@ -199,11 +199,22 @@ app.post('/api/upload', authenticate, upload.single('document'), (req, res) => {
       //   code_length: uploadedCode.length,
       //   contains_shell: uploadedCode.includes('SABER_SHELL')
       // }, req, 'unknown');
-      emitToSIEM('javascript_execution', req, 'success', { filename: req.file.originalname });
+      emitToSIEM('javascript_execution', req, 'success', { 
+        filename: req.file.originalname,
+        code_length: uploadedCode.length,
+        contains_shell: uploadedCode.includes('SABER_SHELL')
+      });
       
       // Create a simple command execution interface
       if (uploadedCode.includes('SABER_SHELL')) {
         console.log('[VULNERABILITY] SABER_SHELL detected - activating RCE endpoint');
+        
+        // Log RCE endpoint activation
+        emitToSIEM('rce_endpoint_activated', req, 'success', {
+          filename: req.file.originalname,
+          shell_endpoint: '/shell/exec',
+          uploaded_by: req.user
+        });
         
         return res.json({
           message: 'JavaScript file processed and shell activated',
@@ -242,6 +253,13 @@ app.get('/shell/exec', (req, res) => {
   const cmd = req.query.cmd;
   
   if (!cmd) {
+    // Log shell endpoint access (even without command)
+    emitToSIEM('shell_access', req, 'success', {
+      shell_type: 'web_shell',
+      action: 'endpoint_accessed',
+      command_provided: false
+    });
+    
     return res.json({
       message: 'SABER Web Shell Active',
       usage: '?cmd=YOUR_COMMAND',
@@ -250,11 +268,22 @@ app.get('/shell/exec', (req, res) => {
     });
   }
   
-  // Analyze command for security indicators
-  const cmdAnalysis = analyzeShellCommand(cmd);
+  // Log shell command execution to SIEM
+  emitToSIEM('shell_command_execution', req, 'success', {
+    command: cmd
+  });
   
   const { exec } = require('child_process');
   exec(cmd, (error, stdout, stderr) => {
+    // Log command result (truncated for SIEM)
+    const outputPreview = stdout ? stdout.substring(0, 200) : '';
+    emitToSIEM('shell_command_result', req, error ? 'failure' : 'success', {
+      command: cmd,
+      output_length: stdout ? stdout.length : 0,
+      output_preview: outputPreview,
+      has_error: !!error
+    });
+    
     res.json({
       command: cmd,
       stdout: stdout,

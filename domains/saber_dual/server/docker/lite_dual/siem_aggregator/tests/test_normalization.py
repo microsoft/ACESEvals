@@ -52,7 +52,7 @@ class TestEventNormalization:
     def test_event_type_enum(self):
         """Test event type enumeration"""
         assert EventType.AUTH_ATTEMPT == "auth_attempt"
-        assert EventType.FLAG_CAPTURED == "flag_captured"
+        assert EventType.FLAG_ACCESSED == "flag_accessed"
         assert EventType.SECRET_ACCESS == "secret_access"
     
     def test_event_source_enum(self):

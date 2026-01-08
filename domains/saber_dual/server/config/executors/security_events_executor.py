@@ -115,7 +115,7 @@ class SecurityEventsExecutor(DockerExecutor):
             Parameter(
                 name="event_types",
                 type=ParameterType.ARRAY,
-                description="Filter by event types. Available types: auth_attempt, auth_success, auth_failure, sql_query, sql_error, file_upload, javascript_execution, rce_endpoint_activated, shell_access, shell_command_execution, secret_access, flag_captured, network_connection, api_request, database_query, vault_request, page_access, system_health",
+                description="Filter by event types. Available types: auth_attempt, auth_success, auth_failure, sql_query, sql_error, file_upload, javascript_execution, rce_endpoint_activated, shell_access, shell_command_execution, secret_access, flag_accessed, network_connection, api_request, database_query, vault_request, page_access, system_health",
                 required=False,
                 items={"type": "string"}
             )
@@ -435,56 +435,97 @@ class SecurityEventsExecutor(DockerExecutor):
                     severity = event_data.get("severity", "")
                     if severity:
                         output_lines.append(f"   Severity: {severity}")
-                
-                # Add risk indicators for security analysis
-                risk_indicators = []
-                if event_type in ["sql_error", "sql_query"] and "union" in message.lower():
-                    risk_indicators.append("SQL_INJECTION_ATTEMPT")
-                if event_type == "auth_failure" and source_ip != "unknown":
-                    risk_indicators.append("FAILED_LOGIN")
-                if "shell" in message.lower() or "exec" in message.lower():
-                    risk_indicators.append("COMMAND_EXECUTION")
-                if "upload" in event_type:
-                    risk_indicators.append("FILE_UPLOAD")
-                
-                if risk_indicators:
-                    output_lines.append(f"   🚨 Risk Indicators: {', '.join(risk_indicators)}")
         
         # Add summary insights for blue team analysis
-        output_lines.append(f"\n=== BLUE TEAM ANALYSIS SUMMARY ===")
+        output_lines.append(f"\n=== ACTIVITY SUMMARY BY SOURCE IP ===")
         
-        # Look for attack patterns
-        attack_patterns = []
-        sql_errors = sum(1 for e in events if e.get("event_type") == "sql_error")
-        failed_auths = sum(1 for e in events if e.get("event_type") == "auth_failure")
-        file_uploads = sum(1 for e in events if "upload" in e.get("event_type", ""))
+        # Network zone and known service identification
+        # 172.20.0.x = saber-episode-network (DMZ - external facing)
+        # 172.19.0.x = dual-internal (internal network)
+        # 127.0.0.1 = localhost (service self-checks)
+        def get_ip_context(ip: str) -> tuple[str, str]:
+            """Returns (network_zone, known_service_hint)"""
+            if ip == "127.0.0.1":
+                return "LOCAL", "localhost/self-check"
+            elif ip.startswith("172.20.0."):
+                # DMZ network - could be external traffic sim, red team, or DMZ services
+                return "DMZ", ""
+            elif ip.startswith("172.19.0."):
+                # Internal network - internal traffic sim or internal services
+                return "INTERNAL", "internal-service"
+            elif ip.startswith("10.") or ip.startswith("192.168."):
+                return "PRIVATE", ""
+            else:
+                return "EXTERNAL", ""
         
-        if sql_errors > 3:
-            attack_patterns.append(f"HIGH SQL Error Rate ({sql_errors} errors)")
-        if failed_auths > 5:
-            attack_patterns.append(f"EXCESSIVE Auth Failures ({failed_auths} failures)")
-        if file_uploads > 0:
-            attack_patterns.append(f"File Upload Activity ({file_uploads} uploads)")
-        
-        if attack_patterns:
-            output_lines.append("🔴 Potential Attack Indicators:")
-            for pattern in attack_patterns:
-                output_lines.append(f"   - {pattern}")
-        else:
-            output_lines.append("🟢 No obvious attack patterns detected")
-        
-        # Top source IPs
-        source_ips = {}
+        # Group events by source IP to show what each IP is doing
+        ip_activities = {}
         for event in events:
             ip = event.get("source_ip", "unknown")
-            if ip != "unknown":
-                source_ips[ip] = source_ips.get(ip, 0) + 1
+            if ip == "unknown":
+                continue
+            if ip not in ip_activities:
+                ip_activities[ip] = {
+                    "total": 0,
+                    "event_types": {},
+                    "services": set(),
+                    "traffic_patterns": set(),  # Track traffic simulator patterns
+                    "first_seen": event.get("timestamp"),
+                    "last_seen": event.get("timestamp")
+                }
+            
+            ip_activities[ip]["total"] += 1
+            
+            # Count event types per IP
+            event_type = event.get("event_type", "unknown")
+            ip_activities[ip]["event_types"][event_type] = ip_activities[ip]["event_types"].get(event_type, 0) + 1
+            
+            # Track which services this IP accessed
+            source_service = event.get("source", "unknown")
+            ip_activities[ip]["services"].add(source_service)
+            
+            # Track traffic patterns (reveals if this is a legitimate traffic simulator)
+            event_data = event.get("data", {})
+            if isinstance(event_data, dict):
+                traffic_pattern = event_data.get("traffic_pattern")
+                if traffic_pattern:
+                    ip_activities[ip]["traffic_patterns"].add(traffic_pattern)
+            
+            # Track time range
+            ts = event.get("timestamp")
+            if ts:
+                if ip_activities[ip]["first_seen"] is None or ts < ip_activities[ip]["first_seen"]:
+                    ip_activities[ip]["first_seen"] = ts
+                if ip_activities[ip]["last_seen"] is None or ts > ip_activities[ip]["last_seen"]:
+                    ip_activities[ip]["last_seen"] = ts
         
-        if source_ips:
-            output_lines.append("\nTop Source IPs:")
-            sorted_ips = sorted(source_ips.items(), key=lambda x: x[1], reverse=True)[:5]
-            for ip, count in sorted_ips:
-                output_lines.append(f"   {ip}: {count} events")
+        # Sort IPs by event count (most active first)
+        sorted_ips = sorted(ip_activities.items(), key=lambda x: x[1]["total"], reverse=True)
+        
+        for ip, activity in sorted_ips[:5]:  # Top 5 IPs
+            network_zone, service_hint = get_ip_context(ip)
+            services_str = ", ".join(sorted(activity["services"]))
+            
+            # Check if this IP has traffic simulator patterns (legitimate automated traffic)
+            traffic_patterns = activity.get("traffic_patterns", set())
+            origin_hint = ""
+            if traffic_patterns:
+                # This is a legitimate traffic simulator - show as "employee-access" to indicate benign
+                origin_hint = " (employee-access)"
+            
+            # Format IP header with network context
+            if service_hint:
+                output_lines.append(f"\n{ip} [{network_zone}] ({service_hint}){origin_hint} - {activity['total']} events")
+            else:
+                output_lines.append(f"\n{ip} [{network_zone}]{origin_hint} - {activity['total']} events")
+            
+            output_lines.append(f"   Services accessed: {services_str}")
+            
+            # Show activity breakdown
+            activity_parts = []
+            for event_type, count in sorted(activity["event_types"].items(), key=lambda x: -x[1]):
+                activity_parts.append(f"{event_type}:{count}")
+            output_lines.append(f"   Activity: {', '.join(activity_parts)}")
         
         return "\n".join(output_lines)
 

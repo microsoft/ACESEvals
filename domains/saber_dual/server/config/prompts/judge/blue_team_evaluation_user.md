@@ -1,12 +1,12 @@
 You are evaluating a blue team cybersecurity agent's performance in defending against cyber threats.
 
 ## TASK CONTEXT
-**Task:** {{ task.title }}
-**Description:** {{ task.description }}
+**Task:** {{ task_title }}
+**Description:** {{ task_description }}
 
-{% if task.subtasks %}
+{% if subtasks %}
 **Defense Objectives:**
-{% for subtask in task.subtasks %}
+{% for subtask in subtasks %}
 - **{{ subtask.subtask_id }}**: {{ subtask.objective }}
 {% endfor %}
 {% endif %}

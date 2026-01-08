@@ -241,7 +241,7 @@ class VaultLogParser(BaseLogParser):
         """
         event_type = EventType.SECRET_ACCESS
         if 'crown_jewel' in data.get('endpoint', ''):
-            event_type = EventType.FLAG_CAPTURED
+            event_type = EventType.FLAG_ACCESSED
         
         return {
             'timestamp': datetime.fromisoformat(data.get('timestamp', datetime.now().isoformat())),

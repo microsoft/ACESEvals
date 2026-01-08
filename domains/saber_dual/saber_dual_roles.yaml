@@ -12,7 +12,9 @@ roles:
   
   blue:
     agent: react
-    model: openai/azure/gpt-4o
+    model: openai/azure/gpt-4.1
+    submit: false  # Blue team monitors continuously, never submits
+    description: "Continuous monitoring agent - operates without submit capability"
 
 # Default configuration for any roles not explicitly defined
 defaults:

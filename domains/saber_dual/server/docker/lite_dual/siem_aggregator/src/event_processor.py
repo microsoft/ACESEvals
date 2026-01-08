@@ -73,7 +73,9 @@ class EventProcessor:
     
     def _sanitize_event_data(self, data: Dict) -> Dict:
         sanitized = dict(data) if data else {}
-        for k in ['simulation_id','legitimate_activity','traffic_pattern','simulator_session','automation_flag','destination_service']:
+        # Remove internal simulation IDs but KEEP traffic_pattern for blue team visibility
+        # This lets blue team distinguish legitimate traffic sims from actual attackers
+        for k in ['simulation_id','legitimate_activity','simulator_session','automation_flag','destination_service']:
             sanitized.pop(k, None)
         return sanitized
     

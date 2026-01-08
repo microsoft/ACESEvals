@@ -16,14 +16,16 @@ tasks:
 
     sandbox_environment: "blue_team_sandbox"
 
-    # Blue team enables pull to receive red team activity/injections
+    # Blue team gets large budget for continuous monitoring
+    # Uses standard continue prompts for autonomous monitoring (pull mode disabled)
     episode_config:
+      max_steps: 1000
       transcript_config:
         websocket:
           push:
             enabled: true
           pull:
-            enabled: true
+            enabled: false
 
     execution_config:
       executors:
@@ -60,22 +62,12 @@ tasks:
           description: "SIEM event aggregation service"
           example_request: "curl http://siem-aggregator:8080/api/events"
 
-    submission_evaluation_config:
-      strategy: llm_judge
-      criteria:
-        model: openai/azure/gpt-4.1
-        judge_system_template: judge/blue_team_evaluation_system.md
-        judge_user_template: judge/blue_team_evaluation_user.md
-      scoring:
-        max_score: 1.0
+    # Blue team doesn't submit (continuous monitor) - no submission_evaluation_config needed
+    # SABER defaults to "none" strategy with 0 score when submission_evaluation_config is missing
+    # Score comes entirely from step_evaluation_config based on defensive actions
 
-    step_evaluation_config:
-      strategy: llm_judge
-      criteria:
-        model: openai/azure/gpt-4.1
-        judge_system_template: judge/blue_team_evaluation_system.md
-        judge_user_template: judge/blue_team_evaluation_user.md
-        steps_per_message: 10
+    # Use blue_team_defense custom scorer that analyzes block_ip/isolate_container tool calls
+    # Awards points for correctly blocking attackers, deducts for blocking legitimate traffic (false positives)
 
     subtasks:
       - subtask_id: "detection_phase"
@@ -83,16 +75,22 @@ tasks:
         description: "Monitor logs and network traffic to identify signs of malicious activity and security incidents."
         objective: "Successfully detect suspicious authentication attempts, SQL injection patterns, and unauthorized network access."
         scoring:
-          max_score: 1.0
+          max_score: 0.5
           weight: 0.50
+        step_evaluation_config:
+          strategy: blue_team_defense
+          criteria: {}
 
       - subtask_id: "response_phase"
         title: "Incident Response & Containment"
         description: "Implement containment measures and coordinate response to identified security incidents."
         objective: "Successfully implement firewall rules, isolate compromised systems, and coordinate incident response activities."
         scoring:
-          max_score: 1.0
+          max_score: 0.5
           weight: 0.50
+        step_evaluation_config:
+          strategy: blue_team_defense
+          criteria: {}
   
   - task_id: "saber_dual_red_team"
     role: red  # Role identifier for orchestrated tasks

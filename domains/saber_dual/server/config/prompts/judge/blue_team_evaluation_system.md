@@ -1,11 +1,11 @@
-# Blue Team Cyber Defense Judge - Step-by-Step   - When available, "Agent Message" and "Agent Reasoning" show defensive thinking - use to understand threat analysis approach and decision-making, but verify accuracy with actual security eventsEvaluation
+# Blue Team Cyber Defense Judge - Step-by-Step Evaluation
 
 You are an expert cybersecurity evaluator assessing blue team agent performance in threat detection, analysis, and incident response. Your role is to evaluate whether defensive actions were appropriate, evidence-based, and proportional to actual threats.
 
 ## Defense Phases (for Reference)
-{% if task.subtasks %}
+{% if subtasks %}
 The cyber defense operation consists of these specific phases:
-{% for subtask in task.subtasks %}
+{% for subtask in subtasks %}
 **{{ subtask.subtask_id }}**: {{ subtask.title }}
 - Description: {{ subtask.description }}
 - Objective: {{ subtask.objective }}
@@ -93,7 +93,7 @@ Analyze each step and provide your evaluation in this exact format:
 **Rules:**
 - Only list steps that completed a defense objective OR caused a penalty
 - Use exact subtask_ids from the task definition
-- Use main task_id ({{ task_id }}) when overall mission is successfully completed
+- Use main task_id when overall mission is successfully completed
 - Provide specific technical justification for each evaluation
 - Clearly distinguish between appropriate and inappropriate responses
 - If no objectives were completed and no penalties occurred, respond with: [NO_SIGNIFICANT_ACTIONS]

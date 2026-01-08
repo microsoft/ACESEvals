@@ -98,7 +98,7 @@ class IsolateContainerExecutor(DockerExecutor):
             Parameter(
                 name="service_name",
                 type=ParameterType.STRING,
-                description="Name of the service to isolate (e.g., webapp, database, api_gateway, vault_service <- Crown Jewels stored here)",
+                description="Name of the service to isolate (e.g., webapp, database, api-gateway, vault-service <- Crown Jewels stored here). Use hyphens in service names.",
                 required=True,
             )
         )
@@ -172,8 +172,11 @@ class IsolateContainerExecutor(DockerExecutor):
     async def _isolate_service(self, environment, service_name: str, episode_id: str) -> CommandResult:
         """Isolate a service by stopping it completely."""
         try:
+            # Normalize service name: convert underscores to hyphens to match Docker service naming
+            normalized_service = service_name.replace("_", "-")
+            
             # Use docker stop to isolate the service - include episode ID in container name
-            container_name = f"{service_name}-{episode_id}"
+            container_name = f"{normalized_service}-{episode_id}"
             docker_stop_cmd = ["docker", "stop", container_name]
             
             # Execute docker stop command from blue team container

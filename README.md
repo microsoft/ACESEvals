@@ -12,13 +12,13 @@ SABER is a modern distributed system for benchmarking AI security agents using t
 │  Open Source Security Agent Benchmarking & Evaluation         │
 └────────────────────────────────────────────────────────────────┘
                               │
-        ┌─────────────────────┼
-        │                     │
-┌───────▼───────┐    ┌────────▼────────┐
-│    Excytin    │    │    CyBench      │
-│   Incident    │    │   CTF/Pentest   │
-│   Response    │    │   Challenges    │
-└───────────────┘    └─────────────────┘
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼───────┐    ┌────────▼────────┐   ┌───────▼───────┐
+│    Excytin    │    │    CyBench      │   │  SABER Dual   │
+│   Incident    │    │   CTF/Pentest   │   │   Red vs Blue │
+│   Response    │    │   Challenges    │   │   Adversarial │
+└───────────────┘    └─────────────────┘   └───────────────┘
 
 Each domain contains:
 ├── domain.yaml          # Domain manifest and configuration
@@ -151,6 +151,30 @@ uv run inspect eval domains/cybench \
   --model openai/azure/gpt-4 \
   -T build=true \
   -T task_filter="labyrinth_*"
+```
+
+---
+
+### 3. SABER Dual - Red vs Blue Adversarial
+
+**Multi-agent adversarial cyber simulation with red team penetration testing vs blue team incident response.**
+
+```bash
+# Red team only
+uv run inspect eval domains/saber_dual \
+  --model openai/azure/gpt-4 \
+  -T task_filter="saber_dual_red_team"
+
+# Blue team only
+uv run inspect eval domains/saber_dual \
+  --model openai/azure/gpt-4 \
+  -T task_filter="saber_dual_blue_team"
+
+# Both teams (orchestrated)
+uv run inspect eval domains/saber_dual \
+  --model openai/azure/gpt-4 \
+  -T roles_file=domains/saber_dual/saber_dual_roles.yaml \
+  -T task_filter="saber_dual_blue_team,saber_dual_red_team"
 ```
 
 ---
