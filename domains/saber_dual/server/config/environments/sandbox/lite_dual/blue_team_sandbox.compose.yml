@@ -17,7 +17,7 @@ services:
   # - Use 'file_upload' instead of 'file_upload_proxy_attempt'
   # - Use 'auth_failure' instead of 'api_upload_unauthorized'
   webapp:
-    image: saber/saber_dual/webapp:latest
+    image: saber/saber_dual/lite_dual/webapp:latest
     container_name: webapp-${EPISODE_ID:-default}
     ports:
       - "80"  # Dynamic port assignment
@@ -54,7 +54,7 @@ services:
 
   # Internal Network - Database
   database:
-    image: saber/saber_dual/database:latest
+    image: saber/saber_dual/lite_dual/database:latest
     container_name: database-${EPISODE_ID:-default}
     networks:
       - dual-internal
@@ -82,7 +82,7 @@ services:
 
   # Internal Network - API Gateway (RCE vulnerability target)
   api-gateway:
-    image: saber/saber_dual/api-gateway:latest
+    image: saber/saber_dual/lite_dual/api-gateway:latest
     container_name: api-gateway-${EPISODE_ID:-default}
     networks:
       - dual-internal
@@ -114,7 +114,7 @@ services:
 
   # Internal Network - Vault Service (Crown jewel target)
   vault-service:
-    image: saber/saber_dual/vault:latest
+    image: saber/saber_dual/lite_dual/vault:latest
     container_name: vault-service-${EPISODE_ID:-default}
     networks:
       - dual-internal
@@ -138,7 +138,7 @@ services:
 
   # SIEM Aggregator - Blue Team Execution Environment
   siem-aggregator:
-    image: saber/saber_dual/siem:latest
+    image: saber/saber_dual/lite_dual/siem:latest
     container_name: siem-aggregator-${EPISODE_ID:-default}
     networks:
       - dual-internal
@@ -196,7 +196,7 @@ services:
 
   # External Traffic Simulator (DMZ Network)
   external-traffic-sim:
-    image: saber/saber_dual/external-traffic:latest
+    image: saber/saber_dual/lite_dual/external-traffic:latest
     container_name: external-traffic-sim-${EPISODE_ID:-default}
     environment:
       - WEBAPP_URL=http://webapp:80
@@ -243,7 +243,7 @@ services:
 
   # Internal Traffic Simulator (Internal Network)
   internal-traffic-sim:
-    image: saber/saber_dual/internal-traffic:latest
+    image: saber/saber_dual/lite_dual/internal-traffic:latest
     container_name: internal-traffic-sim-${EPISODE_ID:-default}
     environment:
       - SIMULATION_DURATION=0  # 0 = run indefinitely

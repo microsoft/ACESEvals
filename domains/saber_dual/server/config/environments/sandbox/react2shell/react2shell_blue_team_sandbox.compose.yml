@@ -12,7 +12,7 @@ services:
   # Azure Identity & Authentication (start first, init-seed depends on these)
   # ==========================================================================
   react2shell-azure-ad:
-    image: saber/saber_dual/react2shell-azure-ad:latest
+    image: saber/saber_dual/react2shell/azure-ad:latest
     container_name: react2shell-azure-ad-${EPISODE_ID:-default}
     hostname: login.microsoftonline.com
     environment:
@@ -36,7 +36,7 @@ services:
       - "saber.episode.id=${EPISODE_ID:-default}"
 
   react2shell-imds:
-    image: saber/saber_dual/react2shell-imds:latest
+    image: saber/saber_dual/react2shell/imds:latest
     container_name: react2shell-imds-${EPISODE_ID:-default}
     hostname: "169.254.169.254"
     environment:
@@ -89,7 +89,7 @@ services:
       - "saber.episode.id=${EPISODE_ID:-default}"
 
   react2shell-keyvault:
-    image: saber/saber_dual/react2shell-keyvault:latest
+    image: saber/saber_dual/react2shell/keyvault:latest
     container_name: react2shell-keyvault-${EPISODE_ID:-default}
     hostname: prod-secrets-kv.vault.azure.net
     environment:
@@ -120,7 +120,7 @@ services:
   # Azure Management Plane
   # ==========================================================================
   react2shell-arm-api:
-    image: saber/saber_dual/react2shell-arm-api:latest
+    image: saber/saber_dual/react2shell/arm-api:latest
     container_name: react2shell-arm-api-${EPISODE_ID:-default}
     hostname: management.azure.com
     environment:
@@ -150,7 +150,7 @@ services:
   # Azure Application Services
   # ==========================================================================
   react2shell-app-service:
-    image: saber/saber_dual/react2shell-app-service:latest
+    image: saber/saber_dual/react2shell/app-service:latest
     container_name: react2shell-app-service-${EPISODE_ID:-default}
     hostname: prod-webapp.azurewebsites.net
     environment:
@@ -185,7 +185,7 @@ services:
       - "saber.episode.id=${EPISODE_ID:-default}"
 
   react2shell-front-door:
-    image: saber/saber_dual/react2shell-front-door:latest
+    image: saber/saber_dual/react2shell/front-door:latest
     container_name: react2shell-front-door-${EPISODE_ID:-default}
     hostname: prod-webapp.azurefd.net
     environment:
@@ -215,7 +215,7 @@ services:
       - "saber.episode.id=${EPISODE_ID:-default}"
 
   react2shell-functions:
-    image: saber/saber_dual/react2shell-functions:latest
+    image: saber/saber_dual/react2shell/functions:latest
     container_name: react2shell-functions-${EPISODE_ID:-default}
     hostname: prod-data-processor.azurewebsites.net
     environment:
@@ -249,7 +249,7 @@ services:
   # Runs AFTER services are healthy, pushes config/data via REST
   # ==========================================================================
   react2shell-init-seed:
-    image: saber/saber_dual/react2shell-init-seed:latest
+    image: saber/saber_dual/react2shell/init-seed:latest
     container_name: react2shell-init-seed-${EPISODE_ID:-default}
     environment:
       - EPISODE_ID=${EPISODE_ID:-default}
@@ -292,7 +292,6 @@ services:
   # ==========================================================================
   react2shell-kusto-emulator:
     image: mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
-    platform: linux/amd64  # Required - no ARM image available, will use QEMU emulation on ARM hosts
     container_name: react2shell-kusto-${EPISODE_ID:-default}
     hostname: kusto.local
     environment:
@@ -304,8 +303,8 @@ services:
       test: ["CMD-SHELL", "curl -s http://localhost:8080/ > /dev/null 2>&1"]
       interval: 30s
       timeout: 15s
-      retries: 8
-      start_period: 120s  # Kusto takes a while to start, especially under emulation
+      retries: 5
+      start_period: 60s  # Kusto startup time on native x64
     labels:
       - "saber.execution.service=false"
       - "saber.domain=saber_dual"
@@ -315,7 +314,7 @@ services:
       - "saber.episode.id=${EPISODE_ID:-default}"
 
   react2shell-sentinel:
-    image: saber/saber_dual/react2shell-sentinel:latest
+    image: saber/saber_dual/react2shell/sentinel:latest
     container_name: react2shell-sentinel-${EPISODE_ID:-default}
     hostname: azure-sentinel
     volumes:

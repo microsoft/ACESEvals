@@ -12,13 +12,17 @@ LABEL version="1.0"
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Clean apt cache first to free space, use --no-install-recommends to minimize size
+RUN rm -rf /var/lib/apt/lists/* \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     curl \
     wget \
     dnsutils \
     net-tools \
     procps \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Create required directories
 RUN mkdir -p \
