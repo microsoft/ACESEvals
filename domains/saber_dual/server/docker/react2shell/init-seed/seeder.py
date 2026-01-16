@@ -697,11 +697,19 @@ def seed_functions(imds_config: dict):
 
 
 def seed_domain_controller(dc_config: dict):
-    """Seed domain controller with users, groups, SPNs."""
+    """Seed domain controller with users, groups, SPNs.
+    
+    Note: Domain controller is optional for react2shell (pure Azure cloud scenario).
+    This function will skip gracefully if DC_HOST is not set or unreachable.
+    """
     if not dc_config:
         return
 
-    host = os.getenv("DC_HOST", "domain-controller")
+    host = os.getenv("DC_HOST", "")
+    if not host:
+        print("  [SKIP] Domain Controller: DC_HOST not configured (optional for cloud scenarios)")
+        return
+    
     base_url = f"http://{host}:8080"
 
     try:
@@ -836,6 +844,10 @@ def main():
     print("\n" + "=" * 60)
     print("Seeding complete!")
     print("=" * 60)
+
+    # Create marker file to signal successful completion (for Docker healthcheck)
+    with open("/tmp/seeding_complete", "w") as f:
+        f.write("done")
 
 
 if __name__ == "__main__":

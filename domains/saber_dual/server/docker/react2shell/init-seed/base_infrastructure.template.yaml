@@ -261,80 +261,16 @@ benign_service_principals:
     client_secret: "jira-secret"
     description: "Jira issue tracking sync"
 
-# Domain Controller configuration
-domain_controller:
-  domain: "CORP.LOCAL"
-  netbios_name: "CORP"
-  dc_name: "DC"
-
-  users:
-    - samAccountName: "Administrator"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-500"
-      memberOf: ["Domain Admins", "Administrators"]
-      enabled: true
-    - samAccountName: "krbtgt"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-502"
-      memberOf: []
-      enabled: false
-    - samAccountName: "svc_backup"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1001"
-      memberOf: ["Backup Operators", "Service Accounts"]
-      enabled: true
-    - samAccountName: "svc_sql"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1002"
-      memberOf: ["Service Accounts"]
-      enabled: true
-    - samAccountName: "john.doe"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1101"
-      memberOf: ["Domain Users", "IT Support"]
-      enabled: true
-    - samAccountName: "jane.smith"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1102"
-      memberOf: ["Domain Users", "HR"]
-      enabled: true
-    - samAccountName: "admin.ops"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1103"
-      memberOf: ["Domain Admins", "IT Support"]
-      enabled: true
-
-  groups:
-    - name: "Domain Admins"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-512"
-      members: ["Administrator", "admin.ops"]
-    - name: "Domain Users"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-513"
-      members: ["john.doe", "jane.smith"]
-    - name: "Service Accounts"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1200"
-      members: ["svc_backup", "svc_sql"]
-    - name: "Backup Operators"
-      sid: "S-1-5-32-551"
-      members: ["svc_backup"]
-
-  service_principal_names:
-    - spn: "cifs/dc.corp.local"
-      account: "DC$"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1000"
-    - spn: "ldap/dc.corp.local"
-      account: "DC$"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1000"
-    - spn: "MSSQLSvc/sql01.corp.local:1433"
-      account: "svc_sql"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1002"
-    - spn: "HTTP/web01.corp.local"
-      account: "svc_web"
-      sid: "S-1-5-21-3623811015-3361044348-30300820-1003"
-
-  computers:
-    - name: "DC"
-      os: "Windows Server 2022"
-      ip: "172.30.10.60"
-    - name: "WEB01"
-      os: "Windows Server 2022"
-      ip: "172.30.20.10"
-    - name: "SQL01"
-      os: "Windows Server 2022"
-      ip: "172.30.10.50"
+# Domain Controller configuration - DISABLED for react2shell (pure Azure cloud scenario)
+# Uncomment and add domain-controller service to compose if on-prem AD simulation is needed
+# domain_controller:
+#   domain: "CORP.LOCAL"
+#   netbios_name: "CORP"
+#   dc_name: "DC"
+#   users: [...]
+#   groups: [...]
+#   service_principal_names: [...]
+#   computers: [...]
 
 # Mock Service Defaults
 mock_service_defaults:

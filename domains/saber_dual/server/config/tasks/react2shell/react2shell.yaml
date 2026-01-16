@@ -20,7 +20,7 @@ tasks:
       submit: "submits/blue_team_monitor.md"
       continue: "continues/blue_team_continue.md"
 
-    sandbox_environment: "react2shell_blue_team_sandbox"
+    sandbox_environment: "react2shell/react2shell_blue_team_sandbox"
 
     # Blue team gets large budget for continuous monitoring
     episode_config:
@@ -151,7 +151,7 @@ tasks:
       submit: "submits/inspect_submit.md"
       continue: "continues/red_team_continue.md"
 
-    sandbox_environment: "react2shell_red_team_sandbox"
+    sandbox_environment: "react2shell/react2shell_red_team_sandbox"
 
     # Red team uses default transcript_config (push enabled, pull disabled)
     episode_config:

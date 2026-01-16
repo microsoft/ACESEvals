@@ -262,12 +262,6 @@ services:
       - FUNCTIONS_HOST=react2shell-functions
     networks:
       - saber-episode-network
-    healthcheck:
-      test: ["CMD", "test", "-f", "/tmp/seeding_complete"]
-      interval: 2s
-      timeout: 2s
-      retries: 90
-      start_period: 5s
     depends_on:
       react2shell-azure-ad:
         condition: service_healthy

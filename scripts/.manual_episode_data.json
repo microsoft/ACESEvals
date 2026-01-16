@@ -1,0 +1,20 @@
+{
+  "domain": "saber_dual",
+  "rest_url": "http://localhost:8000",
+  "mcp_url": "http://localhost:8001",
+  "session_id": "87364497-3dfe-49bc-982f-ceb71bff340a",
+  "dual_mode": true,
+  "episodes": {
+    "blue": {
+      "name": "blue",
+      "task_id": "react2shell_blue_team_react2shell_red_team",
+      "episode_id": "0aadbb4a-bd26-4e0a-a752-a2dec8597bd8"
+    },
+    "red": {
+      "name": "red",
+      "task_id": "react2shell_red_team",
+      "episode_id": "81d21c79-a14d-4a3c-993c-0d078c634024",
+      "attached_to": "0aadbb4a-bd26-4e0a-a752-a2dec8597bd8"
+    }
+  }
+}
