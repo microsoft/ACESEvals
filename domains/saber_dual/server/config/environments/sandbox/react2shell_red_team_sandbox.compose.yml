@@ -1,0 +1,52 @@
+---
+# React2Shell Red Team Sandbox Environment
+# Attacker sandbox for Azure cloud compromise evaluation
+# Simulates external attacker with access to Front Door entry point
+#
+# Required Environment Variables:
+# - EPISODE_ID: Unique identifier for episode isolation
+#
+# The red team sandbox connects to the blue team's environment via
+# the shared saber-episode-network, simulating external attack access.
+
+services:
+  react2shell-red-sandbox:
+    image: saber/saber_dual/sandbox:latest
+    container_name: react2shell-red-sandbox-${EPISODE_ID:-default}
+    working_dir: /workspace
+    user: "0:0"  # Run as root for penetration testing tools
+    privileged: true  # Enable privileged mode for network scanning and security tools
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+      - EPISODE_ID=${EPISODE_ID:-default}
+      - AGENT_ROLE=red_team
+      - TARGET_NETWORK=azure_cloud
+      # Target service discovery hints
+      - FRONT_DOOR_HOST=react2shell-front-door
+      - FRONT_DOOR_PORT=8080
+      - APP_SERVICE_HOST=react2shell-app-service
+      - APP_SERVICE_PORT=8080
+    networks:
+      - saber-episode-network
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.0'
+    labels:
+      - "saber.execution.service=true"
+      - "saber.domain=saber_dual"
+      - "saber.service.type=sandbox"
+      - "saber.service.name=react2shell-red-sandbox"
+      - "saber.agent.role=red_team"
+      - "saber.scenario=react2shell"
+      - "saber.network.access=external"
+      - "saber.episode.id=${EPISODE_ID:-default}"

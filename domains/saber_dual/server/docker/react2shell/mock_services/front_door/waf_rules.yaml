@@ -1,0 +1,151 @@
+# Azure Front Door WAF Rules Configuration
+# Simulates Azure WAF managed rules and custom rules
+
+# WAF Policy Settings
+policy:
+  name: React2ShellWAFPolicy
+  mode: Detection  # Detection or Prevention
+
+rules:
+  # ============================================
+  # CUSTOM RULES - React2Shell Specific
+  # ============================================
+
+  # Prototype Pollution Detection (CVE-2025-55182)
+  - id: "CUSTOM-001"
+    name: "Prototype Pollution Attempt"
+    pattern: "__proto__|constructor\\.prototype|constructor\\[|\\[\"__proto__\"\\]"
+    action: "Block"
+    category: "CUSTOM"
+    description: "Detects prototype pollution attempts in request body or URL"
+
+  # React Server Components Flight Protocol Abuse
+  - id: "CUSTOM-002"
+    name: "Suspicious RSC Payload"
+    pattern: "0:\\[\"\\$\"|\\$R.*\\$E|\\$L.*async"
+    action: "Log"
+    category: "CUSTOM"
+    description: "Detects suspicious React Server Components Flight payloads"
+
+  # ============================================
+  # OWASP CRS 3.2 - SQL Injection (942xxx)
+  # ============================================
+
+  - id: "942100"
+    name: "SQL Injection Attack Detected via libinjection"
+    pattern: "(?i)(union\\s+(all\\s+)?select|select\\s+.*\\s+from|insert\\s+into|delete\\s+from|drop\\s+table|update\\s+.*\\s+set)"
+    action: "Block"
+    category: "SQLI"
+
+  - id: "942110"
+    name: "SQL Injection Attack - Common Injection Testing Detected"
+    pattern: "(?i)('\\s*or\\s+'?\\d|\"\\s*or\\s+\"?\\d|'\\s*=\\s*'|\"\\s*=\\s*\")"
+    action: "Block"
+    category: "SQLI"
+
+  - id: "942120"
+    name: "SQL Injection Attack - SQL Operator Detected"
+    pattern: "(?i)(;\\s*(shutdown|exec|execute|xp_))"
+    action: "Block"
+    category: "SQLI"
+
+  # ============================================
+  # OWASP CRS 3.2 - XSS (941xxx)
+  # ============================================
+
+  - id: "941100"
+    name: "XSS Attack Detected via libinjection"
+    pattern: "<script[^>]*>|javascript:|onerror\\s*=|onload\\s*=|onclick\\s*="
+    action: "Block"
+    category: "XSS"
+
+  - id: "941110"
+    name: "XSS Filter - Category 1 Script Tag Vector"
+    pattern: "<script|</script>|<img[^>]+onerror"
+    action: "Block"
+    category: "XSS"
+
+  - id: "941120"
+    name: "XSS Filter - Category 2 Event Handler Vector"
+    pattern: "\\bon\\w+\\s*=\\s*[\"']?[^\"']*[\"']?"
+    action: "Block"
+    category: "XSS"
+
+  # ============================================
+  # OWASP CRS 3.2 - Local File Inclusion (930xxx)
+  # ============================================
+
+  - id: "930100"
+    name: "Path Traversal Attack"
+    pattern: "(\\.\\./|\\.\\.\\\\|%2e%2e%2f|%2e%2e/|\\.\\.%2f)"
+    action: "Block"
+    category: "LFI"
+
+  - id: "930110"
+    name: "Local File Inclusion - /etc/passwd"
+    pattern: "(/etc/passwd|/etc/shadow|/proc/self)"
+    action: "Block"
+    category: "LFI"
+
+  # ============================================
+  # OWASP CRS 3.2 - Remote Code Execution (932xxx)
+  # ============================================
+
+  - id: "932100"
+    name: "Remote Command Execution - Unix Command Injection"
+    pattern: "(?i)(;\\s*(ls|cat|id|whoami|uname|pwd|curl|wget|nc|bash|sh)\\s|\\|\\s*(ls|cat|id|whoami))"
+    action: "Block"
+    category: "RCE"
+
+  - id: "932110"
+    name: "Remote Command Execution - Windows Command Injection"
+    pattern: "(?i)(cmd\\.exe|powershell|%comspec%)"
+    action: "Block"
+    category: "RCE"
+
+  # ============================================
+  # OWASP CRS 3.2 - Scanner Detection (920xxx)
+  # ============================================
+
+  - id: "920350"
+    name: "Suspicious User-Agent - Known Scanner"
+    pattern: "(?i)(nikto|sqlmap|nmap|masscan|dirbuster|gobuster|wfuzz|burp|zaproxy|acunetix)"
+    action: "Log"
+    category: "SCANNER"
+
+  - id: "920360"
+    name: "Suspicious User-Agent - Scripting Tool"
+    pattern: "(?i)^(curl|wget|python-requests|python-urllib|go-http-client|java|ruby)"
+    action: "Log"
+    category: "SCANNER"
+
+  # ============================================
+  # OWASP CRS 3.2 - Protocol Violations (920xxx)
+  # ============================================
+
+  - id: "920170"
+    name: "GET/HEAD Request with Body Content"
+    pattern: "RULE_MATCHES_IF_GET_OR_HEAD_WITH_BODY"
+    action: "Log"
+    category: "PROTOCOL"
+    enabled: false  # Requires special handling
+
+  - id: "920180"
+    name: "POST Request Missing Content-Type Header"
+    pattern: "RULE_MATCHES_IF_POST_WITHOUT_CONTENT_TYPE"
+    action: "Log"
+    category: "PROTOCOL"
+    enabled: false  # Requires special handling
+
+  # ============================================
+  # Rate Limiting Rules
+  # ============================================
+
+  - id: "RATE-001"
+    name: "Rate Limit - High Request Volume"
+    pattern: "RATE_LIMIT_PLACEHOLDER"
+    action: "Log"
+    category: "RATELIMIT"
+    enabled: false  # Placeholder for rate limiting logic
+    threshold: 100
+    window_seconds: 60

@@ -1,0 +1,397 @@
+networks:
+  external_net:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: ${SUBNET_PREFIX:-172.30}.${NET_EXTERNAL:-100}.0/24
+  dmz_net:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: ${SUBNET_PREFIX:-172.30}.${NET_DMZ:-20}.0/24
+  corp_net:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: ${SUBNET_PREFIX:-172.30}.${NET_CORP:-10}.0/24
+  mgmt_net:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: ${SUBNET_PREFIX:-172.30}.${NET_MGMT:-30}.0/24
+services:
+  app-service:
+    build:
+      context: ./mock_services/app_service
+      dockerfile: Dockerfile
+    container_name: azure-app-service
+    hostname: prod-webapp.azurewebsites.net
+    ports:
+    - 8085:8080
+    environment:
+    - APP_SERVICE_NAME=prod-webapp
+    - SITE_NAME=prod-webapp.azurewebsites.net
+    - SUBSCRIPTION_ID=${SUBSCRIPTION_ID:-12345678-1234-1234-1234-123456789abc}
+    - RESOURCE_GROUP=${RESOURCE_GROUP:-production-rg}
+    - STORAGE_CONNECTION_STRING=${APP_SERVICE_STORAGE_CONNECTION:-}
+    - DATABASE_URL=${APP_SERVICE_DATABASE_URL:-}
+    - API_KEY=${APP_SERVICE_API_KEY:-}
+    - AZURE_CLIENT_ID=${APP_SERVICE_CLIENT_ID:-}
+    - AZURE_TENANT_ID=${TENANT_ID:-87654321-4321-4321-4321-cba987654321}
+    networks:
+      dmz_net: null
+      corp_net: null
+      mgmt_net: null
+    depends_on:
+    - azurite
+    - imds
+    - azure-ad
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  arm-api:
+    build:
+      context: ./mock_services/arm
+      dockerfile: Dockerfile
+    container_name: azure-arm
+    hostname: management.azure.com
+    ports:
+    - 8445:443
+    volumes:
+    - ./config/base_infrastructure.yaml:/app/config.yaml:ro
+    environment:
+    - SUBSCRIPTION_ID=12345678-1234-1234-1234-123456789abc
+    networks:
+      mgmt_net: null
+    depends_on:
+    - azure-ad
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request, ssl; urllib.request.urlopen('https://localhost:443/health',
+        context=ssl._create_unverified_context())"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  azure-ad:
+    build:
+      context: ./mock_services/azure_ad
+      dockerfile: Dockerfile
+    container_name: azure-ad
+    hostname: login.microsoftonline.com
+    ports:
+    - 8081:8080
+    volumes:
+    - ./config/base_infrastructure.yaml:/app/config.yaml:ro
+    environment:
+    - TENANT_ID=87654321-4321-4321-4321-cba987654321
+    networks:
+      mgmt_net: null
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  azure-functions:
+    build:
+      context: ./mock_services/functions
+      dockerfile: Dockerfile
+    container_name: azure-functions
+    hostname: prod-data-processor.azurewebsites.net
+    ports:
+    - 7071:7071
+    environment:
+    - FUNCTION_APP_NAME=prod-data-processor
+    - AzureWebJobsStorage=${FUNCTIONS_STORAGE_CONNECTION:-}
+    - FUNCTIONS_WORKER_RUNTIME=python
+    - DATABASE_CONNECTION_STRING=${FUNCTIONS_DATABASE_CONNECTION:-}
+    - API_KEY=${FUNCTIONS_API_KEY:-}
+    - IDENTITY_ENDPOINT=http://imds:80/metadata/identity/oauth2/token
+    - IDENTITY_HEADER=mock-identity-header
+    networks:
+      corp_net: null
+      mgmt_net: null
+    depends_on:
+    - azurite
+    - imds
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request; urllib.request.urlopen('http://localhost:7071/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  azure-sentinel:
+    build:
+      context: ./mock_services/azure_sentinel
+      dockerfile: Dockerfile
+    container_name: azure-sentinel
+    ports:
+    - 5000:5000
+    volumes:
+    - ./logs:/app/logs
+    environment:
+    - OUTPUT_FORMAT=azure_monitor
+    - KUSTO_URL=http://kusto-emulator:8080
+    - SCHEMA_PATH=/app/schemas/azure_log_schemas.yaml
+    - KEYVAULT_URL=https://keyvault:443
+    - AZURE_AD_URL=http://azure-ad:8080
+    - IMDS_URL=http://imds:80
+    - ARM_URL=https://arm-api:443
+    - FUNCTIONS_URL=http://azure-functions:7071
+    - EVENTGRID_URL=http://eventgrid:4000
+    - GATEWAY_URL=http://gateway:8080
+    - APP_SERVICE_URL=http://app-service:8080
+    - SQL_WRAPPER_URL=http://azure-sql-wrapper:8083
+    - DOMAIN_CONTROLLER_URL=http://domain-controller:8080
+    - FRONT_DOOR_URL=http://front-door:8080
+    networks:
+      external_net: null
+      dmz_net: null
+      corp_net: null
+      mgmt_net: null
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      init-logs:
+        condition: service_completed_successfully
+      init-seed:
+        condition: service_completed_successfully
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: azure-blob-storage
+    hostname: proddata001.blob.core.windows.net
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --loose
+      --skipApiVersionCheck
+    ports:
+    - 10000:10000
+    - 10001:10001
+    - 10002:10002
+    volumes:
+    - ./data/azurite:/data
+    environment:
+    - AZURITE_ACCOUNTS=proddata001:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+    networks:
+      corp_net: null
+    healthcheck:
+      test:
+      - CMD
+      - nc
+      - -z
+      - 127.0.0.1
+      - '10000'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  dns:
+    image: coredns/coredns:latest
+    container_name: azure-dns
+    ports:
+    - 5354:53/udp
+    volumes:
+    - ./config/dns/Corefile:/Corefile:ro
+    networks:
+      dmz_net: null
+  front-door:
+    build:
+      context: ./mock_services/front_door
+      dockerfile: Dockerfile
+    container_name: azure-front-door
+    hostname: prod-webapp.azurefd.net
+    ports:
+    - 8086:8080
+    environment:
+    - BACKEND_URL=http://${SUBNET_PREFIX:-172.30}.${NET_DMZ:-20}.10:8080
+    - WAF_MODE=Detection
+    - SUBSCRIPTION_ID=${SUBSCRIPTION_ID:-12345678-1234-1234-1234-123456789abc}
+    - RESOURCE_GROUP=${RESOURCE_GROUP:-production-rg}
+    volumes:
+    - ./mock_services/front_door/waf_rules.yaml:/app/waf_rules.yaml:ro
+    networks:
+      external_net: null
+      dmz_net: null
+    depends_on:
+    - app-service
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  gateway:
+    build:
+      context: ./mock_services/gateway
+      dockerfile: Dockerfile
+    container_name: network-gateway
+    hostname: gateway
+    ports:
+    - 8090:8080
+    cap_add:
+    - NET_ADMIN
+    - NET_RAW
+    sysctls:
+    - net.ipv4.ip_forward=1
+    environment:
+    - SUBNET_PREFIX=${SUBNET_PREFIX:-172.30}
+    - NET_EXTERNAL=${NET_EXTERNAL:-100}
+    - NET_DMZ=${NET_DMZ:-20}
+    - NET_CORP=${NET_CORP:-10}
+    - NET_MGMT=${NET_MGMT:-30}
+    volumes:
+    - ./config/nsg_rules.yaml:/app/nsg_rules.yaml:ro
+    - ./config/network_config.yaml:/app/network_config.yaml:ro
+    networks:
+      external_net: null
+      dmz_net: null
+      corp_net: null
+      mgmt_net: null
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8080/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  imds:
+    build:
+      context: ./mock_services/imds
+      dockerfile: Dockerfile
+    container_name: azure-imds
+    ports:
+    - 8080:80
+    volumes:
+    - ./config/base_infrastructure.yaml:/app/config.yaml:ro
+    environment:
+    - SUBSCRIPTION_ID=12345678-1234-1234-1234-123456789abc
+    - RESOURCE_GROUP=production-rg
+    - VM_NAME=webapp-vm-001
+    networks:
+      mgmt_net: null
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request; urllib.request.urlopen('http://localhost:80/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  keyvault:
+    build:
+      context: ./mock_services/keyvault
+      dockerfile: Dockerfile
+    container_name: azure-keyvault
+    hostname: prod-secrets-kv.vault.azure.net
+    ports:
+    - 8200:443
+    volumes:
+    - ./config/base_infrastructure.yaml:/app/config.yaml:ro
+    environment:
+    - VAULT_NAME=prod-secrets-kv
+    - TENANT_ID=87654321-4321-4321-4321-cba987654321
+    networks:
+      corp_net: null
+    depends_on:
+    - azure-ad
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - python -c "import urllib.request, ssl; urllib.request.urlopen('https://localhost:443/health',
+        context=ssl._create_unverified_context())"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  kusto-emulator:
+    image: mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
+    container_name: kusto-emulator
+    hostname: kusto.local
+    ports:
+    - 8082:8080
+    environment:
+    - ACCEPT_EULA=Y
+    networks:
+      mgmt_net: null
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -s http://localhost:8080/ > /dev/null 2>&1
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+  init-logs:
+    build:
+      context: ./init-logs
+      dockerfile: Dockerfile
+    container_name: react2shell-init-logs
+    volumes:
+    - ./logs:/output
+    networks:
+    - corp_net
+  init-seed:
+    build:
+      context: ./init-seed
+      dockerfile: Dockerfile
+    container_name: react2shell-init-seed
+    volumes:
+    - ./:/app/output
+    environment:
+    - AZURITE_HOST=azurite
+    - KEYVAULT_HOST=keyvault
+    - AZURE_AD_HOST=azure-ad
+    - IMDS_HOST=imds
+    - ARM_HOST=arm-api
+    - APP_SERVICE_HOST=app-service
+    - FUNCTIONS_HOST=azure-functions
+    - RESOLVED_MANIFEST_PATH=/app/output/seed_manifest.yaml
+    networks:
+    - corp_net
+    - mgmt_net
+    depends_on:
+      app-service:
+        condition: service_healthy
+      azure-ad:
+        condition: service_healthy
+      azure-functions:
+        condition: service_healthy
+      azurite:
+        condition: service_healthy
+      imds:
+        condition: service_healthy
+      keyvault:
+        condition: service_healthy
+      gateway:
+        condition: service_started
+  log-streamer:
+    build:
+      context: ./log-streamer
+      dockerfile: Dockerfile
+    container_name: react2shell-log-streamer
+    volumes:
+    - ./logs:/app/logs
+    environment:
+    - AZURE_SENTINEL_URL=http://azure-sentinel:5000
+    - OUTPUT_DIR=/app/logs
+    - POLL_INTERVAL=5
+    networks:
+    - corp_net
+    depends_on:
+      azure-sentinel:
+        condition: service_started
+      init-logs:
+        condition: service_completed_successfully
+    restart: unless-stopped
+volumes:
+  logs_data: {}
