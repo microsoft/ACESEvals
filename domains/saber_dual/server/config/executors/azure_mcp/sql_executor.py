@@ -216,7 +216,7 @@ class SqlExecutor(DockerExecutor):
         
         self.add_parameter(
             Parameter(
-                name="parameters",
+                name="params",
                 type=ParameterType.OBJECT,
                 description=(
                     "Parameters for the sub-command. For 'server firewall-rule create': "
@@ -234,7 +234,7 @@ class SqlExecutor(DockerExecutor):
         result = super().validate_parameters(parameters)
         
         command = parameters.get("command", "")
-        params = parameters.get("parameters", {})
+        params = parameters.get("params", {})
         
         if command not in self.SUPPORTED_COMMANDS:
             result.add_error(
@@ -277,7 +277,7 @@ class SqlExecutor(DockerExecutor):
             )
         
         command = parameters["command"]
-        params = parameters["parameters"]
+        params = parameters["params"]
         
         try:
             if command == "server firewall-rule create":
@@ -347,7 +347,7 @@ class SqlExecutor(DockerExecutor):
         logger.info(f"Created SQL firewall rule: {rule_name} ({start_ip} - {end_ip})")
         
         return CommandResult.success_result(
-            output=json.dumps(rule, indent=2),
+            json.dumps(rule, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "server firewall-rule create",
@@ -399,7 +399,7 @@ class SqlExecutor(DockerExecutor):
         deleted_rule = self._firewall_rules.pop(rule_key)
         
         return CommandResult.success_result(
-            output=json.dumps({"message": f"Firewall rule '{rule_name}' deleted successfully", "rule": deleted_rule}, indent=2),
+            json.dumps({"message": f"Firewall rule '{rule_name}' deleted successfully", "rule": deleted_rule}, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "server firewall-rule delete",
@@ -441,7 +441,7 @@ class SqlExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(response, indent=2),
+            json.dumps(response, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "server firewall-rule list",
@@ -471,7 +471,7 @@ class SqlExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(servers, indent=2),
+            json.dumps(servers, indent=2),
             metadata={"episode_id": episode_id, "command": "server list"}
         )
 
@@ -499,7 +499,7 @@ class SqlExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(server_info, indent=2),
+            json.dumps(server_info, indent=2),
             metadata={"episode_id": episode_id, "command": "server show"}
         )
 
@@ -528,7 +528,7 @@ class SqlExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(databases, indent=2),
+            json.dumps(databases, indent=2),
             metadata={"episode_id": episode_id, "command": "db list"}
         )
 
@@ -548,6 +548,11 @@ class SqlExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(db_info, indent=2),
+            json.dumps(db_info, indent=2),
             metadata={"episode_id": episode_id, "command": "db show"}
         )
+
+
+# Register the executor with SABER's executor registry
+from saber.server.execution.executors.executor_registry import register_executor
+register_executor("sql", SqlExecutor, "azure_mcp_namespace")

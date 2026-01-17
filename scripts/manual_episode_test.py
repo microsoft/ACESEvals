@@ -348,6 +348,120 @@ def resolve_episode_name(data: dict, name: str) -> dict:
     sys.exit(1)
 
 
+class SimpleMCPClient:
+    """Simple MCP HTTP client for manual testing.
+    
+    MCP protocol requires initialize handshake to get mcp-session-id,
+    which must be passed in subsequent requests.
+    """
+    
+    def __init__(self, mcp_url: str, session_id: str, episode_id: str):
+        self.mcp_url = mcp_url.rstrip("/") + "/mcp"
+        self.session_id = session_id
+        self.episode_id = episode_id
+        self.mcp_session_id: Optional[str] = None
+        self.base_headers = {
+            "X-SABER-Session-ID": session_id,
+            "X-SABER-Episode-ID": episode_id,
+            "X-SABER-Orchestration-Env": "standalone",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        }
+    
+    async def _ensure_initialized(self) -> None:
+        """Initialize MCP session if not already done."""
+        if self.mcp_session_id:
+            return
+        
+        import aiohttp
+        
+        request = {
+            "jsonrpc": "2.0",
+            "id": 0,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "manual_test", "version": "1.0"}
+            }
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.mcp_url, json=request, headers=self.base_headers) as resp:
+                # Get mcp-session-id from response headers
+                self.mcp_session_id = resp.headers.get("mcp-session-id")
+                if not self.mcp_session_id:
+                    raise Exception("No mcp-session-id in initialize response")
+                
+                # Read SSE response
+                text = await resp.text()
+                # Parse SSE format: "event: message\ndata: {...}"
+                for line in text.split("\n"):
+                    if line.startswith("data: "):
+                        data = json.loads(line[6:])
+                        if "error" in data:
+                            raise Exception(f"MCP Initialize Error: {data['error']}")
+    
+    def _get_headers(self) -> dict:
+        """Get headers including mcp-session-id."""
+        headers = dict(self.base_headers)
+        if self.mcp_session_id:
+            headers["mcp-session-id"] = self.mcp_session_id
+        return headers
+    
+    async def _parse_sse_response(self, text: str) -> dict:
+        """Parse SSE response format."""
+        for line in text.split("\n"):
+            if line.startswith("data: "):
+                return json.loads(line[6:])
+        raise Exception(f"No data in SSE response: {text[:200]}")
+    
+    async def list_tools(self) -> list:
+        """List available MCP tools."""
+        import aiohttp
+        
+        await self._ensure_initialized()
+        
+        request = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.mcp_url, json=request, headers=self._get_headers()) as resp:
+                text = await resp.text()
+                data = await self._parse_sse_response(text)
+                if "error" in data:
+                    raise Exception(f"MCP Error: {data['error']}")
+                return data.get("result", {}).get("tools", [])
+    
+    async def call_tool(self, tool_name: str, arguments: dict) -> dict:
+        """Call an MCP tool."""
+        import aiohttp
+        
+        await self._ensure_initialized()
+        
+        request = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": tool_name,
+                "arguments": arguments
+            }
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.mcp_url, json=request, headers=self._get_headers()) as resp:
+                text = await resp.text()
+                data = await self._parse_sse_response(text)
+                if "error" in data:
+                    raise Exception(f"MCP Error: {data['error']}")
+                return data.get("result", {})
+
+
 async def list_tools(episode_name: str) -> None:
     """List available MCP tools for an episode."""
     data = load_episode_data()
@@ -364,33 +478,25 @@ async def list_tools(episode_name: str) -> None:
     print(f"Task: {episode['task_id']}")
     print(f"MCP URL: {mcp_url}")
     
-    from saber.inspect_ai.core.mcp_factory import MCPClientFactory
+    client = SimpleMCPClient(mcp_url, session_id, episode_id)
     
-    factory = MCPClientFactory(mcp_url)
+    tools = await client.list_tools()
+    print(f"\nAvailable Tools ({len(tools)}):")
+    print("-" * 60)
     
-    client = await factory.create_client(
-        session_id=session_id,
-        episode_id=episode_id,
-        orchestration_env="manual",
-    )
-    
-    try:
-        tools = await client.list_tools()
-        print(f"\nAvailable Tools ({len(tools)}):")
-        print("-" * 60)
-        
-        for tool in tools:
-            print(f"\n  {tool.name}")
-            if tool.description:
-                # Truncate long descriptions
-                desc = tool.description[:100] + "..." if len(tool.description) > 100 else tool.description
-                print(f"    {desc}")
-            if tool.inputSchema and "properties" in tool.inputSchema:
-                props = tool.inputSchema["properties"]
-                if props:
-                    print(f"    Parameters: {', '.join(props.keys())}")
-    finally:
-        await factory.cleanup_client(episode_id)
+    for tool in tools:
+        name = tool.get("name", "unknown")
+        desc = tool.get("description", "")
+        print(f"\n  {name}")
+        if desc:
+            # Truncate long descriptions
+            desc_short = desc[:100] + "..." if len(desc) > 100 else desc
+            print(f"    {desc_short}")
+        input_schema = tool.get("inputSchema", {})
+        if input_schema and "properties" in input_schema:
+            props = input_schema["properties"]
+            if props:
+                print(f"    Parameters: {', '.join(props.keys())}")
 
 
 async def call_tool(episode_name: str, tool_name: str, args: dict) -> None:
@@ -409,42 +515,25 @@ async def call_tool(episode_name: str, tool_name: str, args: dict) -> None:
     print(f"Episode ID: {episode_id}")
     print(f"Arguments: {json.dumps(args, indent=2)}")
     
-    from saber.inspect_ai.core.mcp_factory import MCPClientFactory
+    client = SimpleMCPClient(mcp_url, session_id, episode_id)
     
-    factory = MCPClientFactory(mcp_url)
+    print(f"\n{'─' * 60}")
+    print("Executing...")
+    print(f"{'─' * 60}")
     
-    client = await factory.create_client(
-        session_id=session_id,
-        episode_id=episode_id,
-        orchestration_env="manual",
-    )
+    result = await client.call_tool(tool_name, args)
     
-    try:
-        print(f"\n{'─' * 60}")
-        print("Executing...")
-        print(f"{'─' * 60}")
-        
-        result = await client.call_tool(tool_name, args)
-        
-        print(f"\n{'─' * 60}")
-        print("Result:")
-        print(f"{'─' * 60}")
-        
-        # Handle different result types
-        if hasattr(result, "content"):
-            for item in result.content:
-                if hasattr(item, "text"):
-                    print(item.text)
-                else:
-                    print(item)
+    print(f"\n{'─' * 60}")
+    print("Result:")
+    print(f"{'─' * 60}")
+    
+    # Handle MCP result content
+    content = result.get("content", [])
+    for item in content:
+        if isinstance(item, dict) and "text" in item:
+            print(item["text"])
         else:
-            print(result)
-            
-    except Exception as e:
-        print(f"\nError: {e}")
-        raise
-    finally:
-        await factory.cleanup_client(episode_id)
+            print(json.dumps(item, indent=2) if isinstance(item, dict) else item)
 
 
 async def interactive_mode() -> None:
@@ -470,134 +559,115 @@ async def interactive_mode() -> None:
     print("  help                 - Show this help")
     print("  quit                 - Exit")
     
-    from saber.inspect_ai.core.mcp_factory import MCPClientFactory
-    
     mcp_url = data["mcp_url"]
     session_id = data["session_id"]
-    factory = MCPClientFactory(mcp_url)
     
     # Start with first episode
     current_name = list(episodes.keys())[0]
-    current_client = None
     
-    async def get_client(name: str):
-        nonlocal current_client, current_name
-        
-        if current_client and current_name == name:
-            return current_client
-        
-        if current_client:
-            await factory.cleanup_client(episodes[current_name]["episode_id"])
-        
-        current_name = name
+    def get_client(name: str) -> SimpleMCPClient:
         episode_id = episodes[name]["episode_id"]
-        current_client = await factory.create_client(
-            session_id=session_id,
-            episode_id=episode_id,
-            orchestration_env="manual",
-        )
-        return current_client
+        return SimpleMCPClient(mcp_url, session_id, episode_id)
     
-    try:
-        while True:
-            try:
-                prompt = f"\n[{current_name.upper()}] > "
-                line = input(prompt).strip()
-                
-                if not line:
+    while True:
+        try:
+            prompt = f"\n[{current_name.upper()}] > "
+            line = input(prompt).strip()
+            
+            if not line:
+                continue
+            
+            parts = line.split(None, 1)
+            cmd = parts[0].lower()
+            rest = parts[1] if len(parts) > 1 else ""
+            
+            if cmd == "quit" or cmd == "exit":
+                break
+            
+            elif cmd == "help":
+                print("Commands: use, list, call, bash, status, help, quit")
+            
+            elif cmd == "status":
+                ep = episodes[current_name]
+                print(f"Current episode: {current_name}")
+                print(f"  Episode ID: {ep['episode_id']}")
+                print(f"  Task: {ep['task_id']}")
+            
+            elif cmd == "use":
+                if rest in episodes:
+                    current_name = rest
+                    print(f"Switched to {current_name.upper()} episode")
+                else:
+                    print(f"Usage: use <{' | '.join(episodes.keys())}>")
+            
+            elif cmd == "list":
+                client = get_client(current_name)
+                tools = await client.list_tools()
+                print(f"\nTools ({len(tools)}):")
+                for t in tools:
+                    print(f"  - {t.get('name', 'unknown')}")
+            
+            elif cmd == "bash":
+                if not rest:
+                    print("Usage: bash <command>")
+                    continue
+                client = get_client(current_name)
+                result = await client.call_tool("bash", {"command": rest})
+                for item in result.get("content", []):
+                    if isinstance(item, dict) and "text" in item:
+                        print(item["text"])
+                    else:
+                        print(item)
+            
+            elif cmd == "call":
+                # Parse: call <tool_name> {json_args} or call <tool_name> --arg value
+                if not rest:
+                    print("Usage: call <tool_name> [json_args]")
                     continue
                 
-                parts = line.split(None, 1)
-                cmd = parts[0].lower()
-                rest = parts[1] if len(parts) > 1 else ""
+                tool_parts = rest.split(None, 1)
+                tool_name = tool_parts[0]
                 
-                if cmd == "quit" or cmd == "exit":
-                    break
-                
-                elif cmd == "help":
-                    print("Commands: use, list, call, bash, status, help, quit")
-                
-                elif cmd == "status":
-                    ep = episodes[current_name]
-                    print(f"Current episode: {current_name}")
-                    print(f"  Episode ID: {ep['episode_id']}")
-                    print(f"  Task: {ep['task_id']}")
-                
-                elif cmd == "use":
-                    if rest in episodes:
-                        current_name = rest
-                        print(f"Switched to {current_name.upper()} episode")
+                args = {}
+                if len(tool_parts) > 1:
+                    arg_str = tool_parts[1]
+                    if arg_str.startswith("{"):
+                        args = json.loads(arg_str)
                     else:
-                        print(f"Usage: use <{' | '.join(episodes.keys())}>")
-                
-                elif cmd == "list":
-                    client = await get_client(current_name)
-                    tools = await client.list_tools()
-                    print(f"\nTools ({len(tools)}):")
-                    for t in tools:
-                        print(f"  - {t.name}")
-                
-                elif cmd == "bash":
-                    if not rest:
-                        print("Usage: bash <command>")
-                        continue
-                    client = await get_client(current_name)
-                    result = await client.call_tool("bash", {"command": rest})
-                    for item in result.content:
-                        if hasattr(item, "text"):
-                            print(item.text)
-                
-                elif cmd == "call":
-                    # Parse: call <tool_name> {json_args} or call <tool_name> --arg value
-                    if not rest:
-                        print("Usage: call <tool_name> [json_args]")
-                        continue
-                    
-                    tool_parts = rest.split(None, 1)
-                    tool_name = tool_parts[0]
-                    
-                    args = {}
-                    if len(tool_parts) > 1:
-                        arg_str = tool_parts[1]
-                        if arg_str.startswith("{"):
-                            args = json.loads(arg_str)
-                        else:
-                            # Simple --key value parsing
-                            tokens = arg_str.split()
-                            i = 0
-                            while i < len(tokens):
-                                if tokens[i].startswith("--"):
-                                    key = tokens[i][2:]
-                                    if i + 1 < len(tokens) and not tokens[i+1].startswith("--"):
-                                        args[key] = tokens[i+1]
-                                        i += 2
-                                    else:
-                                        args[key] = True
-                                        i += 1
+                        # Simple --key value parsing
+                        tokens = arg_str.split()
+                        i = 0
+                        while i < len(tokens):
+                            if tokens[i].startswith("--"):
+                                key = tokens[i][2:]
+                                if i + 1 < len(tokens) and not tokens[i+1].startswith("--"):
+                                    args[key] = tokens[i+1]
+                                    i += 2
                                 else:
+                                    args[key] = True
                                     i += 1
-                    
-                    client = await get_client(current_name)
-                    result = await client.call_tool(tool_name, args)
-                    for item in result.content:
-                        if hasattr(item, "text"):
-                            print(item.text)
+                            else:
+                                i += 1
                 
-                else:
-                    print(f"Unknown command: {cmd}")
-                    print("Type 'help' for available commands")
-                    
-            except EOFError:
-                break
-            except KeyboardInterrupt:
-                print("\n^C")
-                continue
-            except Exception as e:
-                print(f"Error: {e}")
-    
-    finally:
-        if current_client:
-            await factory.cleanup_client(episodes[current_name]["episode_id"])
+                client = get_client(current_name)
+                result = await client.call_tool(tool_name, args)
+                for item in result.get("content", []):
+                    if isinstance(item, dict) and "text" in item:
+                        print(item["text"])
+                    else:
+                        print(item)
+            
+            else:
+                print(f"Unknown command: {cmd}")
+                print("Type 'help' for available commands")
+                
+        except EOFError:
+            break
+        except KeyboardInterrupt:
+            print("\n^C")
+            continue
+        except Exception as e:
+            print(f"Error: {e}")
 
 
 async def stop_server(domain: Optional[str] = None) -> None:

@@ -123,7 +123,7 @@ class ResourcehealthExecutor(DockerExecutor):
         
         self.add_parameter(
             Parameter(
-                name="parameters",
+                name="params",
                 type=ParameterType.OBJECT,
                 description=(
                     "Parameters for the sub-command. For 'availability-status get': "
@@ -140,7 +140,7 @@ class ResourcehealthExecutor(DockerExecutor):
         result = super().validate_parameters(parameters)
         
         command = parameters.get("command", "")
-        params = parameters.get("parameters", {})
+        params = parameters.get("params", {})
         
         if command not in self.SUPPORTED_COMMANDS:
             result.add_error(
@@ -168,7 +168,7 @@ class ResourcehealthExecutor(DockerExecutor):
             )
         
         command = parameters["command"]
-        params = parameters["parameters"]
+        params = parameters["params"]
         
         try:
             if command == "availability-status get":
@@ -237,7 +237,7 @@ class ResourcehealthExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(status, indent=2),
+            json.dumps(status, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "availability-status get",
@@ -313,7 +313,7 @@ class ResourcehealthExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(response, indent=2),
+            json.dumps(response, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "availability-status list",
@@ -376,10 +376,15 @@ class ResourcehealthExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(events, indent=2),
+            json.dumps(events, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "health-events list",
                 "event_count": len(events["value"]),
             }
         )
+
+
+# Register the executor with SABER's executor registry
+from saber.server.execution.executors.executor_registry import register_executor
+register_executor("resourcehealth", ResourcehealthExecutor, "azure_mcp_namespace")

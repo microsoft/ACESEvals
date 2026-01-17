@@ -114,7 +114,7 @@ class SubscriptionExecutor(DockerExecutor):
         
         self.add_parameter(
             Parameter(
-                name="parameters",
+                name="params",
                 type=ParameterType.OBJECT,
                 description=(
                     "Parameters for the sub-command. For 'list': tenant (optional). "
@@ -154,7 +154,7 @@ class SubscriptionExecutor(DockerExecutor):
             )
         
         command = parameters["command"]
-        params = parameters.get("parameters", {})
+        params = parameters.get("params", {})
         
         try:
             if command == "list":
@@ -226,7 +226,7 @@ class SubscriptionExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(subscriptions, indent=2),
+            json.dumps(subscriptions, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "list",
@@ -309,7 +309,7 @@ class SubscriptionExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(resource_groups, indent=2),
+            json.dumps(resource_groups, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "resource-group list",
@@ -317,3 +317,8 @@ class SubscriptionExecutor(DockerExecutor):
                 "resource_group_count": len(resource_groups["value"]),
             }
         )
+
+
+# Register the executor with SABER's executor registry
+from saber.server.execution.executors.executor_registry import register_executor
+register_executor("subscription", SubscriptionExecutor, "azure_mcp_namespace")

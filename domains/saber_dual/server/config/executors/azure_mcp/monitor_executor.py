@@ -164,7 +164,7 @@ class MonitorExecutor(DockerExecutor):
         
         self.add_parameter(
             Parameter(
-                name="parameters",
+                name="params",
                 type=ParameterType.OBJECT,
                 description=(
                     "Parameters for the sub-command. For 'workspace log query': "
@@ -181,7 +181,7 @@ class MonitorExecutor(DockerExecutor):
         result = super().validate_parameters(parameters)
         
         command = parameters.get("command", "")
-        params = parameters.get("parameters", {})
+        params = parameters.get("params", {})
         
         # Validate command is supported
         if command not in self.SUPPORTED_COMMANDS:
@@ -223,7 +223,7 @@ class MonitorExecutor(DockerExecutor):
             )
         
         command = parameters["command"]
-        params = parameters["parameters"]
+        params = parameters["params"]
         
         try:
             if command == "workspace log query":
@@ -356,7 +356,7 @@ class MonitorExecutor(DockerExecutor):
             response = {"raw": exec_result.stdout, "workspace": workspace}
         
         return CommandResult.success_result(
-            output=json.dumps(response, indent=2),
+            json.dumps(response, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "workspace log query",
@@ -426,7 +426,7 @@ class MonitorExecutor(DockerExecutor):
             response = {"raw": exec_result.stdout}
         
         return CommandResult.success_result(
-            output=json.dumps(response, indent=2),
+            json.dumps(response, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "activitylog list",
@@ -461,7 +461,7 @@ class MonitorExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(tables, indent=2),
+            json.dumps(tables, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "table list",
@@ -488,7 +488,7 @@ class MonitorExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(table_types, indent=2),
+            json.dumps(table_types, indent=2),
             metadata={"episode_id": episode_id, "command": "table type list"}
         )
 
@@ -525,7 +525,7 @@ class MonitorExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(metrics, indent=2),
+            json.dumps(metrics, indent=2),
             metadata={"episode_id": episode_id, "command": "metrics query"}
         )
 
@@ -550,7 +550,7 @@ class MonitorExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(definitions, indent=2),
+            json.dumps(definitions, indent=2),
             metadata={"episode_id": episode_id, "command": "metrics definitions"}
         )
 
@@ -588,3 +588,8 @@ class MonitorExecutor(DockerExecutor):
                 self.stderr = err.decode() if err else ""
         
         return ExecResult(proc.returncode, stdout, stderr)
+
+
+# Register the executor with SABER's executor registry
+from saber.server.execution.executors.executor_registry import register_executor
+register_executor("monitor", MonitorExecutor, "azure_mcp_namespace")

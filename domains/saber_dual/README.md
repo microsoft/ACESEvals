@@ -186,7 +186,7 @@ uv run inspect eval domains/saber_dual \
 
 | File | Purpose |
 |------|---------|
-| `server/config/tasks/lite_dual/lite_dual.yaml` | Task definitions, phases, scoring |
+| `server/config/tasks/react2shell/react2shell.yaml` | Task definitions, phases, scoring |
 | `server/config/environments/sandbox/*.compose.yml` | Docker compose for red/blue sandboxes |
 | `server/config/executors/*.py` | Custom tool implementations |
 | `server/config/prompts/` | Agent instructions per role |

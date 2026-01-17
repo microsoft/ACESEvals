@@ -183,7 +183,7 @@ class KeyvaultExecutor(DockerExecutor):
         
         self.add_parameter(
             Parameter(
-                name="parameters",
+                name="params",
                 type=ParameterType.OBJECT,
                 description=(
                     "Parameters for the sub-command. For 'secret list': "
@@ -199,8 +199,11 @@ class KeyvaultExecutor(DockerExecutor):
         """Validate Azure MCP command and parameters."""
         result = super().validate_parameters(parameters)
         
+        # Debug logging
+        
         command = parameters.get("command", "")
-        params = parameters.get("parameters", {})
+        params = parameters.get("params", {})
+        
         
         if command not in self.SUPPORTED_COMMANDS:
             result.add_error(
@@ -228,7 +231,7 @@ class KeyvaultExecutor(DockerExecutor):
             )
         
         command = parameters["command"]
-        params = parameters["parameters"]
+        params = parameters["params"]
         
         try:
             if command == "secret list":
@@ -310,7 +313,7 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(secrets, indent=2),
+            json.dumps(secrets, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "secret list",
@@ -360,7 +363,7 @@ class KeyvaultExecutor(DockerExecutor):
         logger.info(f"Secret accessed: {secret_name} from vault {vault}")
         
         return CommandResult.success_result(
-            output=json.dumps(secret, indent=2),
+            json.dumps(secret, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "secret get",
@@ -392,7 +395,7 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(secret, indent=2),
+            json.dumps(secret, indent=2),
             metadata={
                 "episode_id": episode_id,
                 "command": "secret create",
@@ -429,7 +432,7 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(keys, indent=2),
+            json.dumps(keys, indent=2),
             metadata={"episode_id": episode_id, "command": "key list"}
         )
 
@@ -454,7 +457,7 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(key, indent=2),
+            json.dumps(key, indent=2),
             metadata={"episode_id": episode_id, "command": "key get"}
         )
 
@@ -478,7 +481,7 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(key, indent=2),
+            json.dumps(key, indent=2),
             metadata={"episode_id": episode_id, "command": "key create"}
         )
 
@@ -502,7 +505,7 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(certs, indent=2),
+            json.dumps(certs, indent=2),
             metadata={"episode_id": episode_id, "command": "certificate list"}
         )
 
@@ -527,7 +530,7 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(cert, indent=2),
+            json.dumps(cert, indent=2),
             metadata={"episode_id": episode_id, "command": "certificate get"}
         )
 
@@ -550,6 +553,11 @@ class KeyvaultExecutor(DockerExecutor):
         }
         
         return CommandResult.success_result(
-            output=json.dumps(settings, indent=2),
+            json.dumps(settings, indent=2),
             metadata={"episode_id": episode_id, "command": "admin settings get"}
         )
+
+
+# Register the executor with SABER's executor registry
+from saber.server.execution.executors.executor_registry import register_executor
+register_executor("keyvault", KeyvaultExecutor, "azure_mcp_namespace")

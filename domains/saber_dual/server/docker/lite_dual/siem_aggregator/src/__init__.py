@@ -1,1 +1,0 @@
-"""SABER_dual SIEM Aggregator Package"""
