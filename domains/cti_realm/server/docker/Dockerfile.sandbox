@@ -33,10 +33,10 @@ RUN pip3 install --no-cache-dir \
     stix2
 
 # Copy CTI Realm tools and data
-COPY server/data/core/ /opt/cti_realm/core/
 COPY server/docker/sandbox_tools/ /opt/cti_realm/tools/
 COPY server/data/cti_reports/ /opt/cti_realm/data/cti_reports/
 COPY server/docker/kusto_init/ /opt/cti_realm/data/kusto_init/
+COPY server/data/data/sigma_rules.json /opt/cti_realm/data/sigma_rules.json
 ENV PYTHONPATH="/opt/cti_realm:/opt/cti_realm/tools:$PYTHONPATH"
 
 # Create non-root user for SABER sandbox

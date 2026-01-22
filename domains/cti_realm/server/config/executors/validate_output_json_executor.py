@@ -4,6 +4,7 @@ Validate Output JSON Executor - Validate final output JSON.
 Logging category: LogCategory.DOCKER
 """
 
+import base64
 from typing import Any, Dict, List, Optional
 
 from saber.logging_config import LogCategory, get_saber_logger
@@ -60,31 +61,35 @@ class ValidateOutputJSONExecutor(DockerExecutor):
     def build_command(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
         """Build command to validate output JSON."""
         json_data = parameters.get("json_data", "")
-        json_escaped = json_data.replace("'", "'\\''")
+        # Base64 encode the JSON data to avoid shell quoting issues
+        json_b64 = base64.b64encode(json_data.encode('utf-8')).decode('ascii')
 
-        script = f"""
-import json
+        script = f'''import json
+import base64
 
 try:
-    data = json.loads(\\'{json_escaped}\\')
+    json_bytes = base64.b64decode("{json_b64}")
+    json_str = json_bytes.decode("utf-8")
+    data = json.loads(json_str)
 
     required_fields = ["sigma_rule", "kql_query", "query_results"]
     missing_fields = [f for f in required_fields if f not in data]
 
     if missing_fields:
-        print(json.dumps({{"valid": False, "error": f"Missing required fields: {{missing_fields}}"}}))
+        print(json.dumps({{"valid": False, "error": "Missing required fields: " + str(missing_fields)}}))
     elif not isinstance(data.get("query_results"), list):
         print(json.dumps({{"valid": False, "error": "query_results must be an array"}}))
     elif not data.get("sigma_rule") or not data.get("kql_query"):
         print(json.dumps({{"valid": False, "error": "sigma_rule and kql_query cannot be empty"}}))
     else:
-        print(json.dumps({{"valid": True, "message": "Output JSON is valid"}}))
+        print(json.dumps({{"valid": True, "message": "Output JSON is valid and contains all required fields"}}))
 except json.JSONDecodeError as e:
-    print(json.dumps({{"valid": False, "error": f"Invalid JSON: {{str(e)}}"}}))
+    print(json.dumps({{"valid": False, "error": "Invalid JSON: " + str(e)}}))
 except Exception as e:
-    print(json.dumps({{"valid": False, "error": f"Validation error: {{str(e)}}"}}))
-"""
-        return ["/bin/sh", "-c", f"python3 -c '{script}'"]
+    print(json.dumps({{"valid": False, "error": "Validation error: " + str(e)}}))
+'''
+        encoded_script = base64.b64encode(script.encode('utf-8')).decode('ascii')
+        return ["/bin/sh", "-c", f"echo {encoded_script} | base64 -d | python3"]
 
     async def execute(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> CommandResult:
         try:

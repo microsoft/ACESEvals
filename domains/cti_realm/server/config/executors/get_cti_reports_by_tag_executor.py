@@ -59,14 +59,15 @@ class GetCTIReportsByTagExecutor(DockerExecutor):
 
     def build_command(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
         """Build command to get CTI reports by tag from local data."""
+        import base64
+
         tag = parameters.get("tag", "")
-        tag_escaped = tag.replace("'", "'\\''")
 
         script = f"""
 import json
 from pathlib import Path
 
-reports_file = Path("/workspace/cti_reports/reports.jsonl")
+reports_file = Path("/opt/cti_realm/data/cti_reports/reports.jsonl")
 matching_reports = []
 
 if reports_file.exists():
@@ -74,12 +75,13 @@ if reports_file.exists():
         for line in f:
             if line.strip():
                 report = json.loads(line)
-                if "{tag_escaped}" in report.get("tags", []):
+                if "{tag}" in report.get("tags", []):
                     matching_reports.append(report)
 
 print(json.dumps({{"count": len(matching_reports), "reports": matching_reports}}))
 """
-        return ["/bin/sh", "-c", f"python3 -c '{script}'"]
+        encoded_script = base64.b64encode(script.encode()).decode()
+        return ["/bin/sh", "-c", f"echo {encoded_script} | base64 -d | python3"]
 
     async def execute(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> CommandResult:
         try:

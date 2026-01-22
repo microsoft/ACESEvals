@@ -50,23 +50,19 @@ class ListKustoTablesExecutor(DockerExecutor):
         pass
 
     def build_command(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
-        """Build command with direct HTTP call to Kusto."""
-        script = """
-import json
-import urllib.request
+        """Build command with direct HTTP call to Kusto using curl."""
+        import json
 
-url = "http://saber-cti-kusto-emulator:8080/v1/rest/query"
-payload = json.dumps({"db": "NetDefaultDB", "csl": ".show tables"}).encode()
+        payload = json.dumps({"db": "NetDefaultDB", "csl": ".show tables"})
 
-try:
-    req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        data = json.loads(response.read().decode())
-        print(json.dumps(data))
-except Exception as e:
-    print(json.dumps({"error": f"Failed to query Kusto: {str(e)}"}))
-"""
-        return ["/bin/sh", "-c", f"python3 -c '{script}'"]
+        return [
+            "curl",
+            "-s",
+            "-X", "POST",
+            "http://saber-cti-kusto-emulator:8080/v1/rest/query",
+            "-H", "Content-Type: application/json",
+            "-d", payload,
+        ]
 
     async def execute(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> CommandResult:
         try:

@@ -37,7 +37,6 @@ _cti_realm_factory = create_domain_task(
     default_agent="react",
 )
 
-
 # Wrap in @task decorator for Inspect AI discovery
 @task
 def cti_realm(**kwargs):
@@ -87,4 +86,8 @@ def cti_realm(**kwargs):
         # Run a single task
         inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T task_filter="linux_privilege_escalation_001"
     """
+    # Ensure scorers are registered only once
+    if not hasattr(cti_realm, "_scorers_registered"):
+        register_cti_realm_scorers()
+        cti_realm._scorers_registered = True
     return _cti_realm_factory(**kwargs)

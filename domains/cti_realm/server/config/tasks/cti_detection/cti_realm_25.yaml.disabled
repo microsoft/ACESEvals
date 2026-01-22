@@ -1,0 +1,2546 @@
+tasks:
+- task_id: linux_001
+  title: Write a detection rule to identify when APT or apt-get packa...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify when APT or apt-get package managers spawn shell interpreters
+      (sh, dash) as child processes, monitoring for Pre-Invoke or Post-Invoke patterns in the parent command line that indicate
+      configuration hook abuse for arbitrary command execution
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id001
+    - T1059
+    - T1546
+    data_sources: &id002
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify when APT or apt-get package managers spawn shell interpreters
+        (sh, dash) as child processes, monitoring for Pre-Invoke or Post-Invoke patterns in the parent command line that indicate
+        configuration hook abuse for arbitrary command execution
+      expected_techniques: *id001
+      expected_data_sources: *id002
+      regex_patterns: &id003
+        initiatingprocessfilename: ^(apt|apt-get|bash)$
+        initiatingprocesscommandline: .*Pre-Invoke.*
+        filename: ^(sh|dash)$
+        processcommandline: .*f8e2a4c6-7d9b-4f3e-8a1c-5e7f9d2b4c8a-T1.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id001
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id002
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify when APT or apt-get package managers spawn shell interpreters
+          (sh, dash) as child processes, monitoring for Pre-Invoke or Post-Invoke patterns in the parent command line that
+          indicate configuration hook abuse for arbitrary command execution
+        expected_techniques: *id001
+        expected_data_sources: *id002
+        regex_patterns: *id003
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_002
+  title: Write a detection rule to identify when APT or apt-get packa...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify when APT or apt-get package managers spawn Python interpreters
+      (python, python3) as child processes, monitoring for Pre-Invoke or Post-Invoke patterns in the parent command line that
+      indicate hook-based execution of malicious Python scripts
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id004
+    - T1059
+    - T1546
+    data_sources: &id005
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify when APT or apt-get package managers spawn Python interpreters
+        (python, python3) as child processes, monitoring for Pre-Invoke or Post-Invoke patterns in the parent command line
+        that indicate hook-based execution of malicious Python scripts
+      expected_techniques: *id004
+      expected_data_sources: *id005
+      regex_patterns: &id006
+        initiatingprocessfilename: ^(apt|apt-get|bash)$
+        initiatingprocesscommandline: .*Pre-Invoke.*
+        filename: ^(python3|python)$
+        processcommandline: .*f8e2a4c6-7d9b-4f3e-8a1c-5e7f9d2b4c8a-T2.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id004
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id005
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify when APT or apt-get package managers spawn Python interpreters
+          (python, python3) as child processes, monitoring for Pre-Invoke or Post-Invoke patterns in the parent command line
+          that indicate hook-based execution of malicious Python scripts
+        expected_techniques: *id004
+        expected_data_sources: *id005
+        regex_patterns: *id006
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_013
+  title: Write a detection rule to detect crontab reconnaissance by m...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect crontab reconnaissance by monitoring for grep commands searching
+      for 'cron' patterns across system directories, indicating attempts to discover scheduled tasks and persistence mechanisms
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id007
+    - T1053
+    data_sources: &id008
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect crontab reconnaissance by monitoring for grep commands searching
+        for 'cron' patterns across system directories, indicating attempts to discover scheduled tasks and persistence mechanisms
+      expected_techniques: *id007
+      expected_data_sources: *id008
+      regex_patterns: &id009
+        initiatingprocessfilename: ^(grep)$
+        initiatingprocesscommandline: .*
+        filename: ^(grep)$
+        processcommandline: .*(grep.*cron|f7b4c2a9-8d5f-4e1b-b3a9-9f72bde6c4aa-T1).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id007
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id008
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect crontab reconnaissance by monitoring for grep commands searching
+          for 'cron' patterns across system directories, indicating attempts to discover scheduled tasks and persistence mechanisms
+        expected_techniques: *id007
+        expected_data_sources: *id008
+        regex_patterns: *id009
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_016
+  title: Write a detection rule to detect malicious file download and...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect malicious file download and execution by monitoring for curl processes
+      downloading bash scripts to /tmp followed by bash execution, indicating classic download-and-execute malware delivery
+      patterns
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id010
+    - T1105
+    - T1059
+    data_sources: &id011
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect malicious file download and execution by monitoring for curl processes
+        downloading bash scripts to /tmp followed by bash execution, indicating classic download-and-execute malware delivery
+        patterns
+      expected_techniques: *id010
+      expected_data_sources: *id011
+      regex_patterns: &id012
+        initiatingprocessfilename: ^(curl|bash|sh)$
+        initiatingprocesscommandline: .*
+        filename: ^(bash|curl)$
+        processcommandline: .*(file:///tmp/.*\.sh|/tmp/.*e7f1a5c9-8d4b-4e6f-9a2c-7d3e8f5a1c6b-T1.*\.sh).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id010
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id011
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect malicious file download and execution by monitoring for curl
+          processes downloading bash scripts to /tmp followed by bash execution, indicating classic download-and-execute malware
+          delivery patterns
+        expected_techniques: *id010
+        expected_data_sources: *id011
+        regex_patterns: *id012
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_017
+  title: Write a detection rule to identify when wget processes downl...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify when wget processes download shell scripts to /tmp followed by
+      sh execution, monitoring for suspicious file downloads to temporary directories with immediate execution
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id013
+    - T1105
+    - T1059
+    data_sources: &id014
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify when wget processes download shell scripts to /tmp followed
+        by sh execution, monitoring for suspicious file downloads to temporary directories with immediate execution
+      expected_techniques: *id013
+      expected_data_sources: *id014
+      regex_patterns: &id015
+        initiatingprocessfilename: ^(wget|bash|sh)$
+        initiatingprocesscommandline: .*
+        filename: ^(sh|wget)$
+        processcommandline: .*(file:///tmp/.*\.sh|/tmp/.*e7f1a5c9-8d4b-4e6f-9a2c-7d3e8f5a1c6b-T2.*\.sh).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id013
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id014
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify when wget processes download shell scripts to /tmp followed
+          by sh execution, monitoring for suspicious file downloads to temporary directories with immediate execution
+        expected_techniques: *id013
+        expected_data_sources: *id014
+        regex_patterns: *id015
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_019
+  title: Write a detection rule to identify when wget downloads Pytho...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify when wget downloads Python scripts to /tmp followed by python
+      execution, indicating malicious script delivery and execution from temporary directories
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id016
+    - T1105
+    - T1059
+    data_sources: &id017
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify when wget downloads Python scripts to /tmp followed by python
+        execution, indicating malicious script delivery and execution from temporary directories
+      expected_techniques: *id016
+      expected_data_sources: *id017
+      regex_patterns: &id018
+        initiatingprocessfilename: ^(wget|python|python3)$
+        initiatingprocesscommandline: .*
+        filename: ^(python|python3|wget)$
+        processcommandline: .*(file:///tmp/.*\.py|/tmp/.*e7f1a5c9-8d4b-4e6f-9a2c-7d3e8f5a1c6b-T4.*\.py).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id016
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id017
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify when wget downloads Python scripts to /tmp followed by python
+          execution, indicating malicious script delivery and execution from temporary directories
+        expected_techniques: *id016
+        expected_data_sources: *id017
+        regex_patterns: *id018
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_024
+  title: Write a detection rule to detect evidence destruction by mon...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect evidence destruction by monitoring for dd commands overwriting log
+      files or evidence files with patterns or random data, indicating attempts to eliminate forensic artifacts
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id019
+    - T1485
+    - T1070
+    data_sources: &id020
+    - DeviceProcessEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect evidence destruction by monitoring for dd commands overwriting
+        log files or evidence files with patterns or random data, indicating attempts to eliminate forensic artifacts
+      expected_techniques: *id019
+      expected_data_sources: *id020
+      regex_patterns: &id021
+        initiatingprocessfilename: ^(bash)$
+        initiatingprocesscommandline: .*
+        filename: ^(dd)$
+        processcommandline: .*(evidence_.*\.log|f3d7a9e4-2c8b-4f6e-8a1d-7e4f9c2a6b3d-T3).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id019
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id020
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect evidence destruction by monitoring for dd commands overwriting
+          log files or evidence files with patterns or random data, indicating attempts to eliminate forensic artifacts
+        expected_techniques: *id019
+        expected_data_sources: *id020
+        regex_patterns: *id021
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_028
+  title: Write a detection rule to detect history logging disablement...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect history logging disablement by monitoring for bash or sh processes
+      setting HISTSIZE=0 in command lines, indicating attempts to prevent command history recording
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id022
+    - T1070
+    data_sources: &id023
+    - DeviceProcessEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect history logging disablement by monitoring for bash or sh processes
+        setting HISTSIZE=0 in command lines, indicating attempts to prevent command history recording
+      expected_techniques: *id022
+      expected_data_sources: *id023
+      regex_patterns: &id024
+        initiatingprocessfilename: ^(bash|sh)$
+        initiatingprocesscommandline: .*
+        filename: ^(bash|sh)$
+        processcommandline: .*(HISTSIZE=0|f9d4b7e3-6a8c-4f2e-9b1d-5e7c8a3f6d2b-T2).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id022
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id023
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect history logging disablement by monitoring for bash or sh processes
+          setting HISTSIZE=0 in command lines, indicating attempts to prevent command history recording
+        expected_techniques: *id022
+        expected_data_sources: *id023
+        regex_patterns: *id024
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_044
+  title: Write a detection rule to detect crontab-based persistence b...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect crontab-based persistence by monitoring for crontab commands loading
+      job definitions from /tmp files, indicating establishment of scheduled malicious task execution
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id025
+    - T1053
+    data_sources: &id026
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect crontab-based persistence by monitoring for crontab commands loading
+        job definitions from /tmp files, indicating establishment of scheduled malicious task execution
+      expected_techniques: *id025
+      expected_data_sources: *id026
+      regex_patterns: &id027
+        initiatingprocessfilename: ^(bash|sh|sudo)$
+        initiatingprocesscommandline: .*
+        filename: ^(crontab)$
+        processcommandline: .*(crontab.*/tmp/cron_t1_|e8c5f2a9-7d4b-4f6e-9a2c-5f8d9e3a1c7b-T1).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id025
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id026
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect crontab-based persistence by monitoring for crontab commands
+          loading job definitions from /tmp files, indicating establishment of scheduled malicious task execution
+        expected_techniques: *id025
+        expected_data_sources: *id026
+        regex_patterns: *id027
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_046
+  title: Write a detection rule to detect credential harvesting from ...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect credential harvesting from command history by monitoring for cat
+      or grep commands reading .bash_history files, indicating attempts to discover passwords or sensitive commands from user
+      history
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id028
+    - T1552
+    data_sources: &id029
+    - DeviceProcessEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect credential harvesting from command history by monitoring for cat
+        or grep commands reading .bash_history files, indicating attempts to discover passwords or sensitive commands from
+        user history
+      expected_techniques: *id028
+      expected_data_sources: *id029
+      regex_patterns: &id030
+        initiatingprocessfilename: ^(cat|grep|bash|sh|sudo)$
+        initiatingprocesscommandline: .*
+        filename: ^(cat|grep)$
+        processcommandline: .*(\.bash_history|a7f3d9e2-4b8c-4f5e-8a1d-7e3f9c5a2b6d-T1).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id028
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id029
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect credential harvesting from command history by monitoring for
+          cat or grep commands reading .bash_history files, indicating attempts to discover passwords or sensitive commands
+          from user history
+        expected_techniques: *id028
+        expected_data_sources: *id029
+        regex_patterns: *id030
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_047
+  title: Write a detection rule to identify history file reconnaissan...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify history file reconnaissance by monitoring for grep or tail commands
+      searching bash history for sensitive keywords like password, passwd, token, key, ssh, or credential-related strings
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id031
+    - T1552
+    data_sources: &id032
+    - DeviceProcessEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify history file reconnaissance by monitoring for grep or tail commands
+        searching bash history for sensitive keywords like password, passwd, token, key, ssh, or credential-related strings
+      expected_techniques: *id031
+      expected_data_sources: *id032
+      regex_patterns: &id033
+        initiatingprocessfilename: ^(grep|bash|sh|sudo|tail)$
+        initiatingprocesscommandline: .*
+        filename: ^(grep|tail)$
+        processcommandline: .*(password|passwd|pwd|token|key|ssh|scp|sftp|a7f3d9e2-4b8c-4f5e-8a1d-7e3f9c5a2b6d-T2).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id031
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id032
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify history file reconnaissance by monitoring for grep or tail
+          commands searching bash history for sensitive keywords like password, passwd, token, key, ssh, or credential-related
+          strings
+        expected_techniques: *id031
+        expected_data_sources: *id032
+        regex_patterns: *id033
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_048
+  title: Write a detection rule to detect systematic history file acc...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect systematic history file access by monitoring for less or cat commands
+      reading .bash_history, .sh_history, or .history files, indicating credential discovery attempts across multiple shell
+      types
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id034
+    - T1552
+    data_sources: &id035
+    - DeviceProcessEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect systematic history file access by monitoring for less or cat commands
+        reading .bash_history, .sh_history, or .history files, indicating credential discovery attempts across multiple shell
+        types
+      expected_techniques: *id034
+      expected_data_sources: *id035
+      regex_patterns: &id036
+        initiatingprocessfilename: ^(less|cat|bash|sh|sudo)$
+        initiatingprocesscommandline: .*
+        filename: ^(less|cat)$
+        processcommandline: .*(\.bash_history|\.sh_history|\.history|a7f3d9e2-4b8c-4f5e-8a1d-7e3f9c5a2b6d-T3).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id034
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id035
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect systematic history file access by monitoring for less or cat
+          commands reading .bash_history, .sh_history, or .history files, indicating credential discovery attempts across
+          multiple shell types
+        expected_techniques: *id034
+        expected_data_sources: *id035
+        regex_patterns: *id036
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_053
+  title: Write a detection rule to identify security tool discovery b...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify security tool discovery by monitoring for find commands searching
+      /opt, /usr, or /var directories, indicating attempts to locate security software installations through filesystem enumeration
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id037
+    - T1518
+    data_sources: &id038
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify security tool discovery by monitoring for find commands searching
+        /opt, /usr, or /var directories, indicating attempts to locate security software installations through filesystem
+        enumeration
+      expected_techniques: *id037
+      expected_data_sources: *id038
+      regex_patterns: &id039
+        initiatingprocessfilename: ^(bash|find)$
+        initiatingprocesscommandline: .*
+        filename: ^(find)$
+        processcommandline: .*((/opt|/usr|/var)|d6c9f4e8-2a5b-4f7e-8a3d-5e7f9d2c4a6b-T3).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id037
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id038
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify security tool discovery by monitoring for find commands searching
+          /opt, /usr, or /var directories, indicating attempts to locate security software installations through filesystem
+          enumeration
+        expected_techniques: *id037
+        expected_data_sources: *id038
+        regex_patterns: *id039
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_062
+  title: Write a detection rule to detect system information reconnai...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect system information reconnaissance by monitoring for cat commands
+      reading /proc/version, indicating attempts to gather kernel and OS version information for exploit targeting
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id040
+    - T1082
+    data_sources: &id041
+    - DeviceProcessEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect system information reconnaissance by monitoring for cat commands
+        reading /proc/version, indicating attempts to gather kernel and OS version information for exploit targeting
+      expected_techniques: *id040
+      expected_data_sources: *id041
+      regex_patterns: &id042
+        initiatingprocessfilename: ^(bash|sh)$
+        initiatingprocesscommandline: .*
+        filename: ^cat$
+        processcommandline: .*(/proc/version|e5d9f3a7-2c8b-4f4e-8a6d-3f7e9c1a5b2d-T2).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id040
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id041
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect system information reconnaissance by monitoring for cat commands
+          reading /proc/version, indicating attempts to gather kernel and OS version information for exploit targeting
+        expected_techniques: *id040
+        expected_data_sources: *id041
+        regex_patterns: *id042
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: linux_064
+  title: Write a detection rule to detect user enumeration by monitor...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect user enumeration by monitoring for w command with -h flag or processes
+      creating user lists in /tmp, indicating reconnaissance of currently logged-in users and their activities
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Linux
+    mitre_techniques: &id043
+    - T1033
+    data_sources: &id044
+    - DeviceProcessEvents
+    - DeviceFileEvents
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect user enumeration by monitoring for w command with -h flag or processes
+        creating user lists in /tmp, indicating reconnaissance of currently logged-in users and their activities
+      expected_techniques: *id043
+      expected_data_sources: *id044
+      regex_patterns: &id045
+        initiatingprocessfilename: ^(bash|sh)$
+        initiatingprocesscommandline: .*
+        filename: ^(w|bash|cat|head)$
+        processcommandline: .*(w -h|/tmp/wlist_|a4f8c2e6-7d9b-4f3e-8a1c-6e2f8d5a9c3b-T2).*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id043
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id044
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect user enumeration by monitoring for w command with -h flag or
+          processes creating user lists in /tmp, indicating reconnaissance of currently logged-in users and their activities
+        expected_techniques: *id043
+        expected_data_sources: *id044
+        regex_patterns: *id045
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: aks_001
+  title: Write a detection rule to identify Kubernetes certificate-ba...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify Kubernetes certificate-based credential access by monitoring for
+      POST requests to the certificates.k8s.io/v1/certificatesigningrequests API endpoint, indicating creation of certificate
+      signing requests for client authentication
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Kubernetes
+    mitre_techniques: &id046
+    - T1552
+    data_sources: &id047
+    - AKSAudit
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify Kubernetes certificate-based credential access by monitoring
+        for POST requests to the certificates.k8s.io/v1/certificatesigningrequests API endpoint, indicating creation of certificate
+        signing requests for client authentication
+      expected_techniques: *id046
+      expected_data_sources: *id047
+      regex_patterns: &id048
+        verb: (?i)^(POST)$
+        requesturi: ^/apis/certificates\.k8s\.io/v1/certificatesigningrequests$
+        useragent: .*a7b8c9d0-1e2f-4a3b-9c8d-0e1f2a3b4c5d-CSR1-create-csr.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id046
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id047
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify Kubernetes certificate-based credential access by monitoring
+          for POST requests to the certificates.k8s.io/v1/certificatesigningrequests API endpoint, indicating creation of
+          certificate signing requests for client authentication
+        expected_techniques: *id046
+        expected_data_sources: *id047
+        regex_patterns: *id048
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: aks_003
+  title: Write a detection rule to identify privilege escalation thro...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify privilege escalation through RBAC by monitoring for POST requests
+      creating ClusterRoles in the rbac.authorization.k8s.io API with potentially excessive permissions, indicating creation
+      of highly privileged roles
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Kubernetes
+    mitre_techniques: &id049
+    - T1548
+    data_sources: &id050
+    - AKSAudit
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify privilege escalation through RBAC by monitoring for POST requests
+        creating ClusterRoles in the rbac.authorization.k8s.io API with potentially excessive permissions, indicating creation
+        of highly privileged roles
+      expected_techniques: *id049
+      expected_data_sources: *id050
+      regex_patterns: &id051
+        verb: (?i)^(POST)$
+        requesturi: ^/apis/rbac\.authorization\.k8s\.io/v1/clusterroles$
+        useragent: .*e1f2a3b4-5c6d-47e8-9f0a-1b2c3d4e5f6a-CRADMIN.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id049
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id050
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify privilege escalation through RBAC by monitoring for POST requests
+          creating ClusterRoles in the rbac.authorization.k8s.io API with potentially excessive permissions, indicating creation
+          of highly privileged roles
+        expected_techniques: *id049
+        expected_data_sources: *id050
+        regex_patterns: *id051
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: aks_004
+  title: Write a detection rule to detect privilege escalation comple...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect privilege escalation completion by monitoring for POST requests
+      creating ClusterRoleBindings that grant ClusterRole permissions to ServiceAccounts or users, indicating assignment of
+      elevated privileges
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Kubernetes
+    mitre_techniques: &id052
+    - T1548
+    data_sources: &id053
+    - AKSAudit
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect privilege escalation completion by monitoring for POST requests
+        creating ClusterRoleBindings that grant ClusterRole permissions to ServiceAccounts or users, indicating assignment
+        of elevated privileges
+      expected_techniques: *id052
+      expected_data_sources: *id053
+      regex_patterns: &id054
+        verb: (?i)^(POST)$
+        requesturi: ^/apis/rbac\.authorization\.k8s\.io/v1/clusterrolebindings$
+        useragent: .*e1f2a3b4-5c6d-47e8-9f0a-1b2c3d4e5f6a-CRADMIN.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id052
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id053
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect privilege escalation completion by monitoring for POST requests
+          creating ClusterRoleBindings that grant ClusterRole permissions to ServiceAccounts or users, indicating assignment
+          of elevated privileges
+        expected_techniques: *id052
+        expected_data_sources: *id053
+        regex_patterns: *id054
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: aks_008
+  title: Write a detection rule to detect cross-namespace secret acce...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect cross-namespace secret access by monitoring for GET or LIST requests
+      to namespace-specific secrets endpoints (/api/v1/namespaces/*/secrets), indicating systematic enumeration of secrets
+      across multiple namespaces
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Kubernetes
+    mitre_techniques: &id055
+    - T1552
+    data_sources: &id056
+    - AKSAudit
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect cross-namespace secret access by monitoring for GET or LIST requests
+        to namespace-specific secrets endpoints (/api/v1/namespaces/*/secrets), indicating systematic enumeration of secrets
+        across multiple namespaces
+      expected_techniques: *id055
+      expected_data_sources: *id056
+      regex_patterns: &id057
+        verb: (?i)^(get|list)$
+        requesturi: ^/api/v1/namespaces/[^/]+/secrets$
+        useragent: .*a3b2c9e4-5d7f-4a9b-9d2e-7f8a1c6b3e5f-SIM2.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id055
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id056
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect cross-namespace secret access by monitoring for GET or LIST
+          requests to namespace-specific secrets endpoints (/api/v1/namespaces/*/secrets), indicating systematic enumeration
+          of secrets across multiple namespaces
+        expected_techniques: *id055
+        expected_data_sources: *id056
+        regex_patterns: *id057
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: aks_009
+  title: Write a detection rule to identify bulk Kubernetes secret ex...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify bulk Kubernetes secret exfiltration by monitoring for high-volume
+      GET or LIST operations to /api/v1/secrets with query parameters, indicating mass secret dumping operations that may
+      precede data exfiltration
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Kubernetes
+    mitre_techniques: &id058
+    - T1552
+    data_sources: &id059
+    - AKSAudit
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify bulk Kubernetes secret exfiltration by monitoring for high-volume
+        GET or LIST operations to /api/v1/secrets with query parameters, indicating mass secret dumping operations that may
+        precede data exfiltration
+      expected_techniques: *id058
+      expected_data_sources: *id059
+      regex_patterns: &id060
+        verb: (?i)^(get|list)$
+        requesturi: ^/api/v1/secrets(\?.*)?$
+        useragent: .*a3b2c9e4-5d7f-4a9b-9d2e-7f8a1c6b3e5f-SIM3.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id058
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id059
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify bulk Kubernetes secret exfiltration by monitoring for high-volume
+          GET or LIST operations to /api/v1/secrets with query parameters, indicating mass secret dumping operations that
+          may precede data exfiltration
+        expected_techniques: *id058
+        expected_data_sources: *id059
+        regex_patterns: *id060
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: aks_017
+  title: Write a detection rule to identify ServiceAccount manipulati...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify ServiceAccount manipulation by monitoring for patch operations
+      on serviceaccounts resources, indicating modification of ServiceAccount metadata such as annotations or labels that
+      may alter behavior or permissions
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Kubernetes
+    mitre_techniques: &id061
+    - T1098
+    data_sources: &id062
+    - AKSAudit
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify ServiceAccount manipulation by monitoring for patch operations
+        on serviceaccounts resources, indicating modification of ServiceAccount metadata such as annotations or labels that
+        may alter behavior or permissions
+      expected_techniques: *id061
+      expected_data_sources: *id062
+      regex_patterns: &id063
+        verb: (?i)^(patch)$
+        objectref_resource: (?i)^(serviceaccounts)$
+        objectref_name: ^sim-serviceaccount-sa-moddel-44556677.*
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id061
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id062
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify ServiceAccount manipulation by monitoring for patch operations
+          on serviceaccounts resources, indicating modification of ServiceAccount metadata such as annotations or labels that
+          may alter behavior or permissions
+        expected_techniques: *id061
+        expected_data_sources: *id062
+        regex_patterns: *id063
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: cloud_002
+  title: Write a detection rule to detect privilege escalation throug...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to detect privilege escalation through hidden membership Administrative Units
+      by monitoring for AU creation with concealed visibility settings, followed by addition of users as members and assignment
+      of privileged directory roles scoped to these hidden organizational containers. This attack enables covert password
+      reset and MFA control capabilities over target users while keeping the administrative relationships invisible to most
+      security tools and investigators. Focus on correlating AU management operations with role assignment activities.
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Cloud
+    mitre_techniques: &id064
+    - T1078
+    - T1098
+    - T1484
+    - T1136
+    data_sources: &id065
+    - SigninLogs
+    - AuditLogs
+    - MicrosoftGraphActivityLogs
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to detect privilege escalation through hidden membership Administrative
+        Units by monitoring for AU creation with concealed visibility settings, followed by addition of users as members and
+        assignment of privileged directory roles scoped to these hidden organizational containers. This attack enables covert
+        password reset and MFA control capabilities over target users while keeping the administrative relationships invisible
+        to most security tools and investigators. Focus on correlating AU management operations with role assignment activities.
+      expected_techniques: *id064
+      expected_data_sources: *id065
+      regex_patterns: &id066
+        Identity: ^(John Mitchell|jmitchell@contoso\.onmicrosoft\.com)$
+        ClientAppUsed: ^Mobile Apps and Desktop clients$
+        AppDisplayName: ^Microsoft Office$
+        ResultType: '0'
+        OperationName: ^Add administrative unit$
+        ActivityDisplayName: ^Add user$
+        InitiatedBy_user_userPrincipalName: ^jmitchell@contoso\.onmicrosoft\.com$
+        RequestUri: .*/roleManagement/directory/roleAssignments.*
+        RequestMethod: ^POST$
+        UserId: ^7b398c54-bcfb-4f9b-8f6f-c8d36ad914a4$
+        ResponseStatusCode: '201'
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id064
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id065
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to detect privilege escalation through hidden membership Administrative
+          Units by monitoring for AU creation with concealed visibility settings, followed by addition of users as members
+          and assignment of privileged directory roles scoped to these hidden organizational containers. This attack enables
+          covert password reset and MFA control capabilities over target users while keeping the administrative relationships
+          invisible to most security tools and investigators. Focus on correlating AU management operations with role assignment
+          activities.
+        expected_techniques: *id064
+        expected_data_sources: *id065
+        regex_patterns: *id066
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: cloud_009
+  title: Write a detection rule to identify privilege escalation thro...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify privilege escalation through VM creation with privileged identities
+      by monitoring for virtual machine creation operations that include administrative managed identities during provisioning,
+      followed by command execution on the newly created infrastructure. This technique allows establishing elevated access
+      paths by embedding privileged identities into attacker-controlled resources. Detection should correlate VM creation
+      showing successful provisioning with subsequent command execution operations and privileged resource management activities
+      that don't match the original caller's permission level.
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Cloud
+    mitre_techniques: &id067
+    - T1078
+    - T1583
+    - T1578
+    - T1609
+    - T1098
+    - T1552
+    - T1550
+    data_sources: &id068
+    - SigninLogs
+    - AzureActivity
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify privilege escalation through VM creation with privileged identities
+        by monitoring for virtual machine creation operations that include administrative managed identities during provisioning,
+        followed by command execution on the newly created infrastructure. This technique allows establishing elevated access
+        paths by embedding privileged identities into attacker-controlled resources. Detection should correlate VM creation
+        showing successful provisioning with subsequent command execution operations and privileged resource management activities
+        that don't match the original caller's permission level.
+      expected_techniques: *id067
+      expected_data_sources: *id068
+      regex_patterns: &id069
+        Identity: ^Sarah Chen$
+        ResultType: '0'
+        ResourceDisplayName: ^Azure Resource Manager$
+        AppDisplayName: ^Microsoft Azure PowerShell$
+        ResourceGroup: ^PROD-COMPUTE-RG-04$
+        OperationNameValue: ^(MICROSOFT\.COMPUTE/VIRTUALMACHINES/WRITE|.*write.*|MICROSOFT\.COMPUTE/VIRTUALMACHINES/RUNCOMMAND/ACTION)$
+        activity_substatus_value: ^(Created|OK)$
+        ResourceProviderValue: ^MICROSOFT\.COMPUTE$
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id067
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id068
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify privilege escalation through VM creation with privileged identities
+          by monitoring for virtual machine creation operations that include administrative managed identities during provisioning,
+          followed by command execution on the newly created infrastructure. This technique allows establishing elevated access
+          paths by embedding privileged identities into attacker-controlled resources. Detection should correlate VM creation
+          showing successful provisioning with subsequent command execution operations and privileged resource management
+          activities that don't match the original caller's permission level.
+        expected_techniques: *id067
+        expected_data_sources: *id068
+        regex_patterns: *id069
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: cloud_011
+  title: Write a detection rule to identify chained credential access...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: Write a detection rule to identify chained credential access from Key Vault to storage by monitoring
+      for vault secret retrieval operations followed within a short timeframe by storage account access and data operations.
+      This multi-stage attack involves exfiltrating secrets from vaults that contain storage access credentials, then immediately
+      weaponizing those credentials to access storage and exfiltrate data. Detection must correlate vault operations showing
+      secret access with subsequent storage operations, analyzing the temporal relationship and identity patterns to link
+      credential theft to credential usage across multiple log sources.
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Cloud
+    mitre_techniques: &id070
+    - T1078
+    - T1087
+    - T1526
+    - T1555
+    - T1530
+    - T1619
+    - T1567
+    data_sources: &id071
+    - SigninLogs
+    - StorageBlobLogs
+    - AzureDiagnostics
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: Write a detection rule to identify chained credential access from Key Vault to storage by monitoring
+        for vault secret retrieval operations followed within a short timeframe by storage account access and data operations.
+        This multi-stage attack involves exfiltrating secrets from vaults that contain storage access credentials, then immediately
+        weaponizing those credentials to access storage and exfiltrate data. Detection must correlate vault operations showing
+        secret access with subsequent storage operations, analyzing the temporal relationship and identity patterns to link
+        credential theft to credential usage across multiple log sources.
+      expected_techniques: *id070
+      expected_data_sources: *id071
+      regex_patterns: &id072
+        Identity: ^Sarah Chen$
+        ResultType: '0'
+        ResourceDisplayName: ^(Azure Resource Manager|Azure Key Vault)$
+        AppDisplayName: ^Microsoft Azure PowerShell$
+        AccountName: ^proddatastorage02$
+        OperationName: ^(ListContainers|ListBlobs|GetBlob|SecretGet)$
+        resource_provider: ^MICROSOFT\.KEYVAULT$
+        ResourceGroup: ^PROD-STORAGE-RG$
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id070
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id071
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: Write a detection rule to identify chained credential access from Key Vault to storage by monitoring
+          for vault secret retrieval operations followed within a short timeframe by storage account access and data operations.
+          This multi-stage attack involves exfiltrating secrets from vaults that contain storage access credentials, then
+          immediately weaponizing those credentials to access storage and exfiltrate data. Detection must correlate vault
+          operations showing secret access with subsequent storage operations, analyzing the temporal relationship and identity
+          patterns to link credential theft to credential usage across multiple log sources.
+        expected_techniques: *id070
+        expected_data_sources: *id071
+        regex_patterns: *id072
+    scoring:
+      max_score: 6.5
+      weight: 1.0
+- task_id: cloud_012
+  title: Write a detection rule to detect service principal privilege...
+  description: Create a comprehensive detection rule based on the specified threat pattern
+  inherit_shared: true
+  execution_config:
+    timeout: 1800
+  initial_context:
+    detection_objective: 'Write a detection rule to detect service principal privilege escalation through application administrator
+      abuse by monitoring for a multi-stage attack: directory resource enumeration through API calls to identify targets,
+      role definition queries to identify service principals with elevated permissions, credential addition to target applications,
+      authentication as the compromised service principal using newly added credentials, and directory role assignments to
+      the original account. The attack exploits the trust relationship between application administrators and their managed
+      service principals, using the service principal as a privilege escalation proxy. Detection requires correlation across
+      enumeration patterns, credential management, service principal authentication, and role assignment operations.'
+    question: Develop both Sigma rule and KQL query with actual query results demonstrating detection effectiveness
+    platform: Cloud
+    mitre_techniques: &id073
+    - T1078
+    - T1592
+    - T1087
+    - T1069
+    - T1098
+    - T1552
+    - T1550
+    - T1210
+    - T1548
+    data_sources: &id074
+    - SigninLogs
+    - MicrosoftGraphActivityLogs
+    - AuditLogs
+    - AADServicePrincipalSignInLogs
+  submission_evaluation_config:
+    strategy: trajectory_analysis
+    criteria:
+      detection_objective: 'Write a detection rule to detect service principal privilege escalation through application administrator
+        abuse by monitoring for a multi-stage attack: directory resource enumeration through API calls to identify targets,
+        role definition queries to identify service principals with elevated permissions, credential addition to target applications,
+        authentication as the compromised service principal using newly added credentials, and directory role assignments
+        to the original account. The attack exploits the trust relationship between application administrators and their managed
+        service principals, using the service principal as a privilege escalation proxy. Detection requires correlation across
+        enumeration patterns, credential management, service principal authentication, and role assignment operations.'
+      expected_techniques: *id073
+      expected_data_sources: *id074
+      regex_patterns: &id075
+        Identity: ^(Alex Johnson|privileged-service-sp)$
+        ResultType: '0'
+        IPAddress: ^13\.72\.241\.239$
+        ResponseStatusCode: '200'
+        RequestUri: .*(https://graph\.microsoft\.com/v1\.0/users|https://graph\.microsoft\.com/v1\.0/groups|https://graph\.microsoft\.com/v1\.0/serviceprincipals|https://graph\.microsoft\.com/v1\.0/roleManagement/directory/roleDefinitions/e8611ab8-c189-46e8-94e1-60213ab1f814).*
+        InitiatedBy_user_userPrincipalName: ^alex\.johnson@contoso\.onmicrosoft\.com$
+        OperationName: ^(.*Certificates and secrets management.*|Add member to role)$
+        ServicePrincipalName: ^privileged-service-sp$
+    scoring:
+      max_score: 10.0
+  subtasks:
+  - subtask_id: c0_cti_analysis
+    title: 'C0: CTI Report Usage'
+    description: Evidence of threat intelligence analysis in agent execution
+    objective: Agent must demonstrate use of CTI reports and threat intelligence
+    step_evaluation_config:
+      strategy: cti_tool_llm
+      criteria:
+        model: openai/azure/gpt-5.1
+        steps_per_message: 20
+    scoring:
+      max_score: 1.25
+      weight: 1.0
+  - subtask_id: c1_threat_context
+    title: 'C1: Threat Context - MITRE Techniques'
+    description: MITRE ATT&CK techniques mentioned in final submission
+    objective: Agent must reference relevant MITRE techniques in their analysis
+    step_evaluation_config:
+      strategy: trajectory_jaccard
+      criteria:
+        expected_items: *id073
+        regex_pattern: T\d{4}(?:\.\d{3})?
+    scoring:
+      max_score: 0.75
+      weight: 1.0
+  - subtask_id: c2_data_exploration
+    title: 'C2: Data Exploration - Data Sources'
+    description: Data sources referenced in final submission
+    objective: Agent must explore and reference available data sources
+    step_evaluation_config:
+      strategy: tool_call_jaccard
+      criteria:
+        expected_tools:
+        - get_table_schema
+        - sample_table_data
+        expected_items: *id074
+        param_name: table
+    scoring:
+      max_score: 1.0
+      weight: 1.0
+  - subtask_id: c3_query_execution
+    title: 'C3: Query Execution - Multiple KQL Attempts'
+    description: Agent executed KQL queries multiple times (iterative development)
+    objective: Agent must test and execute KQL queries at least 2 times
+    step_evaluation_config:
+      strategy: tool_call_count
+      criteria:
+        tool_name: execute_kql_query
+        min_executions: 2
+    scoring:
+      max_score: 0.5
+      weight: 1.0
+  - subtask_id: c4_detection_quality
+    title: 'C4: Detection Quality - F1 + Sigma'
+    description: Combined F1-based KQL validation and Sigma rule quality
+    objective: Agent must produce high-quality detection rules with accurate KQL queries
+    step_evaluation_config:
+      strategy: f1_sigma_scoring
+      criteria:
+        detection_objective: 'Write a detection rule to detect service principal privilege escalation through application
+          administrator abuse by monitoring for a multi-stage attack: directory resource enumeration through API calls to
+          identify targets, role definition queries to identify service principals with elevated permissions, credential addition
+          to target applications, authentication as the compromised service principal using newly added credentials, and directory
+          role assignments to the original account. The attack exploits the trust relationship between application administrators
+          and their managed service principals, using the service principal as a privilege escalation proxy. Detection requires
+          correlation across enumeration patterns, credential management, service principal authentication, and role assignment
+          operations.'
+        expected_techniques: *id073
+        expected_data_sources: *id074
+        regex_patterns: *id075
+    scoring:
+      max_score: 6.5
+      weight: 1.0

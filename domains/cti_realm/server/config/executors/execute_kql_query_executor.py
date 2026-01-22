@@ -66,34 +66,35 @@ class ExecuteKQLQueryExecutor(DockerExecutor):
         )
 
     def build_command(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
-        """Build command with direct HTTP call to Kusto."""
+        """Build command with direct HTTP call to Kusto using curl."""
+        import json
+
         query = parameters.get("query", "")
-        limit = parameters.get("limit", 1000)
+        limit = parameters.get("limit", 100)
+        limit = min(limit, 10)  
 
-        # Escape single quotes in query
-        query_escaped = query.replace("'", "'\\''")
-        limit = min(max(1, limit), 1000)
+        # Append limit if not already present
+        query_limited = (
+            query
+            if "| take" in query or "| limit" in query
+            else f"{query} | take {limit}"
+        )
 
-        script = f"""
-import json
-import urllib.request
+        # Build the JSON payload
+        payload = json.dumps({"db": "NetDefaultDB", "csl": query_limited})
 
-url = "http://saber-cti-kusto-emulator:8080/v1/rest/query"
-query = "{query_escaped}"
-if "| take" not in query.lower() and "| limit" not in query.lower():
-    query = f"{{query}} | take {limit}"
-
-payload = json.dumps({{"db": "NetDefaultDB", "csl": query}}).encode()
-
-try:
-    req = urllib.request.Request(url, data=payload, headers={{"Content-Type": "application/json"}})
-    with urllib.request.urlopen(req, timeout=60) as response:
-        data = json.loads(response.read().decode())
-        print(json.dumps(data))
-except Exception as e:
-    print(json.dumps({{"error": f"Failed to execute query: {{str(e)}}"}}))
-"""
-        return ["/bin/sh", "-c", f"python3 -c '{script}'"]
+        # use curl
+        return [
+            "curl",
+            "-s",
+            "-X",
+            "POST",
+            "http://saber-cti-kusto-emulator:8080/v1/rest/query",
+            "-H",
+            "Content-Type: application/json",
+            "-d",
+            payload,
+        ]
 
     async def execute(self, parameters: Dict[str, Any], context: Dict[str, Any]) -> CommandResult:
         try:

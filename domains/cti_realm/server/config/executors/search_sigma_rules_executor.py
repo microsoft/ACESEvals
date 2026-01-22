@@ -102,7 +102,7 @@ class SearchSigmaRulesExecutor(DockerExecutor):
 import json
 from pathlib import Path
 
-sigma_file = Path("/workspace/data/sigma_rules.json")
+sigma_file = Path("/opt/cti_realm/data/sigma_rules.json")
 if not sigma_file.exists():
     print(json.dumps({{"error": "Sigma rules index not found"}}))
 else:
