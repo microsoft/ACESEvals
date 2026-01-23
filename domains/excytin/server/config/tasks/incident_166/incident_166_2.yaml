@@ -1,261 +1,546 @@
 tasks:
   - task_id: incident_166_task_11
     title: incident_166_task_11
-    description: "During the investigation of this incident, it was found that a BEC-related user signed in to SAP. Can you provide the IP address from which the user signed in to SAP?"
-
+    description: During the investigation of this incident, it was found that a BEC-related
+      user signed in to SAP. Can you provide the IP address from which the user signed
+      in to SAP?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving suspicious activity has been detected, where a user's inbox rules were manipulated in a suspicious manner. It is suspected that an attacker might have gained access to a user's inbox and is manipulating rules to delete or move messages or folders to exfiltrate data from your organization. The activity was first observed coming from a cloud application with AppId `20893` and IP address `255.246.85.58`."
-      question: "During the investigation of this incident, it was found that a BEC-related user signed in to SAP. Can you provide the IP address from which the user signed in to SAP?"
-
+      incident_context: A security incident involving suspicious activity has been
+        detected, where a user's inbox rules were manipulated in a suspicious manner.
+        It is suspected that an attacker might have gained access to a user's inbox
+        and is manipulating rules to delete or move messages or folders to exfiltrate
+        data from your organization. The activity was first observed coming from a
+        cloud application with AppId `20893` and IP address `255.246.85.58`.
+      question: During the investigation of this incident, it was found that a BEC-related
+        user signed in to SAP. Can you provide the IP address from which the user
+        signed in to SAP?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "107.253.5.27"
+          - 107.253.5.27
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An attacker might have gained access to the user's inbox and manipulated rules to delete or move messages or folders for exfiltration. The affected user has AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An attacker might have gained access to the user's inbox and
+          manipulated rules to delete or move messages or folders for exfiltration.
+          The affected user has AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The same user involved in the business email compromise also signed in to SAP in a suspicious manner from the IP address `107.253.5.27`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The same user involved in the business email compromise also
+          signed in to SAP in a suspicious manner from the IP address `107.253.5.27`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_12
     title: incident_166_task_12
-    description: "In a related alert, a suspicious inbox rule was set by a user named Jordan P (laylaw@vnevado.alpineskihouse.co). Can you identify the AppId of the cloud application associated with this suspicious activity?"
-
+    description: In a related alert, a suspicious inbox rule was set by a user named
+      Jordan P (laylaw@vnevado.alpineskihouse.co). Can you identify the AppId of the
+      cloud application associated with this suspicious activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A recent security incident detected involved a password spray attack on an account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` from the IP address `95.202.65.202`. This is part of a larger multi-alert incident. Note that a password spray attack is a brute force attack that attempts a single password against many accounts before moving on to the next password, to avoid detection."
-      question: "In a related alert, a suspicious inbox rule was set by a user named Jordan P (laylaw@vnevado.alpineskihouse.co). Can you identify the AppId of the cloud application associated with this suspicious activity?"
-
+      incident_context: A recent security incident detected involved a password spray
+        attack on an account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+        from the IP address `95.202.65.202`. This is part of a larger multi-alert
+        incident. Note that a password spray attack is a brute force attack that attempts
+        a single password against many accounts before moving on to the next password,
+        to avoid detection.
+      question: In a related alert, a suspicious inbox rule was set by a user named
+        Jordan P (laylaw@vnevado.alpineskihouse.co). Can you identify the AppId of
+        the cloud application associated with this suspicious activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "11161"
+          - '11161'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A password spray attack was detected from IP address `95.202.65.202`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A password spray attack was detected from IP address `95.202.65.202`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious inbox rule was created by the user `Jordan P` with email `laylaw@vnevado.alpineskihouse.co`. The user created a rule named `ITCleanup` to move messages to a folder named `RSS Feeds`, indicating a potential compromise of the account."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious inbox rule was created by the user `Jordan P` with
+          email `laylaw@vnevado.alpineskihouse.co`. The user created a rule named
+          `ITCleanup` to move messages to a folder named `RSS Feeds`, indicating a
+          potential compromise of the account.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "The suspicious activity is related to the cloud application with AppId `11161`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The suspicious activity is related to the cloud application with
+          AppId `11161`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_166_task_13
     title: incident_166_task_13
-    description: "There was a sign-in from an anonymous IP address associated with this incident. Can you identify the IP address involved?"
-
+    description: There was a sign-in from an anonymous IP address associated with
+      this incident. Can you identify the IP address involved?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident was detected involving a suspicious inbox manipulation rule. User Jordan P (laylaw@vnevado.alpineskihouse.co) set a MoveToFolder rule named ITCleanup to move messages to a folder named RSS Feeds. This may indicate that the user account is compromised, and the mailbox is being used for spreading phishing emails or gaining access to other accounts and devices."
-      question: "There was a sign-in from an anonymous IP address associated with this incident. Can you identify the IP address involved?"
-
+      incident_context: A security incident was detected involving a suspicious inbox
+        manipulation rule. User Jordan P (laylaw@vnevado.alpineskihouse.co) set a
+        MoveToFolder rule named ITCleanup to move messages to a folder named RSS Feeds.
+        This may indicate that the user account is compromised, and the mailbox is
+        being used for spreading phishing emails or gaining access to other accounts
+        and devices.
+      question: There was a sign-in from an anonymous IP address associated with this
+        incident. Can you identify the IP address involved?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "192.238.237.190"
+          - 192.238.237.190
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious inbox manipulation rule named `ITCleanup` was set on the inbox of user `Jordan P (laylaw@vnevado.alpineskihouse.co)`, to move messages to a folder named `RSS Feeds`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious inbox manipulation rule named `ITCleanup` was set
+          on the inbox of user `Jordan P (laylaw@vnevado.alpineskihouse.co)`, to move
+          messages to a folder named `RSS Feeds`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The suspicious activity originates from an anonymous IP address `192.238.237.190`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The suspicious activity originates from an anonymous IP address
+          `192.238.237.190`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_14
     title: incident_166_task_14
-    description: "Related to this alert, there was also a suspicious manipulation of a user's inbox rules. Can you identify the AppId of the cloud application involved in the suspicious inbox manipulation?"
-
+    description: Related to this alert, there was also a suspicious manipulation of
+      a user's inbox rules. Can you identify the AppId of the cloud application involved
+      in the suspicious inbox manipulation?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involves possible BEC (Business Email Compromise) financial fraud where suspicious events were observed that indicate an attacker may be attempting to conduct a fraud attack against the organization. This alert was associated with the account of Jordan P (`Jordan P@vnevado.alpineskihouse.co`)."
-      question: "Related to this alert, there was also a suspicious manipulation of a user's inbox rules. Can you identify the AppId of the cloud application involved in the suspicious inbox manipulation?"
-
+      incident_context: A security incident involves possible BEC (Business Email
+        Compromise) financial fraud where suspicious events were observed that indicate
+        an attacker may be attempting to conduct a fraud attack against the organization.
+        This alert was associated with the account of Jordan P (`Jordan P@vnevado.alpineskihouse.co`).
+      question: Related to this alert, there was also a suspicious manipulation of
+        a user's inbox rules. Can you identify the AppId of the cloud application
+        involved in the suspicious inbox manipulation?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "20893"
+          - '20893'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "Suspicious events characteristic of business email compromise (BEC) were observed involving the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious events characteristic of business email compromise
+          (BEC) were observed involving the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Suspicious inbox manipulation rules were detected, potentially indicating an attack on the cloud application with AppId `20893`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious inbox manipulation rules were detected, potentially
+          indicating an attack on the cloud application with AppId `20893`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_15
     title: incident_166_task_15
-    description: "What is the AppId of the cloud application used in the suspicious inbox manipulation rule?"
-
+    description: What is the AppId of the cloud application used in the suspicious
+      inbox manipulation rule?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving potential BEC financial fraud was reported. A suspicious inbox rule that hides incoming email messages was created in a risky Azure Active Directory session. The user account involved in this session had the email `Jordan P@vnevado.alpineskihouse.co` and was connecting from IP address `255.246.85.58`."
-      question: "What is the AppId of the cloud application used in the suspicious inbox manipulation rule?"
-
+      incident_context: A security incident involving potential BEC financial fraud
+        was reported. A suspicious inbox rule that hides incoming email messages was
+        created in a risky Azure Active Directory session. The user account involved
+        in this session had the email `Jordan P@vnevado.alpineskihouse.co` and was
+        connecting from IP address `255.246.85.58`.
+      question: What is the AppId of the cloud application used in the suspicious
+        inbox manipulation rule?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "20893"
+          - '20893'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious inbox rule was created in a risky Azure Active Directory session for user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`, indicating a potential business email compromise (BEC) attempt."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious inbox rule was created in a risky Azure Active Directory
+          session for user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`,
+          indicating a potential business email compromise (BEC) attempt.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious manipulation of inbox rules was detected in cloud application with AppId `20893`, suggesting that an attacker might be exfiltrating data by altering or deleting email messages."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious manipulation of inbox rules was detected in cloud
+          application with AppId `20893`, suggesting that an attacker might be exfiltrating
+          data by altering or deleting email messages.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_16
     title: incident_166_task_16
-    description: "Can you determine the IP address that was used for the anonymous sign-in related to this activity?"
-
+    description: Can you determine the IP address that was used for the anonymous
+      sign-in related to this activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A user's account identified as `Jordan P` with email `Jordan P@vnevado.alpineskihouse.co` was observed to have suspicious inbox rule manipulations. This activity could indicate an attempt to delete or move messages, possibly with the intent to exfiltrate data from the organization."
-      question: "Can you determine the IP address that was used for the anonymous sign-in related to this activity?"
-
+      incident_context: A user's account identified as `Jordan P` with email `Jordan
+        P@vnevado.alpineskihouse.co` was observed to have suspicious inbox rule manipulations.
+        This activity could indicate an attempt to delete or move messages, possibly
+        with the intent to exfiltrate data from the organization.
+      question: Can you determine the IP address that was used for the anonymous sign-in
+        related to this activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "192.238.237.190"
+          - 192.238.237.190
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user's inbox rules linked to AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` were manipulated suspiciously."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user's inbox rules linked to AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          were manipulated suspiciously.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There was a sign-in from an anonymous IP address `192.238.237.190`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a sign-in from an anonymous IP address `192.238.237.190`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_17
     title: incident_166_task_17
-    description: "What was the IP address involved in the password spray attack detected on 2024-07-23?"
-
+    description: What was the IP address involved in the password spray attack detected
+      on 2024-07-23?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious inbox manipulation rule was detected on 2024-07-22 at 10:00:07.502771+00:00. It appears that an attack may have gained access to the inbox of the user account Jordan P, with the email `Jordan P@vnevado.alpineskihouse.co` and IP address 255.246.85.58. The rules might have been manipulated to delete or move messages or folders to exfiltrate data from the organization. Subsequently, a password spray attack was detected on 2024-07-23."
-      question: "What was the IP address involved in the password spray attack detected on 2024-07-23?"
-
+      incident_context: A suspicious inbox manipulation rule was detected on 2024-07-22
+        at 10:00:07.502771+00:00. It appears that an attack may have gained access
+        to the inbox of the user account Jordan P, with the email `Jordan P@vnevado.alpineskihouse.co`
+        and IP address 255.246.85.58. The rules might have been manipulated to delete
+        or move messages or folders to exfiltrate data from the organization. Subsequently,
+        a password spray attack was detected on 2024-07-23.
+      question: What was the IP address involved in the password spray attack detected
+        on 2024-07-23?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "95.202.65.202"
+          - 95.202.65.202
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user's inbox rules were manipulated in a suspicious manner, potentially indicating data exfiltration. The suspicious activity involved the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user's inbox rules were manipulated in a suspicious manner,
+          potentially indicating data exfiltration. The suspicious activity involved
+          the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A password spray attack was detected from the IP address `95.202.65.202`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A password spray attack was detected from the IP address `95.202.65.202`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_18
     title: incident_166_task_18
-    description: "Identify the flagged IP address related to the suspicious inbox rule?"
-
+    description: Identify the flagged IP address related to the suspicious inbox rule?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious inbox rule was created in the mailbox of Jordan P under the name 'ITCleanup' . Multiple IP addresses have been associated, one of them is flagged as potentially malicious."
-      question: "Identify the flagged IP address related to the suspicious inbox rule?"
-
+      incident_context: A suspicious inbox rule was created in the mailbox of Jordan
+        P under the name 'ITCleanup' . Multiple IP addresses have been associated,
+        one of them is flagged as potentially malicious.
+      question: Identify the flagged IP address related to the suspicious inbox rule?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "192.238.237.190"
+          - 192.238.237.190
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious inbox manipulation rule was set by the user Jordan P (laylaw@vnevado.alpineskihouse.co) from the IP address `192.238.237.190`. The rule named ITCleanup moves messages to a folder named RSS Feeds."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious inbox manipulation rule was set by the user Jordan
+          P (laylaw@vnevado.alpineskihouse.co) from the IP address `192.238.237.190`.
+          The rule named ITCleanup moves messages to a folder named RSS Feeds.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
   - task_id: incident_166_task_19
     title: incident_166_task_19
-    description: "Can you identify the email of the user account that signed in to SAP with a risky sign-in alert?"
-
+    description: Can you identify the email of the user account that signed in to
+      SAP with a risky sign-in alert?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During a security incident, there was a sign-in from an anonymous IP address `95.202.65.202`, indicating possible use of a Tor browser or anonymizer VPNs. Following this, a user account with a risky sign-in alert in Microsoft Entra ID signed in to SAP, which might suggest an attacker taking control of an account to manipulate sensitive financial information in SAP systems."
-      question: "Can you identify the email of the user account that signed in to SAP with a risky sign-in alert?"
-
+      incident_context: During a security incident, there was a sign-in from an anonymous
+        IP address `95.202.65.202`, indicating possible use of a Tor browser or anonymizer
+        VPNs. Following this, a user account with a risky sign-in alert in Microsoft
+        Entra ID signed in to SAP, which might suggest an attacker taking control
+        of an account to manipulate sensitive financial information in SAP systems.
+      question: Can you identify the email of the user account that signed in to SAP
+        with a risky sign-in alert?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "Jordan P@vnevado.alpineskihouse.co"
+          - Jordan P@vnevado.alpineskihouse.co
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` signed in from an anonymous IP address."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          signed in from an anonymous IP address.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The user account with the email `Jordan P@vnevado.alpineskihouse.co`, which had a risky sign-in alert in Microsoft Entra ID, signed in to SAP."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user account with the email `Jordan P@vnevado.alpineskihouse.co`,
+          which had a risky sign-in alert in Microsoft Entra ID, signed in to SAP.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_20
     title: incident_166_task_20
-    description: "In connection to this, there was a possible business email compromise with financial fraud characteristics. Can you identify the AadUserId of the account involved in the BEC attempt?"
-
+    description: In connection to this, there was a possible business email compromise
+      with financial fraud characteristics. Can you identify the AadUserId of the
+      account involved in the BEC attempt?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During a recent investigation, it was observed that a suspicious inbox rule was set on the inbox of the user Jordan P (laylaw@vnevado.alpineskihouse.co). This raised concerns that the user's account could be compromised for spreading phishing emails and accessing other accounts and devices. Specifically, a MoveToFolder rule named ITCleanup was created to move messages to a folder named RSS Feeds."
-      question: "In connection to this, there was a possible business email compromise with financial fraud characteristics. Can you identify the AadUserId of the account involved in the BEC attempt?"
-
+      incident_context: During a recent investigation, it was observed that a suspicious
+        inbox rule was set on the inbox of the user Jordan P (laylaw@vnevado.alpineskihouse.co).
+        This raised concerns that the user's account could be compromised for spreading
+        phishing emails and accessing other accounts and devices. Specifically, a
+        MoveToFolder rule named ITCleanup was created to move messages to a folder
+        named RSS Feeds.
+      question: In connection to this, there was a possible business email compromise
+        with financial fraud characteristics. Can you identify the AadUserId of the
+        account involved in the BEC attempt?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "89e933b9-5b2e-4bd6-bcdf-033db707ef82"
+          - 89e933b9-5b2e-4bd6-bcdf-033db707ef82
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious inbox manipulation rule was set on the inbox of Jordan P using the account with Sid `S-1-5-21-1740051960-3534030288-108486866-1602`. This rule moves messages to a folder named RSS Feeds."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious inbox manipulation rule was set on the inbox of
+          Jordan P using the account with Sid `S-1-5-21-1740051960-3534030288-108486866-1602`.
+          This rule moves messages to a folder named RSS Feeds.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There were suspicious events with business email compromise characteristics involving the user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`. An attacker might be attempting to conduct a financial fraud against the organization."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There were suspicious events with business email compromise characteristics
+          involving the user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+          An attacker might be attempting to conduct a financial fraud against the
+          organization.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

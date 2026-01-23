@@ -1,281 +1,631 @@
 tasks:
   - task_id: incident_39_task_51
     title: incident_39_task_51
-    description: "An active 'Kekeo' malware was detected during the incident. Can you identify the Security Identifier (SID) of the account related to this malware activity?"
-
+    description: An active 'Kekeo' malware was detected during the incident. Can you
+      identify the Security Identifier (SID) of the account related to this malware
+      activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident was reported where PsExec was used to launch commands on a remote device. This tool could be leveraged by attackers to launch malicious commands and move laterally within the organization. The incident included multiple processes such as `psexec.exe`, `powershell.exe`, and `net.exe`."
-      question: "An active 'Kekeo' malware was detected during the incident. Can you identify the Security Identifier (SID) of the account related to this malware activity?"
-
+      incident_context: A security incident was reported where PsExec was used to
+        launch commands on a remote device. This tool could be leveraged by attackers
+        to launch malicious commands and move laterally within the organization. The
+        incident included multiple processes such as `psexec.exe`, `powershell.exe`,
+        and `net.exe`.
+      question: An active 'Kekeo' malware was detected during the incident. Can you
+        identify the Security Identifier (SID) of the account related to this malware
+        activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-1-5-21-1540151660-3530000288-105586595-1517"
+          - S-1-5-21-1540151660-3530000288-105586595-1517
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "PsExec was used to launch a command on a remote device with the extracted file `rubeus.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: PsExec was used to launch a command on a remote device with the
+          extracted file `rubeus.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "An active 'Kekeo' malware was detected on an account with SID `S-1-5-21-1540151660-3530000288-105586595-1517`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An active 'Kekeo' malware was detected on an account with SID
+          `S-1-5-21-1540151660-3530000288-105586595-1517`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_39_task_52
     title: incident_39_task_52
-    description: "In relation to this suspicious activity, there was a successful logon using overpass-the-hash with potentially stolen credentials. Can you identify the SID of the account used for this successful logon?"
-
+    description: In relation to this suspicious activity, there was a successful logon
+      using overpass-the-hash with potentially stolen credentials. Can you identify
+      the SID of the account used for this successful logon?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious remote activity was observed on a machine involving the file `psexesvc.exe` under the `LocalSystem` account (SID: S-0-6-5). This can indicate potential malicious attempts to initiate interactive sessions, modify files, pass WMI commands, create scheduled tasks, or other activities from a remote machine."
-      question: "In relation to this suspicious activity, there was a successful logon using overpass-the-hash with potentially stolen credentials. Can you identify the SID of the account used for this successful logon?"
-
+      incident_context: 'A suspicious remote activity was observed on a machine involving
+        the file `psexesvc.exe` under the `LocalSystem` account (SID: S-0-6-5). This
+        can indicate potential malicious attempts to initiate interactive sessions,
+        modify files, pass WMI commands, create scheduled tasks, or other activities
+        from a remote machine.'
+      question: In relation to this suspicious activity, there was a successful logon
+        using overpass-the-hash with potentially stolen credentials. Can you identify
+        the SID of the account used for this successful logon?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-2-2-78"
+          - S-2-2-78
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "Suspicious remote activity observed from IP address `141.216.110.153`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious remote activity observed from IP address `141.216.110.153`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Successful logon using overpass-the-hash method with potentially stolen credentials for account with SID `S-2-2-78`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Successful logon using overpass-the-hash method with potentially
+          stolen credentials for account with SID `S-2-2-78`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_39_task_53
     title: incident_39_task_53
-    description: "During this incident, an attacker executed a file from a remote location. Can you identify the IP address from which the file was dropped and launched?"
-
+    description: During this incident, an attacker executed a file from a remote location.
+      Can you identify the IP address from which the file was dropped and launched?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In a recent incident, there was a suspicious process stopping services on a device. The processes involved were `powershell.exe` and `net.exe`, indicating that an attacker might be attempting to avoid detection or prepare for further malicious activities. This activity aligns with data encryption or destruction tactics, aiming to render the device unusable."
-      question: "During this incident, an attacker executed a file from a remote location. Can you identify the IP address from which the file was dropped and launched?"
-
+      incident_context: In a recent incident, there was a suspicious process stopping
+        services on a device. The processes involved were `powershell.exe` and `net.exe`,
+        indicating that an attacker might be attempting to avoid detection or prepare
+        for further malicious activities. This activity aligns with data encryption
+        or destruction tactics, aiming to render the device unusable.
+      question: During this incident, an attacker executed a file from a remote location.
+        Can you identify the IP address from which the file was dropped and launched?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "141.216.110.153"
+          - 141.216.110.153
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious process stopped services on the device, associated with the account with SID `S-1-5-21-1440151660-4837038288-105596163-1120`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious process stopped services on the device, associated
+          with the account with SID `S-1-5-21-1440151660-4837038288-105596163-1120`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A file was dropped and executed from a remote location with IP address `141.216.110.153`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A file was dropped and executed from a remote location with IP
+          address `141.216.110.153`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_39_task_54
     title: incident_39_task_54
-    description: "What is the name of the file involved in the SID history injection detected during this incident?"
-
+    description: What is the name of the file involved in the SID history injection
+      detected during this incident?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During an observed security incident, an attacker may have utilized the Rubeus tool on endpoint `vnevado-win10b` for kerberoasting and possibly other Kerberos-related attacks. It's possible that the attacker requested Kerberos tickets for a specific account's service principal name (SPN) and decrypted them to acquire plaintext credentials, or used the pass-the-ticket technique. This was detected with execution of specific processes, and the attack continued with the dropping and launching of files from a remote location, potentially indicating lateral movement. Following this, a Security Identification (SID) history injection was detected on the same device, pointing to an attacker possibly gaining elevated privileges."
-      question: "What is the name of the file involved in the SID history injection detected during this incident?"
-
+      incident_context: During an observed security incident, an attacker may have
+        utilized the Rubeus tool on endpoint `vnevado-win10b` for kerberoasting and
+        possibly other Kerberos-related attacks. It's possible that the attacker requested
+        Kerberos tickets for a specific account's service principal name (SPN) and
+        decrypted them to acquire plaintext credentials, or used the pass-the-ticket
+        technique. This was detected with execution of specific processes, and the
+        attack continued with the dropping and launching of files from a remote location,
+        potentially indicating lateral movement. Following this, a Security Identification
+        (SID) history injection was detected on the same device, pointing to an attacker
+        possibly gaining elevated privileges.
+      question: What is the name of the file involved in the SID history injection
+        detected during this incident?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "dkwj.mze"
+          - dkwj.mze
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "Activity indicating the use of the Rubeus tool was observed on the endpoint with the process `psexesvc.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Activity indicating the use of the Rubeus tool was observed on
+          the endpoint with the process `psexesvc.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A remote session dropped a file and executed it using an account with AadUserId `7fcf9695-68fc-4258-864d-e1e5b166c66f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A remote session dropped a file and executed it using an account
+          with AadUserId `7fcf9695-68fc-4258-864d-e1e5b166c66f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "A Security IDentifcation (SID) history injection was detected involving the file `dkwj.mze`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A Security IDentifcation (SID) history injection was detected
+          involving the file `dkwj.mze`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_39_task_55
     title: incident_39_task_55
-    description: "During the investigation of this incident, it was found that Emma Clark (Helpdesk Administrator) attempted to authenticate against a domain controller. What is the hostname of the system from which Emma Clark attempted to authenticate?"
-
+    description: During the investigation of this incident, it was found that Emma
+      Clark (Helpdesk Administrator) attempted to authenticate against a domain controller.
+      What is the hostname of the system from which Emma Clark attempted to authenticate?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving a suspicious file registered as a service was flagged. This occurred when a file named `psexesvc.exe` with potential breach activity was registered on the host `vnevado-win10b` under the account `LocalSystem` identified by SID `S-0-6-5`. This alert, indicating an attempt by an attacker to establish persistence, was linked to several entities."
-      question: "During the investigation of this incident, it was found that Emma Clark (Helpdesk Administrator) attempted to authenticate against a domain controller. What is the hostname of the system from which Emma Clark attempted to authenticate?"
-
+      incident_context: A security incident involving a suspicious file registered
+        as a service was flagged. This occurred when a file named `psexesvc.exe` with
+        potential breach activity was registered on the host `vnevado-win10b` under
+        the account `LocalSystem` identified by SID `S-0-6-5`. This alert, indicating
+        an attempt by an attacker to establish persistence, was linked to several
+        entities.
+      question: During the investigation of this incident, it was found that Emma
+        Clark (Helpdesk Administrator) attempted to authenticate against a domain
+        controller. What is the hostname of the system from which Emma Clark attempted
+        to authenticate?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "VNEVADO-Win10V"
+          - VNEVADO-Win10V
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An attacker might have registered a suspicious file as a service using the account with SID `S-1-5-21-1540151660-3530000288-105586595-1517`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An attacker might have registered a suspicious file as a service
+          using the account with SID `S-1-5-21-1540151660-3530000288-105586595-1517`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Emma Clark (Helpdesk Administrator) attempted to authenticate against VNEVADO-DC from VNEVADO-Win10V, which is suspected to be an overpass-the-hash attack."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Emma Clark (Helpdesk Administrator) attempted to authenticate
+          against VNEVADO-DC from VNEVADO-Win10V, which is suspected to be an overpass-the-hash
+          attack.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_39_task_56
     title: incident_39_task_56
-    description: "What is the name of the account associated with the machine where the 'Kekeo' malware was detected?"
-
+    description: What is the name of the account associated with the machine where
+      the 'Kekeo' malware was detected?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident was noted where Ethan Brooks, an Account Executive, was involved in enumerating SMB sessions on VNEVADO-DC from VNEVADO-Win10V, retrieving recent IP addresses of 2 accounts. During the investigation, it was discovered that tools dropped on a device were potentially used for malicious reasons including credential theft, privilege escalation, and lateral movement. Subsequently, a 'Kekeo' malware was detected and was active on the device, indicating potential cyber attack activities."
-      question: "What is the name of the account associated with the machine where the 'Kekeo' malware was detected?"
-
+      incident_context: A security incident was noted where Ethan Brooks, an Account
+        Executive, was involved in enumerating SMB sessions on VNEVADO-DC from VNEVADO-Win10V,
+        retrieving recent IP addresses of 2 accounts. During the investigation, it
+        was discovered that tools dropped on a device were potentially used for malicious
+        reasons including credential theft, privilege escalation, and lateral movement.
+        Subsequently, a 'Kekeo' malware was detected and was active on the device,
+        indicating potential cyber attack activities.
+      question: What is the name of the account associated with the machine where
+        the 'Kekeo' malware was detected?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "fk8mq"
+          - fk8mq
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The user with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1` performed SMB enumeration on VNEVADO-DC to retrieve recent IP addresses."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`
+          performed SMB enumeration on VNEVADO-DC to retrieve recent IP addresses.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The file `rubeus.exe`, which is a dual-purpose tool, was dropped on the device on 2024-07-04 22:35:02.140784+00:00."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The file `rubeus.exe`, which is a dual-purpose tool, was dropped
+          on the device on 2024-07-04 22:35:02.140784+00:00.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "The 'Kekeo' malware was detected and active on the device, associated with the account named `fk8mq`. This indicates that the machine might have been infected and requires further investigation."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The 'Kekeo' malware was detected and active on the device, associated
+          with the account named `fk8mq`. This indicates that the machine might have
+          been infected and requires further investigation.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_39_task_57
     title: incident_39_task_57
-    description: "What is the process ID and command line of the suspicious service that was launched on the device?"
-
+    description: What is the process ID and command line of the suspicious service
+      that was launched on the device?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious incident was observed where a remote session on `vnevado-dc` led to the execution of the `psexesvc.exe` process by the user `lucasb`. This session was noted with the IP address `141.216.110.153` and involved the execution parameters `7668__2024-06-27t14:34:10.0201983z__psexesvc.exe`. Following this, a suspicious service was launched, indicating potential attacker activity to maintain persistence or elevate privileges on the device."
-      question: "What is the process ID and command line of the suspicious service that was launched on the device?"
-
+      incident_context: A suspicious incident was observed where a remote session
+        on `vnevado-dc` led to the execution of the `psexesvc.exe` process by the
+        user `lucasb`. This session was noted with the IP address `141.216.110.153`
+        and involved the execution parameters `7668__2024-06-27t14:34:10.0201983z__psexesvc.exe`.
+        Following this, a suspicious service was launched, indicating potential attacker
+        activity to maintain persistence or elevate privileges on the device.
+      question: What is the process ID and command line of the suspicious service
+        that was launched on the device?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "ProcessId: 684, CommandLine: `services.exe`"
+          - 'ProcessId: 684, CommandLine: `services.exe`'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A remote session dropped and launched the file `psexesvc.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A remote session dropped and launched the file `psexesvc.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious service was launched with the process ID `684` using the command line `services.exe` at `2024-06-26t17:11:52.8075185z`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious service was launched with the process ID `684` using
+          the command line `services.exe` at `2024-06-26t17:11:52.8075185z`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_39_task_58
     title: incident_39_task_58
-    description: "What is the command line of the process that was dropped and launched from a remote location during the incident?"
-
+    description: What is the command line of the process that was dropped and launched
+      from a remote location during the incident?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident has been detected involving malicious activities across multiple alerts. Initially, an email containing a malicious URL `https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/` was sent from `k1pt7ez@vnevado.alpineskihouse.co` to `tgs2z@vnevado.alpineskihouse.co`, and later removed due to its malicious nature. Later, an alert indicated that PsExec was used to launch a command on a remote device, suggesting potential lateral movements by an attacker. This alert was followed by an indication of possible use of the Rubeus kerberoasting tool, which compromises Kerberos tickets to obtain credentials or use them directly for authentication."
-      question: "What is the command line of the process that was dropped and launched from a remote location during the incident?"
-
+      incident_context: A security incident has been detected involving malicious
+        activities across multiple alerts. Initially, an email containing a malicious
+        URL `https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/`
+        was sent from `k1pt7ez@vnevado.alpineskihouse.co` to `tgs2z@vnevado.alpineskihouse.co`,
+        and later removed due to its malicious nature. Later, an alert indicated that
+        PsExec was used to launch a command on a remote device, suggesting potential
+        lateral movements by an attacker. This alert was followed by an indication
+        of possible use of the Rubeus kerberoasting tool, which compromises Kerberos
+        tickets to obtain credentials or use them directly for authentication.
+      question: What is the command line of the process that was dropped and launched
+        from a remote location during the incident?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "5912__2024-06-27t14:32:53.2267179z__psexesvc.exe"
+          - 5912__2024-06-27t14:32:53.2267179z__psexesvc.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The email account with SID `S-5-7-21-1843151660-3234030288-105586167-1422` received an email with a malicious URL that was later removed."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The email account with SID `S-5-7-21-1843151660-3234030288-105586167-1422`
+          received an email with a malicious URL that was later removed.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "PsExec was used to launch a command on a remote device, and the extracted file was `adminticket.txt`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: PsExec was used to launch a command on a remote device, and the
+          extracted file was `adminticket.txt`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "The use of the Rubeus kerberoasting tool was detected using an account named `fk8mq`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The use of the Rubeus kerberoasting tool was detected using an
+          account named `fk8mq`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_4
         title: Checkpoint 4
-        description: "A remote session dropped and executed a file named `psexesvc.exe` with Process ID `5912` at `2024-06-27t14:32:53.2267179z`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A remote session dropped and executed a file named `psexesvc.exe`
+          with Process ID `5912` at `2024-06-27t14:32:53.2267179z`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
   - task_id: incident_39_task_59
     title: incident_39_task_59
-    description: "What is the URL that the user accessed in the ZAP-quarantined email?"
-
+    description: What is the URL that the user accessed in the ZAP-quarantined email?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A sign-in attempt was detected using a deceptive user account on host `vnevado-win10v`. The associated user accounts were `tgs2z` and `kyleg`, and the IP address was `35.202.74.47`. This connects to another alert where a user accessed a suspicious URL in an email quarantined by zero-hour auto purge."
-      question: "What is the URL that the user accessed in the ZAP-quarantined email?"
-
+      incident_context: A sign-in attempt was detected using a deceptive user account
+        on host `vnevado-win10v`. The associated user accounts were `tgs2z` and `kyleg`,
+        and the IP address was `35.202.74.47`. This connects to another alert where
+        a user accessed a suspicious URL in an email quarantined by zero-hour auto
+        purge.
+      question: What is the URL that the user accessed in the ZAP-quarantined email?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/"
+          - https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A deceptive sign-in attempt was detected using a user account with SID `S-5-7-21-1843151660-3234030288-105586167-1422`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A deceptive sign-in attempt was detected using a user account
+          with SID `S-5-7-21-1843151660-3234030288-105586167-1422`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A user accessed a link in a ZAP-quarantined email. The malicious URL is `https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user accessed a link in a ZAP-quarantined email. The malicious
+          URL is `https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_39_task_60
     title: incident_39_task_60
-    description: "A user later accessed a link in an email that was quarantined by zero-hour auto purge (ZAP). Can you provide the URL that was accessed?"
-
+    description: A user later accessed a link in an email that was quarantined by
+      zero-hour auto purge (ZAP). Can you provide the URL that was accessed?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involved the possible use of the Rubeus kerberoasting tool. This tool was detected on host `vnevado-win10b` and might have been used to request and potentially decrypt Kerberos tickets for an account's service principal name (SPN). Observed processes related to this incident include `psexesvc.exe` and `rubeus.exe`. Additionally, a command line was executed using `cmd` to dump data to `c:\\temp\\adminticket.txt`. This indicates a possible kerberoasting attempt, where attackers seek plaintext credentials or use pass-the-ticket techniques for authentication."
-      question: "A user later accessed a link in an email that was quarantined by zero-hour auto purge (ZAP). Can you provide the URL that was accessed?"
-
+      incident_context: A security incident involved the possible use of the Rubeus
+        kerberoasting tool. This tool was detected on host `vnevado-win10b` and might
+        have been used to request and potentially decrypt Kerberos tickets for an
+        account's service principal name (SPN). Observed processes related to this
+        incident include `psexesvc.exe` and `rubeus.exe`. Additionally, a command
+        line was executed using `cmd` to dump data to `c:\temp\adminticket.txt`. This
+        indicates a possible kerberoasting attempt, where attackers seek plaintext
+        credentials or use pass-the-ticket techniques for authentication.
+      question: A user later accessed a link in an email that was quarantined by zero-hour
+        auto purge (ZAP). Can you provide the URL that was accessed?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/"
+          - https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The process `rubeus.exe` was identified as being used, indicating a possible Rubeus kerberoasting attack."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The process `rubeus.exe` was identified as being used, indicating
+          a possible Rubeus kerberoasting attack.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The attack was associated with an account having SID `S-5-7-21-1843151660-3234030288-105586167-1422`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The attack was associated with an account having SID `S-5-7-21-1843151660-3234030288-105586167-1422`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "A user accessed a malicious link `https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/` in a ZAP-quarantined email."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user accessed a malicious link `https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/`
+          in a ZAP-quarantined email.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0

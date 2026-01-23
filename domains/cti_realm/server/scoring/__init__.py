@@ -4,7 +4,7 @@ This module registers all CTI Realm-specific scoring strategies with the SABER s
 It should be imported by the CTI Realm domain initialization code to make the custom scorers available.
 """
 
-from saber.inspect_ai.scoring import ScorerMetadata, register_submission_scorer, register_subtask_scorer
+from saber.inspect_ai.core.scoring import ScorerMetadata, register_submission_scorer, register_subtask_scorer
 
 # Import CTI Realm specific scorers and constants
 from .constants import CTIRealmStepEvaluationStrategy

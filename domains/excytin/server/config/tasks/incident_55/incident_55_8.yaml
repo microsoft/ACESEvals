@@ -1,301 +1,722 @@
 tasks:
   - task_id: incident_55_task_71
     title: incident_55_task_71
-    description: "Can you find the OAuth application ID where the user Luciano Herrera added the credentials in an unusual manner?"
-
+    description: Can you find the OAuth application ID where the user Luciano Herrera
+      added the credentials in an unusual manner?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A multi-stage security incident involving malicious email delivery, internal phishing campaign, and process injection was detected. An initial email was delivered to and removed from the mailbox of `santiago@vnevado.alpineskihouse.co`, which contained a malicious URL (`http://kn017721628.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`). Later alerts noted a compromised user account sending internal phishing emails and suspicious code injection into processes."
-      question: "Can you find the OAuth application ID where the user Luciano Herrera added the credentials in an unusual manner?"
-
+      incident_context: A multi-stage security incident involving malicious email
+        delivery, internal phishing campaign, and process injection was detected.
+        An initial email was delivered to and removed from the mailbox of `santiago@vnevado.alpineskihouse.co`,
+        which contained a malicious URL (`http://kn017721628.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`).
+        Later alerts noted a compromised user account sending internal phishing emails
+        and suspicious code injection into processes.
+      question: Can you find the OAuth application ID where the user Luciano Herrera
+        added the credentials in an unusual manner?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "4d9476b8-6ae6-459b-a273-5837c15b5981"
+          - 4d9476b8-6ae6-459b-a273-5837c15b5981
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The email account `S-1-5-11-7842151660-4834030208-105586563-1139` received an email with a malicious URL."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The email account `S-1-5-11-7842151660-4834030208-105586563-1139`
+          received an email with a malicious URL.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The user with AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0` sent phishing emails from a compromised device inside the organization."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user with AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0`
+          sent phishing emails from a compromised device inside the organization.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "A process was injected with potentially malicious code involving the user with AadUserId `2de70991-2799-4a95-b734-8e3df3a50118`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process was injected with potentially malicious code involving
+          the user with AadUserId `2de70991-2799-4a95-b734-8e3df3a50118`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_4
         title: Checkpoint 4
-        description: "User Luciano Herrera (pwilson@niseko.alpineskihouse.co) performed an unusual addition of credentials to the OAuth application SimulandApp with OAuthAppId `4d9476b8-6ae6-459b-a273-5837c15b5981`, indicating a possible compromise."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: User Luciano Herrera (pwilson@niseko.alpineskihouse.co) performed
+          an unusual addition of credentials to the OAuth application SimulandApp
+          with OAuthAppId `4d9476b8-6ae6-459b-a273-5837c15b5981`, indicating a possible
+          compromise.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
   - task_id: incident_55_task_72
     title: incident_55_task_72
-    description: "Whose account is associated with the suspicious execution of a command via the Impacket toolkit observed on the device?"
-
+    description: Whose account is associated with the suspicious execution of a command
+      via the Impacket toolkit observed on the device?
     inherit_shared: true
-
     initial_context:
-      incident_context: "Suspicious activity was noted where `cmd.exe` was used to execute a command invoking `powershell.exe` on a device. This activity is part of a broader security incident involving a hands-on-keyboard attack using the Impacket toolkit. This incident involved attempts to move laterally across the network, with attackers possibly trying to execute ransomware or other payloads on the target device. We have linked this remote activity to an ongoing Impacket toolkit attack."
-      question: "Whose account is associated with the suspicious execution of a command via the Impacket toolkit observed on the device?"
-
+      incident_context: Suspicious activity was noted where `cmd.exe` was used to
+        execute a command invoking `powershell.exe` on a device. This activity is
+        part of a broader security incident involving a hands-on-keyboard attack using
+        the Impacket toolkit. This incident involved attempts to move laterally across
+        the network, with attackers possibly trying to execute ransomware or other
+        payloads on the target device. We have linked this remote activity to an ongoing
+        Impacket toolkit attack.
+      question: Whose account is associated with the suspicious execution of a command
+        via the Impacket toolkit observed on the device?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "gsmith"
+          - gsmith
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "There was a suspicious remote activity involving the Azure Active Directory user with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a suspicious remote activity involving the Azure Active
+          Directory user with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There is an ongoing hands-on-keyboard attack using the Impacket toolkit by the account with the name `gsmith`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There is an ongoing hands-on-keyboard attack using the Impacket
+          toolkit by the account with the name `gsmith`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_55_task_73
     title: incident_55_task_73
-    description: "What is the name of the process used in the suspicious Task Scheduler activity?"
-
+    description: What is the name of the process used in the suspicious Task Scheduler
+      activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving suspicious sequence of exploration activities followed by Task Scheduler activity was observed. These activities indicate an attempt to establish persistence by modifying or creating tasks through Task Scheduler."
-      question: "What is the name of the process used in the suspicious Task Scheduler activity?"
-
+      incident_context: A security incident involving suspicious sequence of exploration
+        activities followed by Task Scheduler activity was observed. These activities
+        indicate an attempt to establish persistence by modifying or creating tasks
+        through Task Scheduler.
+      question: What is the name of the process used in the suspicious Task Scheduler
+        activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "schtasks.exe"
+          - schtasks.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The attacker executed a PowerShell command with the encoded command `qwa6afwauwbjahiaaqbwahqacwbcafiazqbuageabqejepaabwb3aguacgbzaggazqbsagwalgbwahmamqa=` on `2024-07-02t09:48:12.7628138z` with Process ID `6808`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The attacker executed a PowerShell command with the encoded command
+          `qwa6afwauwbjahiaaqbwahqacwbcafiazqbuageabqejepaabwb3aguacgbzaggazqbsagwalgbwahmamqa=`
+          on `2024-07-02t09:48:12.7628138z` with Process ID `6808`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The attacker used `schtasks.exe` to create, modify, or delete a task, attempting to automatically launch malicious code and establish persistence."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The attacker used `schtasks.exe` to create, modify, or delete
+          a task, attempting to automatically launch malicious code and establish
+          persistence.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_55_task_74
     title: incident_55_task_74
-    description: "What is the account name associated with the system executable that was renamed and launched?"
-
+    description: What is the account name associated with the system executable that
+      was renamed and launched?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspected DCSync attack was attempted by Luciano Herrera (CIO) on host `MB-WINCLIENT`, targeting the domain controller `MB-DC1`. This activity raised security concerns about directory services replication. Further investigation showed a pattern of malicious activities, including code injection into processes, which might indicate that malicious code is being run within a trusted process. An executable file was renamed and launched, potentially as an attempt to hide malicious activities."
-      question: "What is the account name associated with the system executable that was renamed and launched?"
-
+      incident_context: A suspected DCSync attack was attempted by Luciano Herrera
+        (CIO) on host `MB-WINCLIENT`, targeting the domain controller `MB-DC1`. This
+        activity raised security concerns about directory services replication. Further
+        investigation showed a pattern of malicious activities, including code injection
+        into processes, which might indicate that malicious code is being run within
+        a trusted process. An executable file was renamed and launched, potentially
+        as an attempt to hide malicious activities.
+      question: What is the account name associated with the system executable that
+        was renamed and launched?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "SYSTEM"
+          - SYSTEM
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The account with Sid `S-1-5-21-551436448-9871687716-9837441745-1903` (belonging to Luciano Herrera, CIO) sent a replication request to MB-DC1, indicating a suspected DCSync attack."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The account with Sid `S-1-5-21-551436448-9871687716-9837441745-1903`
+          (belonging to Luciano Herrera, CIO) sent a replication request to MB-DC1,
+          indicating a suspected DCSync attack.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The process `powershell.exe` was injected with potentially malicious code."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The process `powershell.exe` was injected with potentially malicious
+          code.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "A system executable file, renamed and launched by the account `SYSTEM`, might be used to perform malicious activities, such as running malicious code or connecting to an attacker-controlled network address."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A system executable file, renamed and launched by the account
+          `SYSTEM`, might be used to perform malicious activities, such as running
+          malicious code or connecting to an attacker-controlled network address.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_55_task_75
     title: incident_55_task_75
-    description: "Can you identify the email address of the account that created the suspicious service DDLOXJDSQSNGMUKKFUXQ on MB-ADFS?"
-
+    description: Can you identify the email address of the account that created the
+      suspicious service DDLOXJDSQSNGMUKKFUXQ on MB-ADFS?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious sequence of exploration activities has been detected on host `mb-winclient` involving various processes like `powershell.exe` and `whoami.exe`. One of the involved accounts is `bjenkins`, and the activity is likely part of an attacker's efforts to identify assets and coordinate lateral movement after compromising the machine. One of the alerts in this sequence indicated potentially malicious service creation by another account."
-      question: "Can you identify the email address of the account that created the suspicious service DDLOXJDSQSNGMUKKFUXQ on MB-ADFS?"
-
+      incident_context: A suspicious sequence of exploration activities has been detected
+        on host `mb-winclient` involving various processes like `powershell.exe` and
+        `whoami.exe`. One of the involved accounts is `bjenkins`, and the activity
+        is likely part of an attacker's efforts to identify assets and coordinate
+        lateral movement after compromising the machine. One of the alerts in this
+        sequence indicated potentially malicious service creation by another account.
+      question: Can you identify the email address of the account that created the
+        suspicious service DDLOXJDSQSNGMUKKFUXQ on MB-ADFS?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "gsmith@niseko.alpineskihouse.co"
+          - gsmith@niseko.alpineskihouse.co
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A process named `powershell.exe` was used in suspicious sequence of exploration activities."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process named `powershell.exe` was used in suspicious sequence
+          of exploration activities.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The suspicious sequence of exploration activities was executed by the account with SID `S-2-5-21-571436798-3864380397-1837441745-3206`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The suspicious sequence of exploration activities was executed
+          by the account with SID `S-2-5-21-571436798-3864380397-1837441745-3206`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "The account `gsmith@niseko.alpineskihouse.co` created a suspicious service `DDLOXJDSQSNGMUKKFUXQ` on MB-ADFS to execute potentially malicious commands."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The account `gsmith@niseko.alpineskihouse.co` created a suspicious
+          service `DDLOXJDSQSNGMUKKFUXQ` on MB-ADFS to execute potentially malicious
+          commands.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_55_task_76
     title: incident_55_task_76
-    description: "Related to this incident, there was also a suspicious sequence of exploration activities observed on 2024-07-04. What is the Security identifier (SID) of the account involved in the suspicious sequence of exploration activities?"
-
+    description: Related to this incident, there was also a suspicious sequence of
+      exploration activities observed on 2024-07-04. What is the Security identifier
+      (SID) of the account involved in the suspicious sequence of exploration activities?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During a recent security incident, a known public tool disguised under the filename 'iy2orr1e.rrg.exe' was flagged as potentially malicious due to its unexpected filename and hidden window style. Further investigation revealed a related suspicious sequence of exploration activities on the same machine involving a set of commands used to identify assets of value and coordinate lateral movement."
-      question: "Related to this incident, there was also a suspicious sequence of exploration activities observed on 2024-07-04. What is the Security identifier (SID) of the account involved in the suspicious sequence of exploration activities?"
-
+      incident_context: During a recent security incident, a known public tool disguised
+        under the filename 'iy2orr1e.rrg.exe' was flagged as potentially malicious
+        due to its unexpected filename and hidden window style. Further investigation
+        revealed a related suspicious sequence of exploration activities on the same
+        machine involving a set of commands used to identify assets of value and coordinate
+        lateral movement.
+      question: Related to this incident, there was also a suspicious sequence of
+        exploration activities observed on 2024-07-04. What is the Security identifier
+        (SID) of the account involved in the suspicious sequence of exploration activities?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-1-5-21-561436748-3867387497-1732241745-3701"
+          - S-1-5-21-561436748-3867387497-1732241745-3701
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A known public tool, which could also be used for malicious reasons, was observed under an unexpected filename by the user with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A known public tool, which could also be used for malicious reasons,
+          was observed under an unexpected filename by the user with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A process `powershell.exe` called a set of windows commands which might be used for identifying assets and coordinating lateral movement."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process `powershell.exe` called a set of windows commands which
+          might be used for identifying assets and coordinating lateral movement.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "The suspicious sequence of exploration activities was executed by a user account with SID `S-1-5-21-561436748-3867387497-1732241745-3701`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The suspicious sequence of exploration activities was executed
+          by a user account with SID `S-1-5-21-561436748-3867387497-1732241745-3701`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_55_task_77
     title: incident_55_task_77
-    description: "In relation to this incident, there was an alert for a suspicious sequence of exploration activities that occurred earlier. Can you identify the name of the account associated with these activities?"
-
+    description: In relation to this incident, there was an alert for a suspicious
+      sequence of exploration activities that occurred earlier. Can you identify the
+      name of the account associated with these activities?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During an investigation of a security incident, we detected that user `Lucas Grey` clicked on a potentially malicious URL (`http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`) on 2024-07-10. The incident also involved a mailbox with the primary address `bjenkins@niseko.alpineskihouse.co`, indicating further malicious activities might be involved. A connected alert was generated for suspicious sequence of exploration activities."
-      question: "In relation to this incident, there was an alert for a suspicious sequence of exploration activities that occurred earlier. Can you identify the name of the account associated with these activities?"
-
+      incident_context: During an investigation of a security incident, we detected
+        that user `Lucas Grey` clicked on a potentially malicious URL (`http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`)
+        on 2024-07-10. The incident also involved a mailbox with the primary address
+        `bjenkins@niseko.alpineskihouse.co`, indicating further malicious activities
+        might be involved. A connected alert was generated for suspicious sequence
+        of exploration activities.
+      question: In relation to this incident, there was an alert for a suspicious
+        sequence of exploration activities that occurred earlier. Can you identify
+        the name of the account associated with these activities?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "gsmith"
+          - gsmith
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The user with SID `S-1-5-21-561436748-3867387497-1732241745-3701` clicked on a potentially malicious URL."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user with SID `S-1-5-21-561436748-3867387497-1732241745-3701`
+          clicked on a potentially malicious URL.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A process named `powershell.exe` was identified as part of suspicious sequence of exploration activities."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process named `powershell.exe` was identified as part of suspicious
+          sequence of exploration activities.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "The account named `gsmith` was involved in the suspicious sequence of exploration activities."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The account named `gsmith` was involved in the suspicious sequence
+          of exploration activities.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_55_task_78
     title: incident_55_task_78
-    description: "A few days later, on 2024-07-07, an alert was triggered for the unusual addition of credentials to an OAuth app by a user named Luciano Herrera. Can you provide the name and instance of the cloud application affected?"
-
+    description: A few days later, on 2024-07-07, an alert was triggered for the unusual
+      addition of credentials to an OAuth app by a user named Luciano Herrera. Can
+      you provide the name and instance of the cloud application affected?
     inherit_shared: true
-
     initial_context:
-      incident_context: "On 2024-07-04, there was a security incident involving the host `mb-winclient` where a process (`powershell.exe`) running the script `contosoadfsblatempcreds.ps1` was injected with potentially malicious code. Code injection can lead to abnormal behaviors such as network communications to external servers."
-      question: "A few days later, on 2024-07-07, an alert was triggered for the unusual addition of credentials to an OAuth app by a user named Luciano Herrera. Can you provide the name and instance of the cloud application affected?"
-
+      incident_context: On 2024-07-04, there was a security incident involving the
+        host `mb-winclient` where a process (`powershell.exe`) running the script
+        `contosoadfsblatempcreds.ps1` was injected with potentially malicious code.
+        Code injection can lead to abnormal behaviors such as network communications
+        to external servers.
+      question: A few days later, on 2024-07-07, an alert was triggered for the unusual
+        addition of credentials to an OAuth app by a user named Luciano Herrera. Can
+        you provide the name and instance of the cloud application affected?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "office 365__microsoft 365"
+          - office 365__microsoft 365
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A potentially malicious code was injected into a process by the user with SID `S-1-5-21-551436448-9871687716-9837441745-1903`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A potentially malicious code was injected into a process by the
+          user with SID `S-1-5-21-551436448-9871687716-9837441745-1903`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The user Luciano Herrera (pwilson@niseko.alpineskihouse.co) performed an unusual addition of credentials to the OAuth application SimulandApp in the cloud application `office 365` instance `microsoft 365`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user Luciano Herrera (pwilson@niseko.alpineskihouse.co) performed
+          an unusual addition of credentials to the OAuth application SimulandApp
+          in the cloud application `office 365` instance `microsoft 365`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_55_task_79
     title: incident_55_task_79
-    description: "Can you identify the Azure Active Directory (AAD) user ID associated with the attempt to hide the use of a dual-purpose tool?"
-
+    description: Can you identify the Azure Active Directory (AAD) user ID associated
+      with the attempt to hide the use of a dual-purpose tool?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspected DCSync attack was initiated by Luciano Herrera (CIO) from MB-WINCLIENT, sending a replication request to MB-DC1 on 2024-07-10. During the investigation, it was discovered that there was a suspicious system hardware discovery on 2024-07-04 where a known tool or technique was used to gather information on the device. Additionally, there was suspicious remote activity observed on the same day, indicating possible malicious actions initiated remotely."
-      question: "Can you identify the Azure Active Directory (AAD) user ID associated with the attempt to hide the use of a dual-purpose tool?"
-
+      incident_context: A suspected DCSync attack was initiated by Luciano Herrera
+        (CIO) from MB-WINCLIENT, sending a replication request to MB-DC1 on 2024-07-10.
+        During the investigation, it was discovered that there was a suspicious system
+        hardware discovery on 2024-07-04 where a known tool or technique was used
+        to gather information on the device. Additionally, there was suspicious remote
+        activity observed on the same day, indicating possible malicious actions initiated
+        remotely.
+      question: Can you identify the Azure Active Directory (AAD) user ID associated
+        with the attempt to hide the use of a dual-purpose tool?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5"
+          - ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "Luciano Herrera (CIO) with AadUserId `2de70991-2799-4a95-b734-8e3df3a50118` on MB-WINCLIENT sent a replication request to MB-DC1."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Luciano Herrera (CIO) with AadUserId `2de70991-2799-4a95-b734-8e3df3a50118`
+          on MB-WINCLIENT sent a replication request to MB-DC1.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious system hardware discovery was attempted using `powershell.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious system hardware discovery was attempted using `powershell.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "Suspicious remote activity was observed, initiated by an account with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious remote activity was observed, initiated by an account
+          with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_4
         title: Checkpoint 4
-        description: "An account with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5` attempted to hide the use of a dual-purpose tool under an unexpected filename."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An account with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`
+          attempted to hide the use of a dual-purpose tool under an unexpected filename.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
   - task_id: incident_55_task_80
     title: incident_55_task_80
-    description: "Can you identify the ProcessId, the exact time the process was created, and the command line used for the process that attempted to hide the use of a dual-purpose tool?"
-
+    description: Can you identify the ProcessId, the exact time the process was created,
+      and the command line used for the process that attempted to hide the use of
+      a dual-purpose tool?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A malicious URL `https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/` was clicked on a device at 11:24 AM on 2024-07-10, indicating potential malicious activity. Following this event, a suspicious LDAP query was executed on 2024-07-04, which might indicate reconnaissance by an attacker trying to learn the organization's structure. Later, a series of exploration activities were noted, suggesting that the attacker was identifying valuable assets and planning lateral movement after compromising a machine. The final observed activity was an attempt to use a dual-purpose tool under an unexpected filename, likely as an effort to conceal malicious intentions."
-      question: "Can you identify the ProcessId, the exact time the process was created, and the command line used for the process that attempted to hide the use of a dual-purpose tool?"
-
+      incident_context: A malicious URL `https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`
+        was clicked on a device at 11:24 AM on 2024-07-10, indicating potential malicious
+        activity. Following this event, a suspicious LDAP query was executed on 2024-07-04,
+        which might indicate reconnaissance by an attacker trying to learn the organization's
+        structure. Later, a series of exploration activities were noted, suggesting
+        that the attacker was identifying valuable assets and planning lateral movement
+        after compromising a machine. The final observed activity was an attempt to
+        use a dual-purpose tool under an unexpected filename, likely as an effort
+        to conceal malicious intentions.
+      question: Can you identify the ProcessId, the exact time the process was created,
+        and the command line used for the process that attempted to hide the use of
+        a dual-purpose tool?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "ProcessId: 5752, Created Time: 2024-07-06T00:00:01.7155092Z, Command Line: \"iy2orr1e.rrg.exe\" -windowstyle hidden -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa="
+          - 'ProcessId: 5752, Created Time: 2024-07-06T00:00:01.7155092Z, Command
+            Line: "iy2orr1e.rrg.exe" -windowstyle hidden -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa='
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A malicious URL was clicked on the device with AadDeviceId `7661dfd4-218f-4016-8a87-66d68a7f098e` on 2024-07-10 at 11:24:45.667104+00:00."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A malicious URL was clicked on the device with AadDeviceId `7661dfd4-218f-4016-8a87-66d68a7f098e`
+          on 2024-07-10 at 11:24:45.667104+00:00.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious LDAP query was executed by `powershell.exe` on 2024-07-04 at 22:35:03.848291+00:00, indicating potential reconnaissance activity."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious LDAP query was executed by `powershell.exe` on 2024-07-04
+          at 22:35:03.848291+00:00, indicating potential reconnaissance activity.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "A suspicious sequence of exploration activities was conducted by the account `gsmith` on 2024-07-04 at 22:35:03.106654+00:00."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious sequence of exploration activities was conducted
+          by the account `gsmith` on 2024-07-04 at 22:35:03.106654+00:00.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0
       - subtask_id: checkpoint_4
         title: Checkpoint 4
-        description: "An attempt to hide the use of a dual-purpose tool was observed on 2024-07-06 at 00:09:58.973357+00:00. The tool was run with the command line `iy2orr1e.rrg.exe -windowstyle hidden -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa=`, created at `2024-07-06t00:00:01.7155092z`, with Process ID `5752`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An attempt to hide the use of a dual-purpose tool was observed
+          on 2024-07-06 at 00:09:58.973357+00:00. The tool was run with the command
+          line `iy2orr1e.rrg.exe -windowstyle hidden -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa=`,
+          created at `2024-07-06t00:00:01.7155092z`, with Process ID `5752`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.125
+            weight: 1.0

@@ -1,53 +1,109 @@
 tasks:
   - task_id: incident_34_task_81
     title: incident_34_task_81
-    description: "Can you provide the Azure Active Directory (AAD) User ID for the suspicious PowerShell command execution?"
-
+    description: Can you provide the Azure Active Directory (AAD) User ID for the
+      suspicious PowerShell command execution?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving a suspicious PowerShell download or encoded command execution was reported. PowerShell is often used by attackers to bypass security protection mechanisms by executing their payload in memory without leaving a trace or touching the disk. As part of this incident, a process `winword.exe` was launched with the command line `winword.exe c:\\scripts\\rs4_winatp-intro-invoice.docm`, and it might be trying to download external payloads or execute commands on the device."
-      question: "Can you provide the Azure Active Directory (AAD) User ID for the suspicious PowerShell command execution?"
-
+      incident_context: A security incident involving a suspicious PowerShell download
+        or encoded command execution was reported. PowerShell is often used by attackers
+        to bypass security protection mechanisms by executing their payload in memory
+        without leaving a trace or touching the disk. As part of this incident, a
+        process `winword.exe` was launched with the command line `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`,
+        and it might be trying to download external payloads or execute commands on
+        the device.
+      question: Can you provide the Azure Active Directory (AAD) User ID for the suspicious
+        PowerShell command execution?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "16320fec-8d90-403b-b7fe-78f715d4728d"
+          - 16320fec-8d90-403b-b7fe-78f715d4728d
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious PowerShell download or encoded command execution was detected on the host `vnevado-win10e`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious PowerShell download or encoded command execution
+          was detected on the host `vnevado-win10e`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious process executed a PowerShell command by the user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious process executed a PowerShell command by the user
+          with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_82
     title: incident_34_task_82
-    description: "As part of this incident, there was also a suspicious LDAP query, likely indicating reconnaissance activity. Can you identify the file name of the process that was used to execute the LDAP query?"
-
+    description: As part of this incident, there was also a suspicious LDAP query,
+      likely indicating reconnaissance activity. Can you identify the file name of
+      the process that was used to execute the LDAP query?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A recent security incident involved a process executing PowerShell on 2024-07-04 at 22:35:01.807662+00:00. The encoded command executed by `powershell.exe` and resulted in the download of `winatp-intro-backdoor.exe`. This activity was flagged as it might indicate an attacker attempting to download external payloads or execute commands undetected on the device."
-      question: "As part of this incident, there was also a suspicious LDAP query, likely indicating reconnaissance activity. Can you identify the file name of the process that was used to execute the LDAP query?"
-
+      incident_context: A recent security incident involved a process executing PowerShell
+        on 2024-07-04 at 22:35:01.807662+00:00. The encoded command executed by `powershell.exe`
+        and resulted in the download of `winatp-intro-backdoor.exe`. This activity
+        was flagged as it might indicate an attacker attempting to download external
+        payloads or execute commands undetected on the device.
+      question: As part of this incident, there was also a suspicious LDAP query,
+        likely indicating reconnaissance activity. Can you identify the file name
+        of the process that was used to execute the LDAP query?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winword.exe"
+          - winword.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "There was a suspicious PowerShell command execution on host `vnevado-win10e`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a suspicious PowerShell command execution on host `vnevado-win10e`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious LDAP query was executed by the process `winword.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious LDAP query was executed by the process `winword.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/excytin_evaluation_system.md
+            judge_user_template: judge/excytin_evaluation_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
