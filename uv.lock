@@ -2602,6 +2602,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.100.0" },
     { name = "fastmcp", specifier = ">=2.14.0" },
     { name = "filelock", specifier = ">=3.20.1" },
+    { name = "github-copilot-sdk", marker = "extra == 'copilot'", specifier = ">=0.1.13" },
     { name = "httpx", specifier = ">=0.24.0" },
     { name = "httpx-sse", specifier = ">=0.4.0" },
     { name = "inspect-ai", git = "https://dev.azure.com/MSECAIModels/Benchmarking/_git/inspect_ai?branch=dev%2Fsaber_integration" },
@@ -2625,10 +2626,12 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.20.0" },
     { name = "websockets", specifier = ">=11.0.0" },
 ]
-provides-extras = ["dev", "server", "client", "local-dev"]
+provides-extras = ["copilot", "dev", "server", "client", "local-dev"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "pytest", specifier = ">=9.0.1" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250822" },
     { name = "types-requests", specifier = ">=2.32.4.20250913" },
 ]

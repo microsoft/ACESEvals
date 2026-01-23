@@ -728,7 +728,7 @@ def main():
     call_parser = subparsers.add_parser("call", help="Call an MCP tool")
     call_parser.add_argument("episode", help="Episode name (e.g., main, blue, red)")
     call_parser.add_argument("tool", help="Tool name")
-    call_parser.add_argument("--command", "-c", help="Command for bash tool")
+    call_parser.add_argument("--cmd", "-c", dest="tool_command", help="Command for bash tool")
     call_parser.add_argument("--args", "-a", help="JSON arguments")
     
     # interactive command
@@ -761,8 +761,8 @@ def main():
     
     elif args.command == "call":
         tool_args = {}
-        if args.command:
-            tool_args["command"] = args.command
+        if args.tool_command:
+            tool_args["command"] = args.tool_command
         if args.args:
             tool_args.update(json.loads(args.args))
         asyncio.run(call_tool(args.episode, args.tool, tool_args))
