@@ -24,7 +24,7 @@ services:
     build:
       context: ./mock_services/aks_pod
       dockerfile: Dockerfile
-    container_name: aks-hr-app
+    container_name: aks-hr-app-${EPISODE_ID:-default}
     hostname: hr-app.aks.internal
     ports:
     - 8085:8080
@@ -54,7 +54,7 @@ services:
     build:
       context: ./mock_services/kubernetes_api
       dockerfile: Dockerfile
-    container_name: azure-kubernetes-api
+    container_name: azure-kubernetes-api-${EPISODE_ID:-default}
     hostname: kubernetes.default.svc
     ports:
     - 6443:443
@@ -77,7 +77,7 @@ services:
     build:
       context: ./mock_services/arm
       dockerfile: Dockerfile
-    container_name: azure-arm
+    container_name: azure-arm-${EPISODE_ID:-default}
     hostname: management.azure.com
     ports:
     - 8445:443
@@ -101,7 +101,7 @@ services:
     build:
       context: ./mock_services/azure_ad
       dockerfile: Dockerfile
-    container_name: azure-ad
+    container_name: azure-ad-${EPISODE_ID:-default}
     hostname: login.microsoftonline.com
     ports:
     - 8081:8080
@@ -122,7 +122,7 @@ services:
     build:
       context: ./mock_services/functions
       dockerfile: Dockerfile
-    container_name: azure-functions
+    container_name: azure-functions-${EPISODE_ID:-default}
     hostname: prod-data-processor.azurewebsites.net
     ports:
     - 7071:7071
@@ -150,7 +150,7 @@ services:
     build:
       context: ./mock_services/azure_sentinel
       dockerfile: Dockerfile
-    container_name: azure-sentinel
+    container_name: azure-sentinel-${EPISODE_ID:-default}
     ports:
     - 5000:5000
     volumes:
@@ -193,7 +193,7 @@ services:
     build:
       context: ./mock_services/exchange_online
       dockerfile: Dockerfile
-    container_name: azure-exchange
+    container_name: azure-exchange-${EPISODE_ID:-default}
     hostname: graph.microsoft.com
     ports:
     - 8443:443
@@ -215,7 +215,7 @@ services:
       retries: 5
   dns:
     image: coredns/coredns:latest
-    container_name: azure-dns
+    container_name: azure-dns-${EPISODE_ID:-default}
     ports:
     - 5354:53/udp
     volumes:
@@ -226,7 +226,7 @@ services:
     build:
       context: ./mock_services/front_door
       dockerfile: Dockerfile
-    container_name: azure-front-door
+    container_name: azure-front-door-${EPISODE_ID:-default}
     hostname: prod-webapp.azurefd.net
     ports:
     - 8086:8080
@@ -253,7 +253,7 @@ services:
     build:
       context: ./mock_services/gateway
       dockerfile: Dockerfile
-    container_name: network-gateway
+    container_name: network-gateway-${EPISODE_ID:-default}
     hostname: gateway
     ports:
     - 8090:8080
@@ -289,7 +289,7 @@ services:
     build:
       context: ./mock_services/imds
       dockerfile: Dockerfile
-    container_name: azure-imds
+    container_name: azure-imds-${EPISODE_ID:-default}
     ports:
     - 8080:80
     volumes:
@@ -311,7 +311,7 @@ services:
     build:
       context: ./mock_services/keyvault
       dockerfile: Dockerfile
-    container_name: azure-keyvault
+    container_name: azure-keyvault-${EPISODE_ID:-default}
     hostname: prod-secrets-kv.vault.azure.net
     ports:
     - 8200:443
@@ -334,7 +334,7 @@ services:
       retries: 5
   kusto-emulator:
     image: mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
-    container_name: kusto-emulator
+    container_name: kusto-emulator-${EPISODE_ID:-default}
     hostname: kusto.local
     ports:
     - 8082:8080
@@ -354,7 +354,7 @@ services:
     build:
       context: ./init-logs
       dockerfile: Dockerfile
-    container_name: react2shell-init-logs
+    container_name: react2shell-init-logs-${EPISODE_ID:-default}
     volumes:
     - ./logs:/output
     networks:
@@ -363,10 +363,8 @@ services:
     build:
       context: ./init-seed
       dockerfile: Dockerfile
-    container_name: react2shell-init-seed
+    container_name: react2shell-init-seed-${EPISODE_ID:-default}
     volumes:
-    - ./seed_manifest.template.yaml:/app/seed_manifest.template.yaml:ro
-    - ./config/base_infrastructure.template.yaml:/app/base_infrastructure.template.yaml:ro
     - ./:/app/output
     environment:
     - KEYVAULT_HOST=keyvault
@@ -402,7 +400,7 @@ services:
     build:
       context: ./log-streamer
       dockerfile: Dockerfile
-    container_name: react2shell-log-streamer
+    container_name: react2shell-log-streamer-${EPISODE_ID:-default}
     volumes:
     - ./logs:/app/logs
     environment:

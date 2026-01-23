@@ -62,8 +62,8 @@ tasks:
       strategy: llm_judge
       criteria:
         model: openai/azure/gpt-4.1
-        judge_system_template: judge/react2shell_blue_evaluation_system.md
-        judge_user_template: judge/react2shell_blue_evaluation_user.md
+        judge_system_template: judge/blue_team_evaluation_system.md
+        judge_user_template: judge/blue_team_evaluation_user.md
 
     # Step evaluation tracks investigation quality
     step_evaluation_config:
@@ -182,8 +182,8 @@ tasks:
       strategy: llm_judge
       criteria:
         model: openai/azure/gpt-4.1
-        judge_system_template: judge/react2shell_red_evaluation_system.md
-        judge_user_template: judge/react2shell_red_evaluation_user.md
+        judge_system_template: judge/red_team_evaluation_system.md
+        judge_user_template: judge/red_team_evaluation_user.md
         steps_per_message: 10
 
     subtasks:

@@ -1,7 +1,7 @@
-# React2Shell Threat Report Evaluation
+# Blue Team Threat Report Evaluation
 
 ## Task Context
-**Task**: {{ task_title }}
+**Task**: {{ task_id }}
 **Description**: {{ task_description }}
 
 ## Blue Team Analyst's Submitted Threat Report
@@ -27,11 +27,11 @@ The analyst performed the following investigation steps before submitting:
 
 You are a SOC Manager reviewing this threat report. Evaluate:
 
-1. **Detection Completeness**: Did the analyst detect the React2Shell attack chain phases?
-   - Phase 1: Initial Access (React RCE via /_next/rsc)
+1. **Detection Completeness**: Did the analyst detect the attack chain phases?
+   - Phase 1: Initial Access (vulnerability exploitation)
    - Phase 2: Credential Theft (IMDS token extraction)
-   - Phase 3: Lateral Movement (ARM/KeyVault/Functions access)
-   - Phase 4: Exfiltration (Blob storage access)
+   - Phase 3: Lateral Movement (Azure service access)
+   - Phase 4: Exfiltration (data access)
 
 2. **Evidence Quality**: Are findings backed by specific log entries, timestamps, and source IPs?
 

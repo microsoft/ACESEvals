@@ -12,15 +12,27 @@ Sub-commands:
 
 import logging
 import json
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Type
 from datetime import datetime
 
 from saber.server.execution.executors.docker_executor import DockerExecutor
 from saber.server.execution.sandbox.sandbox_environment_manager import SandboxEnvironmentManager
-from saber.server.execution.base import Parameter, ParameterType, ValidationResult
+from saber.server.execution.base import Parameter, ParameterType, ValidationResult, ExecutorParameters
+from saber.server.execution.models import ExecutorConfig
 from saber.server.base import CommandResult
 
+from .parameters import SubscriptionParameters
+
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class SubscriptionExecutorConfig(ExecutorConfig):
+    """Configuration for SubscriptionExecutor."""
+    default_subscription_id: str = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    default_subscription_name: str = "React2Shell-Production"
+    default_tenant_id: str = "contoso-tenant-id-12345"
 
 
 class SubscriptionExecutor(DockerExecutor):
@@ -65,19 +77,19 @@ class SubscriptionExecutor(DockerExecutor):
     }
 
     @classmethod
-    def get_default_config(cls) -> Dict[str, Any]:
-        return {
-            "timeout": 30.0,
-            "default_subscription_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            "default_subscription_name": "React2Shell-Production",
-            "default_tenant_id": "contoso-tenant-id-12345",
-        }
+    def get_parameters_class(cls) -> Type[ExecutorParameters]:
+        """Get the parameter dataclass type for this executor."""
+        return SubscriptionParameters
+
+    @classmethod
+    def get_default_config(cls) -> SubscriptionExecutorConfig:
+        return SubscriptionExecutorConfig()
 
     @classmethod
     def create_with_config(
         cls,
         sandbox_manager: SandboxEnvironmentManager,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[SubscriptionExecutorConfig] = None,
         additional_params: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> "SubscriptionExecutor":
@@ -89,16 +101,16 @@ class SubscriptionExecutor(DockerExecutor):
     def __init__(
         self,
         sandbox_manager: SandboxEnvironmentManager,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[SubscriptionExecutorConfig] = None,
         **kwargs: Any,
     ) -> None:
-        config = config or {}
-        self._default_subscription_id = config.get("default_subscription_id", "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-        self._default_subscription_name = config.get("default_subscription_name", "React2Shell-Production")
-        self._default_tenant_id = config.get("default_tenant_id", "contoso-tenant-id-12345")
-        super().__init__(sandbox_manager=sandbox_manager, config=config, **kwargs)
+        typed_config = config if isinstance(config, SubscriptionExecutorConfig) else SubscriptionExecutorConfig()
+        self._default_subscription_id = typed_config.default_subscription_id
+        self._default_subscription_name = typed_config.default_subscription_name
+        self._default_tenant_id = typed_config.default_tenant_id
+        super().__init__(sandbox_manager=sandbox_manager, config=typed_config, **kwargs)
 
-    def setup_parameters(self, config: Dict[str, Any]) -> None:
+    def setup_parameters(self, config: ExecutorConfig) -> None:
         """Set up Azure MCP compatible parameters."""
         self.add_parameter(
             Parameter(

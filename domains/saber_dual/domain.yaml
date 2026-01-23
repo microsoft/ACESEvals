@@ -15,116 +15,248 @@ images:
       saber.component: "sandbox"
 
   # ============================================================================
-  # React2Shell Azure Cloud Attack Simulation (CVE-2025-55182)
+  # Saber Sim React2Shell - Azure Cloud Attack Simulation (CVE-2025-55182)
+  # React RCE → IMDS → KeyVault → Blob Storage Exfiltration
   # ============================================================================
   
-  react2shell_app_service:
-    tag: "saber/saber_dual/react2shell/app-service:latest"
-    dockerfile: "server/docker/react2shell/mock_services/app_service/Dockerfile"
-    context: "server/docker/react2shell/mock_services/app_service"
+  saber_sim_react2shell_app_service:
+    tag: "saber/saber_dual/saber_sim_react2shell/app-service:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/app_service/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/app_service"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-app-service"
-      saber.scenario: "react2shell"
+      saber.component: "app-service"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_arm_api:
-    tag: "saber/saber_dual/react2shell/arm-api:latest"
-    dockerfile: "server/docker/react2shell/mock_services/arm/Dockerfile"
-    context: "server/docker/react2shell/mock_services/arm"
+  saber_sim_react2shell_arm_api:
+    tag: "saber/saber_dual/saber_sim_react2shell/arm-api:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/arm/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/arm"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-arm"
-      saber.scenario: "react2shell"
+      saber.component: "arm-api"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_azure_ad:
-    tag: "saber/saber_dual/react2shell/azure-ad:latest"
-    dockerfile: "server/docker/react2shell/mock_services/azure_ad/Dockerfile"
-    context: "server/docker/react2shell/mock_services/azure_ad"
+  saber_sim_react2shell_azure_ad:
+    tag: "saber/saber_dual/saber_sim_react2shell/azure-ad:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/azure_ad/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/azure_ad"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-azure-ad"
-      saber.scenario: "react2shell"
+      saber.component: "azure-ad"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_sentinel:
-    tag: "saber/saber_dual/react2shell/sentinel:latest"
-    dockerfile: "server/docker/react2shell/mock_services/azure_sentinel/Dockerfile"
-    context: "server/docker/react2shell/mock_services/azure_sentinel"
+  saber_sim_react2shell_sentinel:
+    tag: "saber/saber_dual/saber_sim_react2shell/sentinel:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/azure_sentinel/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/azure_sentinel"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-sentinel"
-      saber.scenario: "react2shell"
+      saber.component: "sentinel"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_front_door:
-    tag: "saber/saber_dual/react2shell/front-door:latest"
-    dockerfile: "server/docker/react2shell/mock_services/front_door/Dockerfile"
-    context: "server/docker/react2shell/mock_services/front_door"
+  saber_sim_react2shell_front_door:
+    tag: "saber/saber_dual/saber_sim_react2shell/front-door:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/front_door/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/front_door"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-front-door"
-      saber.scenario: "react2shell"
+      saber.component: "front-door"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_functions:
-    tag: "saber/saber_dual/react2shell/functions:latest"
-    dockerfile: "server/docker/react2shell/mock_services/functions/Dockerfile"
-    context: "server/docker/react2shell/mock_services/functions"
+  saber_sim_react2shell_functions:
+    tag: "saber/saber_dual/saber_sim_react2shell/functions:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/functions/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/functions"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-functions"
-      saber.scenario: "react2shell"
+      saber.component: "functions"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_gateway:
-    tag: "saber/saber_dual/react2shell/gateway:latest"
-    dockerfile: "server/docker/react2shell/mock_services/gateway/Dockerfile"
-    context: "server/docker/react2shell/mock_services/gateway"
+  saber_sim_react2shell_gateway:
+    tag: "saber/saber_dual/saber_sim_react2shell/gateway:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/gateway/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/gateway"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-gateway"
-      saber.scenario: "react2shell"
+      saber.component: "gateway"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_imds:
-    tag: "saber/saber_dual/react2shell/imds:latest"
-    dockerfile: "server/docker/react2shell/mock_services/imds/Dockerfile"
-    context: "server/docker/react2shell/mock_services/imds"
+  saber_sim_react2shell_imds:
+    tag: "saber/saber_dual/saber_sim_react2shell/imds:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/imds/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/imds"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-imds"
-      saber.scenario: "react2shell"
+      saber.component: "imds"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_keyvault:
-    tag: "saber/saber_dual/react2shell/keyvault:latest"
-    dockerfile: "server/docker/react2shell/mock_services/keyvault/Dockerfile"
-    context: "server/docker/react2shell/mock_services/keyvault"
+  saber_sim_react2shell_keyvault:
+    tag: "saber/saber_dual/saber_sim_react2shell/keyvault:latest"
+    dockerfile: "server/docker/sim_react2shell/mock_services/keyvault/Dockerfile"
+    context: "server/docker/sim_react2shell/mock_services/keyvault"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-keyvault"
-      saber.scenario: "react2shell"
+      saber.component: "keyvault"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_init_logs:
-    tag: "saber/saber_dual/react2shell/init-logs:latest"
-    dockerfile: "server/docker/react2shell/init-logs/Dockerfile"
-    context: "server/docker/react2shell/init-logs"
+  saber_sim_react2shell_init_logs:
+    tag: "saber/saber_dual/saber_sim_react2shell/init-logs:latest"
+    dockerfile: "server/docker/sim_react2shell/init-logs/Dockerfile"
+    context: "server/docker/sim_react2shell/init-logs"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-init"
-      saber.scenario: "react2shell"
+      saber.component: "init-logs"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_init_seed:
-    tag: "saber/saber_dual/react2shell/init-seed:latest"
-    dockerfile: "server/docker/react2shell/init-seed/Dockerfile"
-    context: "server/docker/react2shell/init-seed"
+  saber_sim_react2shell_init_seed:
+    tag: "saber/saber_dual/saber_sim_react2shell/init-seed:latest"
+    dockerfile: "server/docker/sim_react2shell/init-seed/Dockerfile"
+    context: "server/docker/sim_react2shell/init-seed"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-init"
-      saber.scenario: "react2shell"
+      saber.component: "init-seed"
+      saber.scenario: "saber_sim_react2shell"
   
-  react2shell_log_streamer:
-    tag: "saber/saber_dual/react2shell/log-streamer:latest"
-    dockerfile: "server/docker/react2shell/log-streamer/Dockerfile"
-    context: "server/docker/react2shell/log-streamer"
+  saber_sim_react2shell_log_streamer:
+    tag: "saber/saber_dual/saber_sim_react2shell/log-streamer:latest"
+    dockerfile: "server/docker/sim_react2shell/log-streamer/Dockerfile"
+    context: "server/docker/sim_react2shell/log-streamer"
     labels:
       saber.domain: "saber_dual"
-      saber.component: "react2shell-logs"
-      saber.scenario: "react2shell"
+      saber.component: "log-streamer"
+      saber.scenario: "saber_sim_react2shell"
+
+  # ============================================================================
+  # Romulus React2Shell - AKS SSRF Attack Simulation
+  # AKS SSRF → IMDS → K8s Secrets → KeyVault → Exchange Exfiltration
+  # ============================================================================
+  
+  romulus_react2shell_aks_pod:
+    tag: "saber/saber_dual/romulus_react2shell/aks-pod:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/aks_pod/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/aks_pod"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "aks-pod"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_arm_api:
+    tag: "saber/saber_dual/romulus_react2shell/arm-api:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/arm/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/arm"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "arm-api"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_azure_ad:
+    tag: "saber/saber_dual/romulus_react2shell/azure-ad:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/azure_ad/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/azure_ad"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "azure-ad"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_sentinel:
+    tag: "saber/saber_dual/romulus_react2shell/sentinel:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/azure_sentinel/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/azure_sentinel"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "sentinel"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_exchange_online:
+    tag: "saber/saber_dual/romulus_react2shell/exchange-online:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/exchange_online/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/exchange_online"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "exchange-online"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_front_door:
+    tag: "saber/saber_dual/romulus_react2shell/front-door:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/front_door/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/front_door"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "front-door"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_azure_functions:
+    tag: "saber/saber_dual/romulus_react2shell/azure-functions:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/functions/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/functions"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "azure-functions"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_gateway:
+    tag: "saber/saber_dual/romulus_react2shell/gateway:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/gateway/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/gateway"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "gateway"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_imds:
+    tag: "saber/saber_dual/romulus_react2shell/imds:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/imds/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/imds"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "imds"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_keyvault:
+    tag: "saber/saber_dual/romulus_react2shell/keyvault:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/keyvault/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/keyvault"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "keyvault"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_kubernetes_api:
+    tag: "saber/saber_dual/romulus_react2shell/kubernetes-api:latest"
+    dockerfile: "server/docker/romulus_react2shell/mock_services/kubernetes_api/Dockerfile"
+    context: "server/docker/romulus_react2shell/mock_services/kubernetes_api"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "kubernetes-api"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_init_logs:
+    tag: "saber/saber_dual/romulus_react2shell/init-logs:latest"
+    dockerfile: "server/docker/romulus_react2shell/init-logs/Dockerfile"
+    context: "server/docker/romulus_react2shell/init-logs"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "init-logs"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_init_seed:
+    tag: "saber/saber_dual/romulus_react2shell/init-seed:latest"
+    dockerfile: "server/docker/romulus_react2shell/init-seed/Dockerfile"
+    context: "server/docker/romulus_react2shell/init-seed"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "init-seed"
+      saber.scenario: "romulus_react2shell"
+  
+  romulus_react2shell_log_streamer:
+    tag: "saber/saber_dual/romulus_react2shell/log-streamer:latest"
+    dockerfile: "server/docker/romulus_react2shell/log-streamer/Dockerfile"
+    context: "server/docker/romulus_react2shell/log-streamer"
+    labels:
+      saber.domain: "saber_dual"
+      saber.component: "log-streamer"
+      saber.scenario: "romulus_react2shell"
 
 # No profiles needed - server has full privileges by default
 

@@ -13,15 +13,27 @@ Sub-commands:
 
 import logging
 import json
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Type
 from datetime import datetime, timedelta
 
 from saber.server.execution.executors.docker_executor import DockerExecutor
 from saber.server.execution.sandbox.sandbox_environment_manager import SandboxEnvironmentManager
-from saber.server.execution.base import Parameter, ParameterType, ValidationResult
+from saber.server.execution.base import Parameter, ParameterType, ValidationResult, ExecutorParameters
+from saber.server.execution.models import ExecutorConfig
 from saber.server.base import CommandResult
 
+from .parameters import ResourcehealthParameters
+
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ResourcehealthExecutorConfig(ExecutorConfig):
+    """Configuration for ResourcehealthExecutor."""
+    siem_base_url: str = "http://siem-aggregator:8080"
+    default_subscription: str = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    default_resource_group: str = "react2shell-rg"
 
 
 class ResourcehealthExecutor(DockerExecutor):
@@ -74,19 +86,19 @@ class ResourcehealthExecutor(DockerExecutor):
     }
 
     @classmethod
-    def get_default_config(cls) -> Dict[str, Any]:
-        return {
-            "timeout": 30.0,
-            "siem_base_url": "http://siem-aggregator:8080",
-            "default_subscription": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            "default_resource_group": "react2shell-rg",
-        }
+    def get_parameters_class(cls) -> Type[ExecutorParameters]:
+        """Get the parameter dataclass type for this executor."""
+        return ResourcehealthParameters
+
+    @classmethod
+    def get_default_config(cls) -> ResourcehealthExecutorConfig:
+        return ResourcehealthExecutorConfig()
 
     @classmethod
     def create_with_config(
         cls,
         sandbox_manager: SandboxEnvironmentManager,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[ResourcehealthExecutorConfig] = None,
         additional_params: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> "ResourcehealthExecutor":
@@ -98,16 +110,16 @@ class ResourcehealthExecutor(DockerExecutor):
     def __init__(
         self,
         sandbox_manager: SandboxEnvironmentManager,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[ResourcehealthExecutorConfig] = None,
         **kwargs: Any,
     ) -> None:
-        config = config or {}
-        self._siem_base_url = config.get("siem_base_url", "http://siem-aggregator:8080")
-        self._default_subscription = config.get("default_subscription", "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-        self._default_resource_group = config.get("default_resource_group", "react2shell-rg")
-        super().__init__(sandbox_manager=sandbox_manager, config=config, **kwargs)
+        typed_config = config if isinstance(config, ResourcehealthExecutorConfig) else ResourcehealthExecutorConfig()
+        self._siem_base_url = typed_config.siem_base_url
+        self._default_subscription = typed_config.default_subscription
+        self._default_resource_group = typed_config.default_resource_group
+        super().__init__(sandbox_manager=sandbox_manager, config=typed_config, **kwargs)
 
-    def setup_parameters(self, config: Dict[str, Any]) -> None:
+    def setup_parameters(self, config: ExecutorConfig) -> None:
         """Set up Azure MCP compatible parameters."""
         self.add_parameter(
             Parameter(

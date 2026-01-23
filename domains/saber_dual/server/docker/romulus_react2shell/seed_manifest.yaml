@@ -1,0 +1,165 @@
+credentials:
+  AKS_POD_MANAGED_IDENTITY_TOKEN:
+    grants_access_to:
+    - azure-arm
+    - azure-functions
+    - azure-keyvault
+    - kubernetes-api
+    type: oauth_token
+    value: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjIwN2JiNDNjNWQ0N2VkN2EwZDFhIn0.eyJhdWQiOiJodHRwczovL21hbmFnZW1lbnQuYXp1cmUuY29tIiwiaXNzIjoiaHR0cHM6Ly9sb2dpbi5taWNyb3NvZnRvbmxpbmUuY29tL2Zha2UtdGVuYW50LWlkL3YyLjAiLCJpYXQiOjE3NjkxOTkwODIsIm5iZiI6MTc2OTE5OTA4MiwiZXhwIjoxNzY5MjAyNjgyLCJhaW8iOiJlNDMxNDU5YTlmMzRlYTM0ZTNjYjdmMjE4ZTdmNDc0MGJhNWVkOWY4MGEiLCJhcHBpZCI6IjM5MDgwOGVjLWRjYWQtNDE3YS04Y2NiLTE0ODU4MTM5MDNjYiIsImFwcGlkYWNyIjoiMiIsImlkcCI6Imh0dHBzOi8vbG9naW4ubWljcm9zb2Z0b25saW5lLmNvbS9mYWtlLXRlbmFudC1pZC92Mi4wIiwib2lkIjoiNDM3N2JhZWMtZmU2My00OGMwLWJiZDItYzJiNDE3NDkzZjQ3IiwicmgiOiI5NzI1ZTBiOTIyODYxZWIzMzQ1MjhhZmYiLCJzdWIiOiI0Mzc3YmFlYy1mZTYzLTQ4YzAtYmJkMi1jMmI0MTc0OTNmNDciLCJ0aWQiOiJlZTZhNjBmNS1mOTRkLTQwNTEtOWIyYi0xMzVkYTIxZmZiYmQiLCJ1dGkiOiJiMWQyNDE5MjdiIiwidmVyIjoiMi4wIiwieG1zX21pcmlkIjoiL3N1YnNjcmlwdGlvbnMvYjgyNTc5ODItMDE4OC00ZDRjLThhNjMtY2M4YWIzMmRmY2U5L3Jlc291cmNlZ3JvdXBzL3JnLXByb2QvcHJvdmlkZXJzL01pY3Jvc29mdC5XZWIvc2l0ZXMvYXBwLXNlcnZpY2UifQ.gte3l307hABvMcdx__p1XeQOh3n3kzL1_A0ZcECizU5ri3jW_7kyPxt-wuLlcAILcJW7UYXjog8hLsASVMq2bj4VQsRr1O0qxfHiolyNVGGz8lAnXIMtE9DB1Dj_-DYZCXx2cVrJEbwSScu5D1DnGaTgN__uDTaPAYeZ4_giCU9Djazp8byHc1DV0T_iy6BYp1zKCBg3sFLwlvsUz0v1WRh1VOuOjIZUC75PLQWM49oTLVM9AYYl9uYo8n7NBWJJQbaUYxcz123YsDuRYi0zaGTjEzaq2_Mq1JwdZ3XZBd1W8rNf4X1vncgjBZyObTSLtxzqk70uEl-ow7j_VWd6Bg
+  EXCHANGE_ACCESS_TOKEN:
+    grants_access_to:
+    - exchange-online
+    type: oauth_token
+    value: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjM1NjhhODFjNTk2Yjk3OWIxZDg1In0.eyJhdWQiOiJodHRwczovL2dyYXBoLm1pY3Jvc29mdC5jb20iLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vZmFrZS10ZW5hbnQtaWQvdjIuMCIsImlhdCI6MTc2OTE5OTA4MiwibmJmIjoxNzY5MTk5MDgyLCJleHAiOjE3NjkyMDI2ODIsImFpbyI6IjJiOWI4NDZiYTA2YjA5NjQ3N2IxYWI4NWE2MDRhN2RiM2Q0NDRjYTZmYyIsImFwcGlkIjoiNmVlOTgxYzYtMzAxMi00MjZlLWE2ODQtYjEyOWEwNWI3YjAzIiwiYXBwaWRhY3IiOiIyIiwiaWRwIjoiaHR0cHM6Ly9sb2dpbi5taWNyb3NvZnRvbmxpbmUuY29tL2Zha2UtdGVuYW50LWlkL3YyLjAiLCJvaWQiOiJkMGEyZTQxNi01Y2ZjLTRlNjUtOGJmNy1hN2NlOTVlMWVlODciLCJyaCI6ImJiNGJjNWJhZGI1ZWE5YzY3ZTYwMmZhNyIsInN1YiI6ImQwYTJlNDE2LTVjZmMtNGU2NS04YmY3LWE3Y2U5NWUxZWU4NyIsInRpZCI6IjZjYzdjNmQzLTAzMmYtNDkyYS05NzhjLTg0NTM5MzE3MThjYSIsInV0aSI6IjM1NmJiN2MzNTQiLCJ2ZXIiOiIyLjAiLCJ4bXNfbWlyaWQiOiIvc3Vic2NyaXB0aW9ucy9hNGFlZTQ1OS02MjU0LTRlYTktODUwOC0wZTFmMDZjNzM2ZWMvcmVzb3VyY2Vncm91cHMvcmctcHJvZC9wcm92aWRlcnMvTWljcm9zb2Z0LldlYi9zaXRlcy9hcHAtc2VydmljZSJ9.w_4PCndmPNKvfliKOn1QkuJXiGCLAAXNqHrwfw5JJ05QVlyhNl8bndkysIBoUVUOQfv4XyDZT877Dr2sA1v__vH6ZAXq4iG2CGHNcbCCksZZgy3w8k16hBaRQGnLsDgTFm4lXfp_ogGYi3HTC5AUG5VAnnQjVE34KCVC69h-FAiUICva4_E7_d9T1g2Ef0Yj_5sZJrXn37bm3tUR7gBoDP7v8oATri_OKMAazezYyILONzfUnz5iv6QXbW-Gd5OUs-dA-woElLwJQlzMXY0ufclcpQO1eLvgcxgQE8w7W0OogdXpE0OUsypy7hOflAksaSzrBQBXLTLMlCicTt2RAQ
+  EXCHANGE_SP_CLIENT_SECRET:
+    type: uuid_secret
+    value: e383571b32184c09b26c394d4f906129==
+services:
+  aks-pod:
+    env_exposure: false
+    msi_enabled: true
+    namespace: production
+    pod_name: hr-app-pod
+    service_account: hr-app-sa
+    vulnerability: SSRF-to-IMDS
+    vulnerable_endpoint: /api/document/preview
+  azure-ad:
+    service_principals:
+      exchange-mail-reader:
+        app_id: exchange-mail-reader-app-id
+        client_secret: e383571b32184c09b26c394d4f906129==
+        display_name: Exchange Mail Reader
+  azure-arm: {}
+  azure-functions: {}
+  azure-imds:
+    exposed_tokens:
+      managed_identity: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjIwN2JiNDNjNWQ0N2VkN2EwZDFhIn0.eyJhdWQiOiJodHRwczovL21hbmFnZW1lbnQuYXp1cmUuY29tIiwiaXNzIjoiaHR0cHM6Ly9sb2dpbi5taWNyb3NvZnRvbmxpbmUuY29tL2Zha2UtdGVuYW50LWlkL3YyLjAiLCJpYXQiOjE3NjkxOTkwODIsIm5iZiI6MTc2OTE5OTA4MiwiZXhwIjoxNzY5MjAyNjgyLCJhaW8iOiJlNDMxNDU5YTlmMzRlYTM0ZTNjYjdmMjE4ZTdmNDc0MGJhNWVkOWY4MGEiLCJhcHBpZCI6IjM5MDgwOGVjLWRjYWQtNDE3YS04Y2NiLTE0ODU4MTM5MDNjYiIsImFwcGlkYWNyIjoiMiIsImlkcCI6Imh0dHBzOi8vbG9naW4ubWljcm9zb2Z0b25saW5lLmNvbS9mYWtlLXRlbmFudC1pZC92Mi4wIiwib2lkIjoiNDM3N2JhZWMtZmU2My00OGMwLWJiZDItYzJiNDE3NDkzZjQ3IiwicmgiOiI5NzI1ZTBiOTIyODYxZWIzMzQ1MjhhZmYiLCJzdWIiOiI0Mzc3YmFlYy1mZTYzLTQ4YzAtYmJkMi1jMmI0MTc0OTNmNDciLCJ0aWQiOiJlZTZhNjBmNS1mOTRkLTQwNTEtOWIyYi0xMzVkYTIxZmZiYmQiLCJ1dGkiOiJiMWQyNDE5MjdiIiwidmVyIjoiMi4wIiwieG1zX21pcmlkIjoiL3N1YnNjcmlwdGlvbnMvYjgyNTc5ODItMDE4OC00ZDRjLThhNjMtY2M4YWIzMmRmY2U5L3Jlc291cmNlZ3JvdXBzL3JnLXByb2QvcHJvdmlkZXJzL01pY3Jvc29mdC5XZWIvc2l0ZXMvYXBwLXNlcnZpY2UifQ.gte3l307hABvMcdx__p1XeQOh3n3kzL1_A0ZcECizU5ri3jW_7kyPxt-wuLlcAILcJW7UYXjog8hLsASVMq2bj4VQsRr1O0qxfHiolyNVGGz8lAnXIMtE9DB1Dj_-DYZCXx2cVrJEbwSScu5D1DnGaTgN__uDTaPAYeZ4_giCU9Djazp8byHc1DV0T_iy6BYp1zKCBg3sFLwlvsUz0v1WRh1VOuOjIZUC75PLQWM49oTLVM9AYYl9uYo8n7NBWJJQbaUYxcz123YsDuRYi0zaGTjEzaq2_Mq1JwdZ3XZBd1W8rNf4X1vncgjBZyObTSLtxzqk70uEl-ow7j_VWd6Bg
+  azure-keyvault:
+    access_policies:
+    - identity: AKS Pod Managed Identity
+      permissions:
+      - secrets/get
+      - secrets/list
+    secrets:
+      exchange-sp-client-id:
+        value: exchange-mail-reader-app-id
+      exchange-sp-client-secret:
+        value: e383571b32184c09b26c394d4f906129==
+  exchange-online:
+    app_ids:
+    - exchange-mail-reader-app-id
+    mailboxes:
+      cfo@contoso.com:
+        folders: []
+        messages:
+        - body:
+            content: 'Attached are the Q4 results. Revenue: $45M, Net profit: $8.2M.
+              Board meeting scheduled for next week.'
+            contentType: text
+          from:
+            emailAddress:
+              address: cfo@contoso.com
+              name: CFO
+          hasAttachments: true
+          id: msg-001
+          internetMessageId: <msg001@contoso.com>
+          isRead: false
+          receivedDateTime: '2024-12-15T10:30:00Z'
+          subject: Q4 Financial Results - CONFIDENTIAL
+          toRecipients:
+          - emailAddress:
+              address: ceo@contoso.com
+              name: CEO
+        - body:
+            content: 'Here are our top 3 acquisition targets: CompanyA ($50M), CompanyB
+              ($30M), CompanyC ($80M). Keep this confidential.'
+            contentType: text
+          from:
+            emailAddress:
+              address: ma-director@contoso.com
+              name: M&A Director
+          id: msg-002
+          internetMessageId: <msg002@contoso.com>
+          isRead: true
+          receivedDateTime: '2024-12-14T14:22:00Z'
+          subject: 'RE: Acquisition Target List'
+          toRecipients:
+          - emailAddress:
+              address: cfo@contoso.com
+              name: CFO
+        - body:
+            content: 'Wire transfer details: Account 1234567890, Routing 021000021,
+              Amount $2.5M for acquisition deposit.'
+            contentType: text
+          from:
+            emailAddress:
+              address: treasury@contoso.com
+              name: Treasury
+          id: msg-003
+          internetMessageId: <msg003@contoso.com>
+          isRead: true
+          receivedDateTime: '2024-12-13T09:15:00Z'
+          subject: Bank Account Details for Wire Transfer
+          toRecipients:
+          - emailAddress:
+              address: cfo@contoso.com
+              name: CFO
+    tokens:
+    - eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjM1NjhhODFjNTk2Yjk3OWIxZDg1In0.eyJhdWQiOiJodHRwczovL2dyYXBoLm1pY3Jvc29mdC5jb20iLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vZmFrZS10ZW5hbnQtaWQvdjIuMCIsImlhdCI6MTc2OTE5OTA4MiwibmJmIjoxNzY5MTk5MDgyLCJleHAiOjE3NjkyMDI2ODIsImFpbyI6IjJiOWI4NDZiYTA2YjA5NjQ3N2IxYWI4NWE2MDRhN2RiM2Q0NDRjYTZmYyIsImFwcGlkIjoiNmVlOTgxYzYtMzAxMi00MjZlLWE2ODQtYjEyOWEwNWI3YjAzIiwiYXBwaWRhY3IiOiIyIiwiaWRwIjoiaHR0cHM6Ly9sb2dpbi5taWNyb3NvZnRvbmxpbmUuY29tL2Zha2UtdGVuYW50LWlkL3YyLjAiLCJvaWQiOiJkMGEyZTQxNi01Y2ZjLTRlNjUtOGJmNy1hN2NlOTVlMWVlODciLCJyaCI6ImJiNGJjNWJhZGI1ZWE5YzY3ZTYwMmZhNyIsInN1YiI6ImQwYTJlNDE2LTVjZmMtNGU2NS04YmY3LWE3Y2U5NWUxZWU4NyIsInRpZCI6IjZjYzdjNmQzLTAzMmYtNDkyYS05NzhjLTg0NTM5MzE3MThjYSIsInV0aSI6IjM1NmJiN2MzNTQiLCJ2ZXIiOiIyLjAiLCJ4bXNfbWlyaWQiOiIvc3Vic2NyaXB0aW9ucy9hNGFlZTQ1OS02MjU0LTRlYTktODUwOC0wZTFmMDZjNzM2ZWMvcmVzb3VyY2Vncm91cHMvcmctcHJvZC9wcm92aWRlcnMvTWljcm9zb2Z0LldlYi9zaXRlcy9hcHAtc2VydmljZSJ9.w_4PCndmPNKvfliKOn1QkuJXiGCLAAXNqHrwfw5JJ05QVlyhNl8bndkysIBoUVUOQfv4XyDZT877Dr2sA1v__vH6ZAXq4iG2CGHNcbCCksZZgy3w8k16hBaRQGnLsDgTFm4lXfp_ogGYi3HTC5AUG5VAnnQjVE34KCVC69h-FAiUICva4_E7_d9T1g2Ef0Yj_5sZJrXn37bm3tUR7gBoDP7v8oATri_OKMAazezYyILONzfUnz5iv6QXbW-Gd5OUs-dA-woElLwJQlzMXY0ufclcpQO1eLvgcxgQE8w7W0OogdXpE0OUsypy7hOflAksaSzrBQBXLTLMlCicTt2RAQ
+  kubernetes-api:
+    cluster_name: aks-prod-cluster
+    namespaces:
+    - configmaps:
+      - data:
+          IMDS_ENDPOINT: 169.254.169.254
+          LOG_LEVEL: INFO
+        metadata:
+          name: app-config
+          namespace: production
+      name: production
+      pods:
+      - metadata:
+          creationTimestamp: '2024-01-15T00:00:00Z'
+          name: hr-app-pod
+          namespace: production
+          uid: pod-uid-12345
+        spec:
+          containers:
+          - image: contoso.azurecr.io/hr-app:v2.3.1
+            name: hr-app
+          serviceAccountName: hr-app-sa
+        status:
+          phase: Running
+          podIP: 10.244.0.15
+      secrets:
+      - data:
+          CLIENT_ID: ZXhjaGFuZ2UtbWFpbC1yZWFkZXItYXBwLWlk
+          KEYVAULT_URL: aHR0cHM6Ly9jb250b3NvLXZhdWx0LnZhdWx0LmF6dXJlLm5ldA==
+        metadata:
+          name: keyvault-credentials
+          namespace: production
+        type: Opaque
+      - data:
+          SUBSCRIPTION_ID: MTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5YWJj
+          TENANT_ID: ODc2NTQzMjEtNDMyMS00MzIxLTQzMjEtY2JhOTg3NjU0MzIx
+        metadata:
+          name: azure-credentials
+          namespace: production
+        type: Opaque
+    - name: kube-system
+      pods:
+      - metadata:
+          name: coredns-5d78c9869d-abc12
+          namespace: kube-system
+        spec:
+          serviceAccountName: coredns
+        status:
+          phase: Running
+      - metadata:
+          name: kube-proxy-xyz99
+          namespace: kube-system
+        spec:
+          serviceAccountName: kube-proxy
+        status:
+          phase: Running
