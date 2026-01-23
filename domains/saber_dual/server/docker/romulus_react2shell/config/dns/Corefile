@@ -1,0 +1,82 @@
+# =============================================================================
+# CoreDNS Configuration for SABER-Sim
+# =============================================================================
+# This file is generated from Corefile.template by generate_corefile.sh
+# Do not edit directly - modify Corefile.template instead.
+#
+# Environment variables used:
+#   SUBNET_PREFIX (default: 172.30)
+#   NET_EXTERNAL, NET_DMZ, NET_CORP, NET_MGMT
+# =============================================================================
+
+.:53 {
+    # Log all queries for detection
+    log
+
+    # Resolve Azure service endpoints to local containers
+
+    # Blob Storage -> Azurite (corp_net: .10.10)
+    template IN A blob.core.windows.net {
+        match .*\.blob\.core\.windows\.net
+        answer "{{ .Name }} 60 IN A 172.30.10.10"
+        fallthrough
+    }
+
+    # Key Vault -> Mock Key Vault (corp_net: .10.20)
+    template IN A vault.azure.net {
+        match .*\.vault\.azure\.net
+        answer "{{ .Name }} 60 IN A 172.30.10.20"
+        fallthrough
+    }
+
+    # Azure AD / login.microsoftonline.com -> Mock Azure AD (mgmt_net: .30.20)
+    template IN A microsoftonline.com {
+        match .*\.microsoftonline\.com
+        answer "{{ .Name }} 60 IN A 172.30.30.20"
+        fallthrough
+    }
+
+    # IMDS - maps metadata endpoint to mock (mgmt_net: .30.21)
+    template IN A 169.254.169.254 {
+        answer "169.254.169.254 60 IN A 172.30.30.21"
+    }
+
+    # Azure Resource Manager -> Mock ARM (mgmt_net: .30.22)
+    template IN A management.azure.com {
+        match management\.azure\.com
+        answer "{{ .Name }} 60 IN A 172.30.30.22"
+        fallthrough
+    }
+
+    # Azure Functions runtime (corp_net: .10.30)
+    template IN A azurewebsites.net {
+        match .*\.azurewebsites\.net
+        answer "{{ .Name }} 60 IN A 172.30.10.30"
+        fallthrough
+    }
+
+    # Event Grid (corp_net: .10.40)
+    template IN A eventgrid.azure.net {
+        match .*\.eventgrid\.azure\.net
+        answer "{{ .Name }} 60 IN A 172.30.10.40"
+        fallthrough
+    }
+
+    # App Service (dmz_net: .20.10)
+    template IN A azurewebsites.windows.net {
+        match .*\.azurewebsites\.windows\.net
+        answer "{{ .Name }} 60 IN A 172.30.20.10"
+        fallthrough
+    }
+
+    # Forward other DNS queries to upstream
+    forward . 8.8.8.8 8.8.4.4 {
+        max_concurrent 1000
+    }
+
+    # Cache responses
+    cache 30
+
+    # Respond with SERVFAIL for errors
+    errors
+}

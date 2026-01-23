@@ -1,0 +1,223 @@
+# =============================================================================
+# NSG Rules Configuration
+# =============================================================================
+# Simulates Azure Network Security Groups for realistic attack surface.
+#
+# This file supports two modes:
+#   1. Symbolic names (resolved by gateway at startup using network_config.yaml)
+#   2. IP addresses (for backward compatibility)
+#
+# Network references:
+#   - Use network names: external_net, dmz_net, corp_net, mgmt_net
+#   - Use service names: azurite, keyvault, azure-ad, imds, etc.
+#   - Or use IP/CIDR notation directly
+#
+# The gateway service resolves symbolic names to actual IPs at startup.
+# =============================================================================
+
+# Default action when no rules match (deny for security)
+default_action: deny
+
+# Network definitions for symbolic resolution
+# These map to the network segments defined in docker-compose.yml
+networks:
+  external_net: "${SUBNET_PREFIX:-172.30}.${NET_EXTERNAL:-100}.0/24"
+  dmz_net: "${SUBNET_PREFIX:-172.30}.${NET_DMZ:-20}.0/24"
+  corp_net: "${SUBNET_PREFIX:-172.30}.${NET_CORP:-10}.0/24"
+  mgmt_net: "${SUBNET_PREFIX:-172.30}.${NET_MGMT:-30}.0/24"
+
+# Service definitions for symbolic resolution
+# Maps service names to their IP within their network segment
+services:
+  # DMZ services
+  dns: "${SUBNET_PREFIX:-172.30}.${NET_DMZ:-20}.3"
+  app-service: "${SUBNET_PREFIX:-172.30}.${NET_DMZ:-20}.10"
+
+  # Corp services
+  azurite: "${SUBNET_PREFIX:-172.30}.${NET_CORP:-10}.10"
+  keyvault: "${SUBNET_PREFIX:-172.30}.${NET_CORP:-10}.20"
+  azure-functions: "${SUBNET_PREFIX:-172.30}.${NET_CORP:-10}.30"
+  eventgrid: "${SUBNET_PREFIX:-172.30}.${NET_CORP:-10}.40"
+  azure-sentinel-corp: "${SUBNET_PREFIX:-172.30}.${NET_CORP:-10}.200"
+
+  # Mgmt services
+  azure-ad: "${SUBNET_PREFIX:-172.30}.${NET_MGMT:-30}.20"
+  imds: "${SUBNET_PREFIX:-172.30}.${NET_MGMT:-30}.21"
+  arm-api: "${SUBNET_PREFIX:-172.30}.${NET_MGMT:-30}.22"
+
+# Rules are processed in priority order (lower = higher priority)
+# Matches first rule that applies
+rules:
+  # ============================================
+  # INBOUND TO DMZ (Public-facing tier)
+  # ============================================
+  - name: AllowInternetToDMZ_HTTP
+    priority: 100
+    direction: inbound
+    src: external_net   # Symbolic name for external network
+    dst: dmz_net        # Symbolic name for DMZ network
+    ports: [80, 443, 8080]
+    protocol: tcp
+    action: allow
+    log: true
+
+  - name: AllowInternetToDMZ_DNS
+    priority: 110
+    direction: inbound
+    src: external_net
+    dst: dns            # Symbolic name for DNS service
+    ports: [53]
+    protocol: udp
+    action: allow
+    log: true
+
+  # ============================================
+  # DMZ TO CORP (Web app to backend)
+  # ============================================
+  - name: AllowDMZtoCorpStorage
+    priority: 200
+    direction: inbound
+    src: dmz_net        # DMZ network (app-service)
+    dst: azurite        # Symbolic name for blob storage
+    ports: [10000, 10001, 10002]
+    protocol: tcp
+    action: allow
+    log: true
+
+  - name: AllowDMZtoCorpKeyVault
+    priority: 210
+    direction: inbound
+    src: dmz_net
+    dst: keyvault       # Symbolic name for Key Vault
+    ports: [443]
+    protocol: tcp
+    action: allow
+    log: true
+
+  # ============================================
+  # CORP INTERNAL (Backend services)
+  # ============================================
+  - name: AllowCorpInternal
+    priority: 300
+    direction: inbound
+    src: corp_net
+    dst: corp_net
+    ports: []  # Empty = all ports
+    protocol: any
+    action: allow
+    log: false
+
+  # ============================================
+  # CORP TO MGMT (Functions need IMDS/AD)
+  # ============================================
+  - name: AllowFunctionsToIMDS
+    priority: 400
+    direction: inbound
+    src: azure-functions  # Symbolic name for Azure Functions
+    dst: imds             # Symbolic name for IMDS
+    ports: [80]
+    protocol: tcp
+    action: allow
+    log: true
+
+  - name: AllowCorpToAzureAD
+    priority: 410
+    direction: inbound
+    src: corp_net
+    dst: azure-ad       # Symbolic name for Azure AD
+    ports: [8080]
+    protocol: tcp
+    action: allow
+    log: true
+
+  - name: AllowCorpToARM
+    priority: 420
+    direction: inbound
+    src: corp_net
+    dst: arm-api        # Symbolic name for ARM API
+    ports: [443]
+    protocol: tcp
+    action: allow
+    log: true
+
+  # ============================================
+  # MGMT PLANE (Control plane access)
+  # ============================================
+  - name: AllowMgmtInternal
+    priority: 500
+    direction: inbound
+    src: mgmt_net
+    dst: mgmt_net
+    ports: []
+    protocol: any
+    action: allow
+    log: false
+
+  # ============================================
+  # LOG COLLECTOR (Allow from all networks)
+  # ============================================
+  - name: AllowToLogCollector
+    priority: 600
+    direction: inbound
+    src: 0.0.0.0/0
+    dst: azure-sentinel-corp  # Azure Sentinel on corp network
+    ports: [5000]
+    protocol: tcp
+    action: allow
+    log: false
+
+  # ============================================
+  # BLOCK RULES (Attack surface reduction)
+  # ============================================
+  - name: BlockExternalToMgmt
+    priority: 900
+    direction: inbound
+    src: external_net
+    dst: mgmt_net
+    ports: []
+    protocol: any
+    action: deny
+    log: true  # Log for detection
+
+  - name: BlockExternalToCorp
+    priority: 910
+    direction: inbound
+    src: external_net
+    dst: corp_net
+    ports: []
+    protocol: any
+    action: deny
+    log: true  # Log for detection
+
+  - name: BlockDMZToMgmt
+    priority: 920
+    direction: inbound
+    src: dmz_net
+    dst: mgmt_net
+    ports: []
+    protocol: any
+    action: deny
+    log: true
+
+  # ============================================
+  # OUTBOUND RULES (Egress control)
+  # ============================================
+  - name: AllowOutboundDNS
+    priority: 1000
+    direction: outbound
+    src: 0.0.0.0/0
+    dst: dns
+    ports: [53]
+    protocol: udp
+    action: allow
+    log: false
+
+  - name: AllowCorpOutboundToInternet
+    priority: 1100
+    direction: outbound
+    src: corp_net
+    dst: external_net
+    ports: [80, 443]
+    protocol: tcp
+    action: allow
+    log: true  # Important for exfiltration detection

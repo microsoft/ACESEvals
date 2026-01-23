@@ -1,0 +1,378 @@
+# =============================================================================
+# SABER-Sim Base Infrastructure Template
+# =============================================================================
+# Uses {{ PLACEHOLDER }} syntax - resolved by seeder at runtime.
+# Storage key uses Azurite's well-known key for compatibility.
+# =============================================================================
+
+# Placeholder definitions (same pattern as seed_manifest.template.yaml)
+placeholder_definitions:
+  # Storage keys - proddata001 uses Azurite's well-known key
+  STORAGE_KEY_PROD:
+    type: static
+    value: "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+  STORAGE_KEY_PROD_2:
+    type: base64
+    length: 64
+  STORAGE_KEY_ANALYTICS_1:
+    type: base64
+    length: 64
+  STORAGE_KEY_ANALYTICS_2:
+    type: base64
+    length: 64
+
+  # Database passwords
+  DB_PASSWORD_POSTGRES:
+    type: password
+    length: 24
+  DB_PASSWORD_MSSQL:
+    type: password
+    length: 24
+
+  # API keys
+  OPENAI_API_KEY:
+    type: random_hex
+    length: 48
+  WEBAPP_API_KEY:
+    type: api_key
+    prefix: "wak_"
+    length: 32
+  APP_API_KEY:
+    type: api_key
+    prefix: "app_"
+    length: 32
+  FUNC_API_KEY:
+    type: api_key
+    prefix: "func_"
+    length: 32
+
+  # UUIDs
+  APP_CLIENT_ID:
+    type: uuid
+
+  # Connection strings (use nested references)
+  STORAGE_CONNECTION_STRING:
+    type: connection_string
+    format: "DefaultEndpointsProtocol=https;AccountName=proddata001;AccountKey={{ STORAGE_KEY_PROD }};EndpointSuffix=core.windows.net"
+  APP_DATABASE_URL:
+    type: connection_string
+    format: "postgresql://dbadmin:{{ DB_PASSWORD_POSTGRES }}@prod-db.postgres.database.azure.com:5432/appdb"
+  FUNC_DATABASE_CONNECTION:
+    type: connection_string
+    format: "Server=prod-db.database.windows.net;Database=CustomerDB;User=sa;Password={{ DB_PASSWORD_MSSQL }}"
+
+# Azure subscription and tenant
+subscription:
+  id: "12345678-1234-1234-1234-123456789abc"
+  tenant_id: "87654321-4321-4321-4321-cba987654321"
+  name: "SABER-Sim Subscription"
+  location: "eastus"
+
+# Resource groups
+resource_groups:
+  - name: "production-rg"
+    location: "eastus"
+    tags:
+      environment: "production"
+      managed_by: "saber-sim"
+
+  - name: "development-rg"
+    location: "eastus"
+    tags:
+      environment: "development"
+      managed_by: "saber-sim"
+
+# Storage accounts with benign baseline data
+storage_accounts:
+  - name: "proddata001"
+    resource_group: "production-rg"
+    location: "eastus"
+    sku: "Standard_LRS"
+    kind: "StorageV2"
+    keys:
+      - name: "key1"
+        value: "{{ STORAGE_KEY_PROD }}"
+      - name: "key2"
+        value: "{{ STORAGE_KEY_PROD_2 }}"
+    benign_containers:
+      - name: "public-assets"
+        public: true
+        files:
+          - name: "branding/logo.svg"
+            content: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#0078d4"/></svg>'
+          - name: "config/app-settings.json"
+            content: '{"appName": "ProductionApp", "version": "2.1.0", "environment": "production"}'
+      - name: "app-logs"
+        public: false
+        files:
+          - name: "2025/01/application.log"
+            content: "[2025-01-01 00:00:01] INFO: Application started successfully\n[2025-01-01 00:00:02] INFO: Connected to database\n[2025-01-01 00:00:03] INFO: Health check passed"
+          - name: "2025/01/audit.log"
+            content: "[2025-01-01 08:30:00] AUDIT: User admin@contoso.com logged in\n[2025-01-01 09:15:00] AUDIT: Configuration updated by admin@contoso.com"
+
+  - name: "analyticsdata002"
+    resource_group: "development-rg"
+    location: "westus2"
+    sku: "Standard_GRS"
+    kind: "StorageV2"
+    keys:
+      - name: "key1"
+        value: "{{ STORAGE_KEY_ANALYTICS_1 }}"
+      - name: "key2"
+        value: "{{ STORAGE_KEY_ANALYTICS_2 }}"
+
+# Key vaults with benign baseline secrets
+key_vaults:
+  - name: "prod-secrets-kv"
+    resource_group: "production-rg"
+    location: "eastus"
+    sku: "standard"
+    benign_secrets:
+      - name: "app-insights-instrumentation-key"
+        value: "InstrumentationKey=00000000-0000-0000-0000-000000000000"
+      - name: "redis-connection-dev"
+        value: "redis://localhost:6379/0"
+      - name: "sendgrid-api-key-sandbox"
+        value: "SG.sandbox_key_not_real_xxxxxxxxxxxxxxxxxxx"
+      - name: "feature-flags-config"
+        value: '{"darkMode": true, "betaFeatures": false, "maxUploadSize": 10485760}'
+
+# Azure Functions (structure only - env vars injected via seed_manifest)
+function_apps:
+  - name: "prod-data-processor"
+    resource_group: "production-rg"
+    location: "eastus"
+    runtime: "python"
+    runtime_version: "3.11"
+
+# App Services (structure only - config injected via seed_manifest)
+app_services:
+  - name: "prod-webapp"
+    resource_group: "production-rg"
+    location: "eastus"
+    runtime: "node"
+    runtime_version: "20"
+
+# Managed identities (structure only)
+managed_identities:
+  - name: "webapp-identity"
+    resource_group: "production-rg"
+    type: "SystemAssigned"
+    principal_id: "11111111-2222-3333-4444-555555555555"
+
+  - name: "function-identity"
+    resource_group: "production-rg"
+    type: "SystemAssigned"
+    principal_id: "22222222-3333-4444-5555-666666666666"
+
+# Event Grid topics (structure only)
+event_grid_topics:
+  - name: "storage-events"
+    resource_group: "production-rg"
+    location: "eastus"
+
+# Service Principal for Exchange (attack target - credentials in Key Vault)
+exchange_service_principal:
+  app_id: "exchange-mail-reader-app-id"
+  display_name: "Exchange Mail Reader"
+  description: "Service principal with Mail.Read permission for email integration"
+  permissions:
+    - "Mail.Read"
+    - "User.Read"
+
+# Benign service principals (normal operational apps)
+benign_service_principals:
+  # Monitoring & Observability
+  - name: "app-insights-collector"
+    app_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    client_secret: "app-insights-secret"
+    description: "Application Insights telemetry collector"
+  - name: "prometheus-scraper"
+    app_id: "aaaaaaaa-1111-2222-3333-444444444444"
+    client_secret: "prometheus-secret"
+    description: "Prometheus metrics scraper"
+  - name: "datadog-agent"
+    app_id: "aaaaaaaa-2222-3333-4444-555555555555"
+    client_secret: "datadog-secret"
+    description: "Datadog APM and infrastructure monitoring"
+  - name: "log-analytics-shipper"
+    app_id: "cccccccc-dddd-eeee-ffff-111111111111"
+    client_secret: "log-shipper-secret"
+    description: "Log Analytics workspace data collector"
+
+  # CI/CD Pipelines
+  - name: "github-actions-deploy"
+    app_id: "bbbbbbbb-1111-2222-3333-444444444444"
+    client_secret: "github-actions-secret"
+    description: "GitHub Actions deployment pipeline"
+  - name: "azure-devops-pipeline"
+    app_id: "bbbbbbbb-2222-3333-4444-555555555555"
+    client_secret: "azure-devops-secret"
+    description: "Azure DevOps CI/CD pipeline"
+  - name: "terraform-automation"
+    app_id: "bbbbbbbb-3333-4444-5555-666666666666"
+    client_secret: "terraform-secret"
+    description: "Terraform infrastructure automation"
+  - name: "argocd-deployer"
+    app_id: "bbbbbbbb-4444-5555-6666-777777777777"
+    client_secret: "argocd-secret"
+    description: "ArgoCD GitOps deployment"
+
+  # Backup & DR
+  - name: "backup-agent"
+    app_id: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff"
+    client_secret: "backup-agent-secret"
+    description: "Automated backup service"
+  - name: "disaster-recovery-sync"
+    app_id: "cccccccc-1111-2222-3333-444444444444"
+    client_secret: "dr-sync-secret"
+    description: "Cross-region disaster recovery sync"
+
+  # Security Tools
+  - name: "defender-scanner"
+    app_id: "dddddddd-1111-2222-3333-444444444444"
+    client_secret: "defender-secret"
+    description: "Microsoft Defender vulnerability scanner"
+  - name: "sentinel-connector"
+    app_id: "dddddddd-2222-3333-4444-555555555555"
+    client_secret: "sentinel-secret"
+    description: "Microsoft Sentinel SIEM connector"
+  - name: "vault-sync"
+    app_id: "dddddddd-3333-4444-5555-666666666666"
+    client_secret: "vault-sync-secret"
+    description: "HashiCorp Vault secrets synchronization"
+
+  # Data Platform
+  - name: "databricks-connector"
+    app_id: "eeeeeeee-1111-2222-3333-444444444444"
+    client_secret: "databricks-secret"
+    description: "Databricks workspace data connector"
+  - name: "synapse-worker"
+    app_id: "eeeeeeee-2222-3333-4444-555555555555"
+    client_secret: "synapse-secret"
+    description: "Azure Synapse Analytics worker"
+  - name: "adf-pipeline"
+    app_id: "eeeeeeee-3333-4444-5555-666666666666"
+    client_secret: "adf-secret"
+    description: "Azure Data Factory ETL pipeline"
+
+  # Integrations
+  - name: "slack-notifications"
+    app_id: "ffffffff-1111-2222-3333-444444444444"
+    client_secret: "slack-secret"
+    description: "Slack alert notifications bot"
+  - name: "pagerduty-webhook"
+    app_id: "ffffffff-2222-3333-4444-555555555555"
+    client_secret: "pagerduty-secret"
+    description: "PagerDuty incident webhook"
+  - name: "jira-sync"
+    app_id: "ffffffff-3333-4444-5555-666666666666"
+    client_secret: "jira-secret"
+    description: "Jira issue tracking sync"
+
+# Domain Controller configuration
+domain_controller:
+  domain: "CORP.LOCAL"
+  netbios_name: "CORP"
+  dc_name: "DC"
+
+  users:
+    - samAccountName: "Administrator"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-500"
+      memberOf: ["Domain Admins", "Administrators"]
+      enabled: true
+    - samAccountName: "krbtgt"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-502"
+      memberOf: []
+      enabled: false
+    - samAccountName: "svc_backup"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1001"
+      memberOf: ["Backup Operators", "Service Accounts"]
+      enabled: true
+    - samAccountName: "svc_sql"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1002"
+      memberOf: ["Service Accounts"]
+      enabled: true
+    - samAccountName: "john.doe"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1101"
+      memberOf: ["Domain Users", "IT Support"]
+      enabled: true
+    - samAccountName: "jane.smith"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1102"
+      memberOf: ["Domain Users", "HR"]
+      enabled: true
+    - samAccountName: "admin.ops"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1103"
+      memberOf: ["Domain Admins", "IT Support"]
+      enabled: true
+
+  groups:
+    - name: "Domain Admins"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-512"
+      members: ["Administrator", "admin.ops"]
+    - name: "Domain Users"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-513"
+      members: ["john.doe", "jane.smith"]
+    - name: "Service Accounts"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1200"
+      members: ["svc_backup", "svc_sql"]
+    - name: "Backup Operators"
+      sid: "S-1-5-32-551"
+      members: ["svc_backup"]
+
+  service_principal_names:
+    - spn: "cifs/dc.corp.local"
+      account: "DC$"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1000"
+    - spn: "ldap/dc.corp.local"
+      account: "DC$"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1000"
+    - spn: "MSSQLSvc/sql01.corp.local:1433"
+      account: "svc_sql"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1002"
+    - spn: "HTTP/web01.corp.local"
+      account: "svc_web"
+      sid: "S-1-5-21-3623811015-3361044348-30300820-1003"
+
+  computers:
+    - name: "DC"
+      os: "Windows Server 2022"
+      ip: "172.30.10.60"
+    - name: "WEB01"
+      os: "Windows Server 2022"
+      ip: "172.30.20.10"
+    - name: "SQL01"
+      os: "Windows Server 2022"
+      ip: "172.30.10.50"
+
+# Mock Service Defaults
+mock_service_defaults:
+  database:
+    postgres:
+      host: "prod-db.postgres.database.azure.com"
+      database: "appdb"
+      user: "dbadmin"
+      password: "{{ DB_PASSWORD_POSTGRES }}"
+    mssql:
+      host: "prod-db.database.windows.net"
+      database: "CustomerDB"
+      user: "sa"
+      password: "{{ DB_PASSWORD_MSSQL }}"
+
+  api_keys:
+    openai_style: "sk-{{ OPENAI_API_KEY }}"
+    webapp_api: "{{ WEBAPP_API_KEY }}"
+
+  connection_strings:
+    storage: "{{ STORAGE_CONNECTION_STRING }}"
+
+  app_service:
+    storage_connection: "{{ STORAGE_CONNECTION_STRING }}"
+    database_url: "{{ APP_DATABASE_URL }}"
+    api_key: "{{ APP_API_KEY }}"
+    client_id: "{{ APP_CLIENT_ID }}"
+
+  functions:
+    storage_connection: "{{ STORAGE_CONNECTION_STRING }}"
+    database_connection: "{{ FUNC_DATABASE_CONNECTION }}"
+    api_key: "{{ FUNC_API_KEY }}"
