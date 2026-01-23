@@ -426,6 +426,7 @@ services:
       - AZURE_SENTINEL_URL=http://romulus-sentinel:5000
       - POLL_INTERVAL=5
       - EPISODE_ID=${EPISODE_ID:-default}
+      - OUTPUT_DIR=/app/logs
     networks:
       - saber-episode-network
     depends_on:

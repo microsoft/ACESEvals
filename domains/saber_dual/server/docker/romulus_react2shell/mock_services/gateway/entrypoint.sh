@@ -12,7 +12,7 @@ fi
 
 # Show network interfaces
 echo "=== Network Interfaces ==="
-ip addr show | grep -E "inet 172.30"
+ip addr show | grep -E "inet 172.30" || true
 
 # Default: Allow all forwarding (will be restricted in Phase 4)
 iptables -P FORWARD ACCEPT
