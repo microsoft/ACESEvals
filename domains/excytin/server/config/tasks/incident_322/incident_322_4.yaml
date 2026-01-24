@@ -32,8 +32,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.25
@@ -49,8 +49,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.25
@@ -86,8 +86,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -102,8 +102,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -118,8 +118,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -157,8 +157,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -172,8 +172,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -188,8 +188,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -204,8 +204,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -243,8 +243,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.25
@@ -260,8 +260,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.25
@@ -297,8 +297,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -313,8 +313,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -329,8 +329,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -369,8 +369,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -385,8 +385,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -401,8 +401,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -440,8 +440,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -457,8 +457,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -474,8 +474,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.167
@@ -513,8 +513,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -529,8 +529,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -545,8 +545,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -561,8 +561,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.125
@@ -600,8 +600,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.25
@@ -616,8 +616,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.25
@@ -650,8 +650,8 @@ tasks:
           strategy: llm_judge
           criteria:
             model: openai/azure/gpt-4.1
-            judge_system_template: judge/excytin_evaluation_system.md
-            judge_user_template: judge/excytin_evaluation_user.md
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
             steps_per_message: 50
           scoring:
             max_score: 0.5

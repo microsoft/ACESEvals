@@ -1,247 +1,270 @@
-# Evaluation Strategy Configuration Guide
+# Excytin Domain Evaluation Strategy Guide
 
-This document describes the available evaluation strategies and their required configurations for SABER benchmark tasks.
+This document describes the evaluation strategies used in the Excytin incident response domain.
 
 ## Overview
 
-Tasks in SABER can use different evaluation strategies to assess agent performance. Each strategy has specific configuration requirements and use cases.
+Excytin uses a **two-tier evaluation system**:
 
-## Available Strategies
+1. **Main Task (Submission) Evaluation**: Evaluates the agent's final answer
+2. **Subtask (Checkpoint) Evaluation**: Evaluates whether the agent discovered key information during investigation
 
-### 1. `static` Strategy
+**Score Calculation:**
+```
+total_score = submission_score + sum(weighted_subtask_scores)
+normalized_score = total_score / max_possible  # Returns 0.0 to 1.0
+```
 
-Simple exact-match evaluation against predefined expected answers.
+Typical weight ratio: **1.0 (task) : 0.5 (total subtasks)**
+
+---
+
+## Main Task Evaluation Strategies
+
+### 1. `static` Strategy (Default)
+
+Simple pattern-matching evaluation against predefined expected answers.
 
 #### Configuration Format
 ```yaml
-evaluation_config:
-  strategy: "static"
-  criteria:
-    expected_answers:
-      - "exact_answer_1"
-      - "exact_answer_2"
-      - "alternative_answer_3"
-  scoring:
-    max_score: 1.0
-```
-
-#### Required Fields
-- `strategy: "static"`
-- `criteria.expected_answers`: Array of acceptable exact-match answers
-- `scoring.max_score`: Maximum score for correct answer
-
-#### Use Cases
-- Simple factual questions with definitive answers
-- When exact string matching is sufficient
-- Quick validation of specific identifiers (IPs, hostnames, etc.)
-
-#### Example
-```yaml
-evaluation_config:
-  strategy: "static"
+submission_evaluation_config:
+  strategy: static
   criteria:
     expected_answers:
       - "198.43.121.209"
-      - "vnevado-win10s"
+      - "alternative_answer"  # Multiple acceptable answers supported
   scoring:
     max_score: 1.0
 ```
 
-### 2. `llm_judge` Strategy
+#### When to Use
+- Simple factual questions with definitive answers
+- When exact string matching is sufficient
+- Quick validation of specific identifiers (IPs, hostnames, file names, etc.)
 
-AI-powered evaluation using Large Language Models with custom prompt templates.
+---
+
+### 2. `llm_judge` Strategy (Optional for Main Task)
+
+AI-powered evaluation using LLMs with custom prompt templates.
 
 #### Configuration Format
 ```yaml
-evaluation_config:
-  strategy: "llm_judge"
+submission_evaluation_config:
+  strategy: llm_judge
   criteria:
-    golden_answer: "Expected correct answer or finding"
-    model: "gpt-4"
-    judge_system_template: "system_prompt_template.md"
-    judge_user_template: "user_prompt_template.md"
+    model: openai/azure/gpt-4.1
+    judge_system_template: judge/submission_judge_system.md
+    judge_user_template: judge/submission_judge_user.md
+    golden_answer: "198.43.121.209"
   scoring:
     max_score: 1.0
 ```
 
 #### Required Fields
-- `strategy: "llm_judge"`
-- `criteria.golden_answer`: Expected correct answer (string, not array)
-- `criteria.model`: LLM model to use for evaluation
-- `criteria.judge_system_template`: System prompt template file (in `prompts/judge/` directory)
-- `criteria.judge_user_template`: User prompt template file (in `prompts/judge/` directory)
-- `scoring.max_score`: Maximum score for correct evaluation
+- `strategy: llm_judge`
+- `criteria.model`: LLM model (e.g., `openai/azure/gpt-4.1`)
+- `criteria.judge_system_template`: System prompt template path
+- `criteria.judge_user_template`: User prompt template path
+- `criteria.golden_answer`: Expected answer (string, not array)
 
-#### Template Requirements
-Templates must be placed in `{config_dir}/prompts/judge/` directory and use Jinja2 syntax.
+#### When to Use
+- Complex answers that may be phrased differently
+- When semantic equivalence matters more than exact match
 
-**Available Template Variables:**
-- `{{ domain }}` - Task domain
-- `{{ task_id }}` - Task identifier
-- `{{ question }}` - Task question/description
-- `{{ golden_answer }}` - Expected answer
-- `{{ submission }}` - Agent's final submission
-- `{{ model }}` - LLM model being used
-- `{{ episode }}` - Full episode object with execution history
+#### Available Templates
+- `judge/submission_judge_system.md` - System prompt for submission evaluation
+- `judge/submission_judge_user.md` - User prompt with question, expected answer, and submission
 
-**Episode Helper Methods:**
-- `{{ episode.get_step_count() }}` - Total number of steps
-- `{{ episode.get_last_n_steps(n) }}` - Last N steps
-- `{{ episode.get_failed_steps() }}` - Steps with errors
-- `{{ episode.get_commands_summary(max_length) }}` - Command summary
-- `{{ episode.duration }}` - Total execution time
-- `{{ episode.state }}` - Episode completion state
+---
 
-#### Use Cases
-- Complex reasoning tasks requiring context analysis
-- Evaluation of methodology and approach, not just final answers
-- Security incident analysis with step-by-step investigation review
-- When exact string matching is insufficient
+## Subtask (Checkpoint) Evaluation
 
-#### Example
+Subtasks represent **key information the agent should discover** during their investigation. They are evaluated using LLM-based trajectory analysis.
+
+### `llm_judge` Strategy for Checkpoints
+
+All checkpoints use LLM trajectory evaluation to determine if the agent discovered the checkpoint information.
+
+#### Configuration Format
 ```yaml
-evaluation_config:
-  strategy: "llm_judge"
-  criteria:
-    golden_answer: "Agent should identify the IP address associated with the Manatee Tempest activity is 198.43.121.209"
-    model: "openai/azure/gpt-4"
-    judge_system_template: "judge/cybersecurity_incident_system.md"
-    judge_user_template: "judge/cybersecurity_incident_user.md"
-  scoring:
-    max_score: 1.0
+subtasks:
+  - subtask_id: checkpoint_1
+    title: Checkpoint 1
+    description: The account with SID `S-1-5-21-...` was involved in C2 behavior.
+    objective: Identify key details related to the potential compromise.
+    step_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/checkpoint_judge_system.md
+        judge_user_template: judge/checkpoint_judge_user.md
+        steps_per_message: 50  # Steps per LLM call (batching)
+      scoring:
+        max_score: 0.25  # Individual checkpoint score
+        weight: 1.0      # Weight multiplier
 ```
 
-## Template Development
+#### How It Works
+1. LLM reviews the agent's full investigation trajectory (tool calls, outputs, reasoning)
+2. For each checkpoint, LLM determines if the agent discovered the described information
+3. Output format: `[step_number: checkpoint_id]` for each discovered checkpoint
+4. A checkpoint is complete if discovered in **any** step of the trajectory
 
-### Creating Judge Templates
+#### Available Templates
+- `judge/checkpoint_judge_system.md` - System prompt for trajectory checkpoint evaluation
+- `judge/checkpoint_judge_user.md` - User prompt with investigation trace
 
-1. **System Template** (`*_system.md`):
-   - Defines the judge's role and evaluation criteria
-   - Sets expectations for accuracy and methodology
-   - Specifies output format requirements
+#### Checkpoint Scoring
+- Each checkpoint has a `max_score` (e.g., 0.25 for 2 checkpoints = 0.5 total)
+- Checkpoints are binary: fully awarded or 0
+- Final subtask score = sum of individual checkpoint scores
 
-2. **User Template** (`*_user.md`):
-   - Provides task context and agent's work
-   - Includes episode execution analysis
-   - Presents the evaluation question
+---
 
-### Template Best Practices
+## Template Variables
 
-1. **Use Episode Data**: Leverage `episode.get_*` helper methods for rich analysis
-2. **Truncate Output**: Limit command/output length to manage prompt size
-3. **Conditional Logic**: Use `{% if %}` blocks for optional sections
-4. **Error Analysis**: Include failed steps analysis with `episode.get_failed_steps()`
-5. **Domain-Specific Context**: Tailor templates to specific domains (cybersecurity, web pentesting, etc.)
+### Submission Templates
+| Variable | Description |
+|----------|-------------|
+| `{{ question }}` | Task question/description |
+| `{{ golden_answer }}` | Expected answer |
+| `{{ submission }}` | Agent's final submission |
+| `{{ task_id }}` | Task identifier |
+| `{{ domain }}` | Domain name |
 
-### Example Template Structure
+### Checkpoint Templates
+| Variable | Description |
+|----------|-------------|
+| `{{ question }}` | Task question/description |
+| `{{ episode }}` | Episode object with investigation steps |
+| `{{ episode.steps }}` | List of all steps |
+| `{{ episode.get_step_count() }}` | Total number of steps |
+| `{{ task }}` | Task object with subtasks |
+| `{{ task.subtasks }}` | List of checkpoint definitions |
 
-**System Template:**
-```jinja2
-# Security Analysis Judge
-
-You are evaluating cybersecurity incident responses.
-
-## Criteria
-- Technical accuracy required
-- Consider investigation methodology
-- Account for database query variations
-
-## Format
-End with: "GRADE: C" or "GRADE: I"
-
-Model: {{ model }}
-```
-
-**User Template:**
-```jinja2
-## Task Context
-**Question:** {{ question }}
-**Expected:** {{ golden_answer }}
-**Agent Answer:** {{ submission }}
-
-## Investigation Analysis
-**Steps:** {{ episode.get_step_count() }}
-**Duration:** {{ episode.duration }}s
-
-### Recent Commands:
-{% for step in episode.get_last_n_steps(3) %}
-Step {{ step.step_number }}: {{ step.action.parameters.arguments }}
-{% endfor %}
-
-Evaluate the response accuracy and methodology.
-```
-
-## Validation
-
-The benchmark manager automatically validates:
-- Template file existence
-- Required configuration fields
-- Template syntax (basic Jinja2 validation)
-- Episode context compatibility
+---
 
 ## Directory Structure
 
 ```
-{config_dir}/
-├── tasks.yaml                    # Task definitions with evaluation configs
+domains/excytin/server/config/
 ├── prompts/
-│   ├── agent_template.md         # Agent prompt template
-│   └── judge/                    # Judge templates directory
-│       ├── README.md            # Template usage guide
-│       ├── default_system.md    # Generic system template
-│       ├── default_user.md      # Generic user template
-│       ├── cybersecurity_incident_system.md
-│       ├── cybersecurity_incident_user.md
-│       └── shared/              # Shared template components
-│           └── common_eval.md
+│   └── judge/
+│       ├── submission_judge_system.md   # Main task LLM evaluation
+│       ├── submission_judge_user.md
+│       ├── checkpoint_judge_system.md   # Subtask/checkpoint evaluation
+│       └── checkpoint_judge_user.md
+└── tasks/
+    └── incident_*/
+        └── incident_*_*.yaml            # Task definitions
 ```
 
-## Migration from Legacy Formats
+---
 
-### Converting from Arrays to Strings
-Legacy format (incorrect):
+## Complete Task Example
+
 ```yaml
-criteria:
-  golden_answer:
-    - "Expected answer"
+tasks:
+  - task_id: incident_5_task_1
+    title: incident_5_task_1
+    description: What is the IP address associated with the Manatee Tempest activity group?
+    inherit_shared: true
+    initial_context:
+      incident_context: A command and control behavior was blocked...
+      question: What is the IP address associated with the Manatee Tempest activity group?
+    
+    # Main task evaluation - static matching (default)
+    # To use LLM-as-a-judge, change strategy to "llm_judge" and add:
+    #   criteria:
+    #     model: openai/azure/gpt-4.1
+    #     judge_system_template: judge/submission_judge_system.md
+    #     judge_user_template: judge/submission_judge_user.md
+    #     golden_answer: "198.43.121.209"
+    submission_evaluation_config:
+      strategy: static
+      criteria:
+        expected_answers:
+          - 198.43.121.209
+      scoring:
+        max_score: 1.0
+    
+    # Subtask checkpoints - LLM trajectory evaluation
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: The account with SID `S-1-5-21-...` was involved in C2 behavior.
+        objective: Identify key details related to the potential compromise.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Manatee Tempest group associated with IP `198.43.121.209`.
+        objective: Identify key details related to the potential compromise.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
 ```
 
-Correct format:
+---
+
+## Switching Between Strategies
+
+### To enable LLM-as-a-judge for main task:
+
+Replace:
 ```yaml
-criteria:
-  golden_answer: "Expected answer"
+submission_evaluation_config:
+  strategy: static
+  criteria:
+    expected_answers:
+      - 198.43.121.209
+  scoring:
+    max_score: 1.0
 ```
 
-### Adding Required Template Fields
-When migrating to `llm_judge`, ensure you add:
+With:
 ```yaml
-criteria:
-  model: "gpt-4"
-  judge_system_template: "your_system.md"
-  judge_user_template: "your_user.md"
+submission_evaluation_config:
+  strategy: llm_judge
+  criteria:
+    model: openai/azure/gpt-4.1
+    judge_system_template: judge/submission_judge_system.md
+    judge_user_template: judge/submission_judge_user.md
+    golden_answer: "198.43.121.209"
+  scoring:
+    max_score: 1.0
 ```
+
+---
 
 ## Troubleshooting
 
-### Common Configuration Errors
+### Common Issues
 
-1. **Missing template files**: Ensure templates exist in `prompts/judge/` directory
-2. **Array instead of string**: `golden_answer` must be a string, not array
-3. **Missing model**: LLM judge requires explicit model specification
-4. **Invalid template syntax**: Check Jinja2 syntax in templates
-5. **Missing episode methods**: Ensure episode helper methods are spelled correctly
-
-### Validation Errors
-
-The benchmark manager will report specific errors during initialization:
-- Template file not found
-- Required configuration field missing
-- Invalid strategy name
-- Template rendering errors
+1. **"Unknown subtask strategy" error**: Ensure strategy is lowercase `llm_judge`, not `LLM_JUDGE`
+2. **Template not found**: Check template path is relative to `prompts/` directory
+3. **Model API errors**: Verify model name format (e.g., `openai/azure/gpt-4.1`)
+4. **Empty checkpoint scores**: Review checkpoint descriptions - they should contain discoverable facts
 
 ### Debug Tips
 
-1. Use `episode.get_step_count()` to verify episode data access
-2. Add debug output in templates: `{{ episode | length }}` or `{{ episode.keys() }}`
-3. Test templates with minimal content first
-4. Check log output for template validation details
+1. Check logs for "Batch LLM subtask evaluation" entries
+2. Verify template variables with `{{ episode.get_step_count() }}`
+3. Test with a single task first using `-T task_filter="incident_5_task_1"`
