@@ -8,7 +8,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped
@@ -38,7 +38,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped
@@ -67,7 +67,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped
@@ -96,7 +96,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped
@@ -125,7 +125,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped
@@ -138,8 +138,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
-          cpus: '0.5'
+          memory: 4g
+          cpus: '1.0'
     labels:
       - "saber.domain=excytin"
       - "saber.service.type=permanent"
@@ -154,7 +154,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped
@@ -183,7 +183,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped
@@ -212,7 +212,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db
       MYSQL_ROOT_HOST: "%"
-    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
     networks:
       - excytin-database
     restart: unless-stopped

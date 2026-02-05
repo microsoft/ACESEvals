@@ -206,3 +206,7 @@ pip-delete-this-directory.txt
 
 # Local copies of external tools (not submodules)
 external/inspect_ai/
+
+# AI Assistant directories
+**/.github
+**/.claude

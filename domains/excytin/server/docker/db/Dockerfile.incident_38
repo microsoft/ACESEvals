@@ -1,7 +1,7 @@
 # Custom MySQL image for excytin domain - Incident 38
 # Includes SQL initialization files to work around Docker-in-Docker volume mounting limitations
 
-FROM mysql:8.0
+FROM mysql:8.0.36
 
 # Copy SQL initialization files and CSV data
 COPY server/data/sql_files/incident_38.sql /docker-entrypoint-initdb.d/
