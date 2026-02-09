@@ -7,16 +7,6 @@ domain:
   version: "1.0.0"
 
 images:
-  server:
-    tag: "saber/cybench/server:latest"
-    dockerfile: "server/docker/Dockerfile.server"
-    buildArgs:
-      DOMAIN_NAME: "cybench"
-    labels:
-      saber.domain: "cybench"
-      saber.component: "server"
-      saber.benchmark: "cybench"
-  
   sandbox:
     tag: "saber/cybench/sandbox:latest"
     dockerfile: "server/docker/Dockerfile.sandbox"

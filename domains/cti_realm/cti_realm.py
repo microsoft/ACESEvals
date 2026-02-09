@@ -3,8 +3,8 @@
 This module exposes the CTI Realm domain as an Inspect AI task that can be
 evaluated with commands like:
 
-    inspect eval external/saber/domains/cti_realm --model openai/gpt-4
-    inspect eval external/saber/domains/cti_realm -T task_filter=linux_* --model anthropic/claude-3-opus
+    inspect eval domains/cti_realm --model openai/gpt-4
+    inspect eval domains/cti_realm -T task_filter=linux_* --model anthropic/claude-3-opus
 """
 
 import sys
@@ -26,8 +26,8 @@ if str(_cti_realm_root) not in sys.path:
 from server.scoring import register_cti_realm_scorers
 
 # Get the domains root
-# This file is at: external/saber/domains/cti_realm/cti_realm.py
-# We need: external/saber/domains (the domains directory itself)
+# This file is at: domains/cti_realm/cti_realm.py
+# We need: domains (the domains directory itself)
 _domains_root = Path(__file__).resolve().parent.parent
 
 # Create the task factory (returns a callable that Inspect AI will invoke)
@@ -63,28 +63,28 @@ def cti_realm(**kwargs):
 
     Examples:
         # Basic evaluation (server stays running after)
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4
+        inspect eval domains/cti_realm --model openai/gpt-4
 
         # Use custom agent
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T agent=custom_example
+        inspect eval domains/cti_realm --model openai/gpt-4 -T agent=custom_example
 
         # Build missing images first
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T build=true
+        inspect eval domains/cti_realm --model openai/gpt-4 -T build=true
 
         # Rebuild all images (clean slate)
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T rebuild_all=true
+        inspect eval domains/cti_realm --model openai/gpt-4 -T rebuild_all=true
 
         # Stop server after evaluation completes
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T stop_saber_after=true
+        inspect eval domains/cti_realm --model openai/gpt-4 -T stop_saber_after=true
 
         # Filter to Linux privilege escalation tasks
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T task_filter="linux_*"
+        inspect eval domains/cti_realm --model openai/gpt-4 -T task_filter="linux_*"
 
         # Run trajectory analysis example task
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T task_filter="cti_trajectory_*"
+        inspect eval domains/cti_realm --model openai/gpt-4 -T task_filter="cti_trajectory_*"
 
         # Run a single task
-        inspect eval external/saber/domains/cti_realm --model openai/gpt-4 -T task_filter="linux_privilege_escalation_001"
+        inspect eval domains/cti_realm --model openai/gpt-4 -T task_filter="linux_privilege_escalation_001"
     """
     # Ensure scorers are registered only once
     if not hasattr(cti_realm, "_scorers_registered"):

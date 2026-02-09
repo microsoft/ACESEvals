@@ -9,6 +9,9 @@ services:
     container_name: saber-excytin-incident-55
     ports:
       - "3310:3306"
+    volumes:
+      - ./server/data/sql_files/incident_55.sql:/docker-entrypoint-initdb.d/incident_55.sql:ro
+      - ./server/data/csv_files/incident_55:/var/lib/mysql-files
     environment:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: env_monitor_db

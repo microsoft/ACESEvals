@@ -10,16 +10,6 @@ domain:
 
 # Docker images for the domain
 images:
-  server:
-    tag: "saber/cti_realm/server:latest"
-    dockerfile: "server/docker/Dockerfile.server"
-    buildArgs:
-      DOMAIN_NAME: "cti_realm"
-    labels:
-      saber.domain: "cti_realm"
-      saber.component: "server"
-      saber.scenario: "threat-intelligence"
-
   sandbox:
     tag: "saber/cti_realm/sandbox:latest"
     dockerfile: "server/docker/Dockerfile.sandbox"

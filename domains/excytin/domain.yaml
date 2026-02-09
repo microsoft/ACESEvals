@@ -7,16 +7,6 @@ domain:
   version: "1.0.0"
 
 images:
-  server:
-    tag: "saber/excytin/server:latest"
-    dockerfile: "server/docker/Dockerfile.server"
-    buildArgs:
-      DOMAIN_NAME: "excytin"
-    labels:
-      saber.domain: "excytin"
-      saber.component: "server"
-      saber.scenario: "incident-response"
-  
   sandbox:
     tag: "saber/excytin/sandbox:latest"
     dockerfile: "server/docker/Dockerfile.sandbox"

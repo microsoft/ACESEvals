@@ -7,16 +7,6 @@ domain:
   version: "1.0.0"
 
 images:
-  server:
-    tag: "saber/saber_dual/server:latest"
-    dockerfile: "server/docker/Dockerfile.server"
-    buildArgs:
-      DOMAIN_NAME: "saber_dual"
-    labels:
-      saber.domain: "saber_dual"
-      saber.component: "server"
-      saber.framework: "dual-agent"
-  
   sandbox:
     tag: "saber/saber_dual/sandbox:latest"
     dockerfile: "server/docker/Dockerfile.sandbox"

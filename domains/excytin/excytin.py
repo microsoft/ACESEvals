@@ -60,9 +60,6 @@ def excytin(**kwargs):
         # Rebuild all images (clean slate)
         inspect eval domains/excytin --model openai/gpt-4 -T rebuild_all=true
         
-        # Rebuild only server image
-        inspect eval domains/excytin --model openai/gpt-4 -T rebuild=server
-        
         # Stop server after evaluation completes
         inspect eval domains/excytin --model openai/gpt-4 -T stop_saber_after=true
         
