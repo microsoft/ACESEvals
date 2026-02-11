@@ -1,179 +1,360 @@
 tasks:
   - task_id: incident_134_task_51
     title: incident_134_task_51
-    description: "Can you identify the name of the account involved in the BEC fraud attempt?"
-
+    description: Can you identify the name of the account involved in the BEC fraud
+      attempt?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving suspicious emails sent by a possibly compromised user account related to an ongoing BEC (business email compromise) fraud attempt was reported. Suspicious emails were sent to `nathan@avoriaz.alpineskihouse.co` by `raphaelt@vnevado.alpineskihouse.co` from IP address `237.7.81.122`."
-      question: "Can you identify the name of the account involved in the BEC fraud attempt?"
-
+      incident_context: A security incident involving suspicious emails sent by a
+        possibly compromised user account related to an ongoing BEC (business email
+        compromise) fraud attempt was reported. Suspicious emails were sent to `nathan@avoriaz.alpineskihouse.co`
+        by `raphaelt@vnevado.alpineskihouse.co` from IP address `237.7.81.122`.
+      question: Can you identify the name of the account involved in the BEC fraud
+        attempt?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "Nina Park"
+          - Nina Park
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "Suspicious emails were sent by the possibly compromised user account named `Nina Park`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious emails were sent by the possibly compromised user
+          account named `Nina Park`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
   - task_id: incident_134_task_52
     title: incident_134_task_52
-    description: "Can you identify the AadUserId of the account involved in the sign-in from the anonymous IP address?"
-
+    description: Can you identify the AadUserId of the account involved in the sign-in
+      from the anonymous IP address?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In a recent incident, a password spray attack was detected originating from the IP address `170.54.121.63`. This type of attack involves attempting to access multiple accounts by using commonly used passwords. During our investigation, it is observed that there was a sign-in from an anonymous IP address (e.g. Tor browser, anonymizer VPNs) which is connected to the password spray attack."
-      question: "Can you identify the AadUserId of the account involved in the sign-in from the anonymous IP address?"
-
+      incident_context: In a recent incident, a password spray attack was detected
+        originating from the IP address `170.54.121.63`. This type of attack involves
+        attempting to access multiple accounts by using commonly used passwords. During
+        our investigation, it is observed that there was a sign-in from an anonymous
+        IP address (e.g. Tor browser, anonymizer VPNs) which is connected to the password
+        spray attack.
+      question: Can you identify the AadUserId of the account involved in the sign-in
+        from the anonymous IP address?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "e036dee7-fa23-42ef-a019-468c8d3401f1"
+          - e036dee7-fa23-42ef-a019-468c8d3401f1
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A password spray attack was detected on account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A password spray attack was detected on account with AadUserId
+          `e036dee7-fa23-42ef-a019-468c8d3401f1`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A sign-in from an anonymous IP address was detected for the same account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A sign-in from an anonymous IP address was detected for the same
+          account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_134_task_53
     title: incident_134_task_53
-    description: "Can you provide the AadUserId associated with the user account involved in the password spray attack?"
-
+    description: Can you provide the AadUserId associated with the user account involved
+      in the password spray attack?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving a compromised account following a password-spray attack occurred. The user `Nina Park` with the email `Nina Park@vnevado.alpineskihouse.co` and SID `S-1-5-21-1874151667-3554330288-105586563-1715` was signed in from an unusual location and browser during the attack. This suggests that an attacker may have compromised the user account for unauthorized access to the network. Immediate investigation is recommended to mitigate potential security risks."
-      question: "Can you provide the AadUserId associated with the user account involved in the password spray attack?"
-
+      incident_context: A security incident involving a compromised account following
+        a password-spray attack occurred. The user `Nina Park` with the email `Nina
+        Park@vnevado.alpineskihouse.co` and SID `S-1-5-21-1874151667-3554330288-105586563-1715`
+        was signed in from an unusual location and browser during the attack. This
+        suggests that an attacker may have compromised the user account for unauthorized
+        access to the network. Immediate investigation is recommended to mitigate
+        potential security risks.
+      question: Can you provide the AadUserId associated with the user account involved
+        in the password spray attack?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "e036dee7-fa23-42ef-a019-468c8d3401f1"
+          - e036dee7-fa23-42ef-a019-468c8d3401f1
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user account associated with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` was targeted in a password spray attack."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user account associated with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`
+          was targeted in a password spray attack.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The user with the breached account was later accessed from an unusual IP address `170.54.121.63`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user with the breached account was later accessed from an
+          unusual IP address `170.54.121.63`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_134_task_54
     title: incident_134_task_54
-    description: "During the incident investigation, from which IP address did the user sign in when their account was compromised following the password-spray attack?"
-
+    description: During the incident investigation, from which IP address did the
+      user sign in when their account was compromised following the password-spray
+      attack?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident was detected involving suspicious manipulation of a user's inbox rules on a cloud application (`AppId: 20893`). The attacker's IP address (`237.7.81.122`) suggests potential unauthorized access aimed at data exfiltration. This attack might be linked to an account compromised following a password-spray attack, where a user signed in from an unusual location and browser."
-      question: "During the incident investigation, from which IP address did the user sign in when their account was compromised following the password-spray attack?"
-
+      incident_context: 'A security incident was detected involving suspicious manipulation
+        of a user''s inbox rules on a cloud application (`AppId: 20893`). The attacker''s
+        IP address (`237.7.81.122`) suggests potential unauthorized access aimed at
+        data exfiltration. This attack might be linked to an account compromised following
+        a password-spray attack, where a user signed in from an unusual location and
+        browser.'
+      question: During the incident investigation, from which IP address did the user
+        sign in when their account was compromised following the password-spray attack?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "170.54.121.63"
+          - 170.54.121.63
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user's inbox rules with SID `S-1-5-21-1874151667-3554330288-105586563-1715` were manipulated in a suspicious manner."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user's inbox rules with SID `S-1-5-21-1874151667-3554330288-105586563-1715`
+          were manipulated in a suspicious manner.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The user account from IP address `170.54.121.63` was compromised following a password-spray attack."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user account from IP address `170.54.121.63` was compromised
+          following a password-spray attack.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_134_task_55
     title: incident_134_task_55
-    description: "Regarding the BEC financial fraud alert, which user account was identified as possibly compromised?"
-
+    description: Regarding the BEC financial fraud alert, which user account was identified
+      as possibly compromised?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A user's inbox rules were manipulated in a suspicious manner using the cloud application with AppId `20893`. This indicates the possibility of an attacker gaining access to the user's inbox and manipulating rules to delete or move messages or folders to exfiltrate data from your organization."
-      question: "Regarding the BEC financial fraud alert, which user account was identified as possibly compromised?"
-
+      incident_context: A user's inbox rules were manipulated in a suspicious manner
+        using the cloud application with AppId `20893`. This indicates the possibility
+        of an attacker gaining access to the user's inbox and manipulating rules to
+        delete or move messages or folders to exfiltrate data from your organization.
+      question: Regarding the BEC financial fraud alert, which user account was identified
+        as possibly compromised?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "e036dee7-fa23-42ef-a019-468c8d3401f1"
+          - e036dee7-fa23-42ef-a019-468c8d3401f1
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "Suspicious inbox manipulation rule detected from IP address `237.7.81.122`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious inbox manipulation rule detected from IP address `237.7.81.122`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Business Email Compromise (BEC) financial fraud detected with a suspicious inbox rule created by a user with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Business Email Compromise (BEC) financial fraud detected with
+          a suspicious inbox rule created by a user with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_134_task_56
     title: incident_134_task_56
-    description: "What is the IP address linked to the suspicious emails sent by the BEC-related user?"
-
+    description: What is the IP address linked to the suspicious emails sent by the
+      BEC-related user?
     inherit_shared: true
-
     initial_context:
-      incident_context: "As part of a security incident involving email messages with malicious URLs, an email containing the URL `https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/` was sent from `alyssat@vnevado.alpineskihouse.co` to `raphaelt@vnevado.alpineskihouse.co` and was later removed after delivery. This incident is indicative of a BEC (business email compromise) where suspicious emails were sent by possibly compromised user accounts."
-      question: "What is the IP address linked to the suspicious emails sent by the BEC-related user?"
-
+      incident_context: As part of a security incident involving email messages with
+        malicious URLs, an email containing the URL `https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/`
+        was sent from `alyssat@vnevado.alpineskihouse.co` to `raphaelt@vnevado.alpineskihouse.co`
+        and was later removed after delivery. This incident is indicative of a BEC
+        (business email compromise) where suspicious emails were sent by possibly
+        compromised user accounts.
+      question: What is the IP address linked to the suspicious emails sent by the
+        BEC-related user?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "237.7.81.122"
+          - 237.7.81.122
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The email account `Nina Park` received an email with a malicious URL that was later removed."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The email account `Nina Park` received an email with a malicious
+          URL that was later removed.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Suspicious emails were sent from IP address `237.7.81.122` by a user possibly compromised in a BEC fraud attempt."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious emails were sent from IP address `237.7.81.122` by
+          a user possibly compromised in a BEC fraud attempt.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_134_task_57
     title: incident_134_task_57
-    description: "Can you determine the malicious IP address associated with this account sign-in activity during the time of the compromise?"
-
+    description: Can you determine the malicious IP address associated with this account
+      sign-in activity during the time of the compromise?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident was reported on 2024-07-18 indicating that the account `Nina Park` with email `Nina Park@vnevado.alpineskihouse.co` was potentially compromised following a password-spray attack. This incident involved an unusual sign-in from a location and browser, suggesting unauthorized access to the network. Immediate investigation is recommended to mitigate security risks."
-      question: "Can you determine the malicious IP address associated with this account sign-in activity during the time of the compromise?"
-
+      incident_context: A security incident was reported on 2024-07-18 indicating
+        that the account `Nina Park` with email `Nina Park@vnevado.alpineskihouse.co`
+        was potentially compromised following a password-spray attack. This incident
+        involved an unusual sign-in from a location and browser, suggesting unauthorized
+        access to the network. Immediate investigation is recommended to mitigate
+        security risks.
+      question: Can you determine the malicious IP address associated with this account
+        sign-in activity during the time of the compromise?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "170.54.121.63"
+          - 170.54.121.63
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user was signed in from an unusual location and browser during a password spray attack using the IP address `170.54.121.63`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user was signed in from an unusual location and browser during
+          a password spray attack using the IP address `170.54.121.63`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There was a sign-in from a malicious IP address `170.54.121.63` during or around the time of the sign-in."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a sign-in from a malicious IP address `170.54.121.63`
+          during or around the time of the sign-in.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

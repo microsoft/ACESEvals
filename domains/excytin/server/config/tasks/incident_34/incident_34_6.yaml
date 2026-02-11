@@ -1,257 +1,529 @@
 tasks:
   - task_id: incident_34_task_51
     title: incident_34_task_51
-    description: "Can you provide the SID of the account involved in executing the suspicious LDAP query?"
-
+    description: Can you provide the SID of the account involved in executing the
+      suspicious LDAP query?
     inherit_shared: true
-
     initial_context:
-      incident_context: "An Automated investigation was initiated manually by user u141(u141@ash.alpineskihouse.co) on the host vnevado-win10e.vnevado.alpineskihouse.co. This investigation automatically identifies and reviews threat artifacts for possible remediation. Following this, a suspicious LDAP query was executed, which is often used by attackers to learn an organization's structure, including administrative users, groups, and interesting assets."
-      question: "Can you provide the SID of the account involved in executing the suspicious LDAP query?"
-
+      incident_context: An Automated investigation was initiated manually by user
+        u141(u141@ash.alpineskihouse.co) on the host vnevado-win10e.vnevado.alpineskihouse.co.
+        This investigation automatically identifies and reviews threat artifacts for
+        possible remediation. Following this, a suspicious LDAP query was executed,
+        which is often used by attackers to learn an organization's structure, including
+        administrative users, groups, and interesting assets.
+      question: Can you provide the SID of the account involved in executing the suspicious
+        LDAP query?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-1-5-21-1870156660-7534030218-135086563-1193"
+          - S-1-5-21-1870156660-7534030218-135086563-1193
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An Automated investigation was initiated manually by user `u141@ash.alpineskihouse.co`, targeting device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An Automated investigation was initiated manually by user `u141@ash.alpineskihouse.co`,
+          targeting device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious LDAP query was executed by the account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`, indicating potential reconnaissance activity."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious LDAP query was executed by the account with SID
+          `S-1-5-21-1870156660-7534030218-135086563-1193`, indicating potential reconnaissance
+          activity.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_52
     title: incident_34_task_52
-    description: "What is the name of the process that was used to create the anomalous scheduled task related to this alert?"
-
+    description: What is the name of the process that was used to create the anomalous
+      scheduled task related to this alert?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In a recent security incident reported as 'Suspicious PowerShell download or encoded command execution', a process on host 'vnevado-win10e' executed 'powershell.exe' with a specific command to download or run an encoded payload. This activity is often used by attackers to bypass security protection mechanisms by executing their payload in memory without leaving a trace. Additionally, there is a related alert indicating that an anomalous scheduled task was created, which could be used for persistence."
-      question: "What is the name of the process that was used to create the anomalous scheduled task related to this alert?"
-
+      incident_context: In a recent security incident reported as 'Suspicious PowerShell
+        download or encoded command execution', a process on host 'vnevado-win10e'
+        executed 'powershell.exe' with a specific command to download or run an encoded
+        payload. This activity is often used by attackers to bypass security protection
+        mechanisms by executing their payload in memory without leaving a trace. Additionally,
+        there is a related alert indicating that an anomalous scheduled task was created,
+        which could be used for persistence.
+      question: What is the name of the process that was used to create the anomalous
+        scheduled task related to this alert?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "schtasks.exe"
+          - schtasks.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A process with Process ID `8604` executed `powershell.exe` on `2024-06-26t12:00:39.2886108z` with an encoded command to potentially download a file or run a command without touching the disk."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process with Process ID `8604` executed `powershell.exe` on
+          `2024-06-26t12:00:39.2886108z` with an encoded command to potentially download
+          a file or run a command without touching the disk.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The executable `schtasks.exe` was used on `2024-07-04 22:35:01.260626+00:00` to create an anomalous scheduled task that might be used by an attacker for persistence."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The executable `schtasks.exe` was used on `2024-07-04 22:35:01.260626+00:00`
+          to create an anomalous scheduled task that might be used by an attacker
+          for persistence.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_53
     title: incident_34_task_53
-    description: "Following this PowerShell activity, there was a suspicious LDAP query. Can you identify the file name of the process used to execute this LDAP query?"
-
+    description: Following this PowerShell activity, there was a suspicious LDAP query.
+      Can you identify the file name of the process used to execute this LDAP query?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During an investigation of a security incident where a suspicious PowerShell command was executed, it was found that attackers often use PowerShell to bypass security protection mechanisms by executing their payload in memory. As part of this incident, a PowerShell command was observed creating and executing a file named `winatp-intro-backdoor.exe`. The specific process `powershell.exe` was involved in this activity."
-      question: "Following this PowerShell activity, there was a suspicious LDAP query. Can you identify the file name of the process used to execute this LDAP query?"
-
+      incident_context: During an investigation of a security incident where a suspicious
+        PowerShell command was executed, it was found that attackers often use PowerShell
+        to bypass security protection mechanisms by executing their payload in memory.
+        As part of this incident, a PowerShell command was observed creating and executing
+        a file named `winatp-intro-backdoor.exe`. The specific process `powershell.exe`
+        was involved in this activity.
+      question: Following this PowerShell activity, there was a suspicious LDAP query.
+        Can you identify the file name of the process used to execute this LDAP query?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winword.exe"
+          - winword.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious process executed a PowerShell command on a host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious process executed a PowerShell command on a host
+          with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious LDAP query was executed with the process `winword.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious LDAP query was executed with the process `winword.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_54
     title: incident_34_task_54
-    description: "In relation to this investigation, an anomaly was detected in the ASEP registry, indicating that a suspicious process registered a command or file to be run after a reboot. Can you provide the security identifier (SID) of the account associated with this detected anomaly?"
-
+    description: In relation to this investigation, an anomaly was detected in the
+      ASEP registry, indicating that a suspicious process registered a command or
+      file to be run after a reboot. Can you provide the security identifier (SID)
+      of the account associated with this detected anomaly?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A user with email u141@ash.alpineskihouse.co manually initiated an automated investigation on the host `vnevado-win10e`. The investigation, which identifies and reviews possible threat artifacts for remediation, was started on July 4, 2024."
-      question: "In relation to this investigation, an anomaly was detected in the ASEP registry, indicating that a suspicious process registered a command or file to be run after a reboot. Can you provide the security identifier (SID) of the account associated with this detected anomaly?"
-
+      incident_context: A user with email u141@ash.alpineskihouse.co manually initiated
+        an automated investigation on the host `vnevado-win10e`. The investigation,
+        which identifies and reviews possible threat artifacts for remediation, was
+        started on July 4, 2024.
+      question: In relation to this investigation, an anomaly was detected in the
+        ASEP registry, indicating that a suspicious process registered a command or
+        file to be run after a reboot. Can you provide the security identifier (SID)
+        of the account associated with this detected anomaly?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-1-5-21-1870156660-7534030218-135086563-1193"
+          - S-1-5-21-1870156660-7534030218-135086563-1193
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user with email `u141@ash.alpineskihouse.co` initiated an automated investigation on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user with email `u141@ash.alpineskihouse.co` initiated an automated
+          investigation on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "An anomaly was detected in the ASEP registry involving an account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An anomaly was detected in the ASEP registry involving an account
+          with SID `S-1-5-21-1870156660-7534030218-135086563-1193`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_55
     title: incident_34_task_55
-    description: "What is the command line that was used to create the anomalous scheduled task, and what is the Process ID associated with this task?"
-
+    description: What is the command line that was used to create the anomalous scheduled
+      task, and what is the Process ID associated with this task?
     inherit_shared: true
-
     initial_context:
-      incident_context: "An anomalous scheduled task was created on the device with hostname `vnevado-win10e`. This may be used by an attacker to obtain persistence on the device. The command line used to create the task was executed using `powershell.exe`. The report link for further details is: https://security.microsoft.com/threatanalytics3/c9709a39-ac8d-493d-9a63-71da3ca1e745/analystreport"
-      question: "What is the command line that was used to create the anomalous scheduled task, and what is the Process ID associated with this task?"
-
+      incident_context: 'An anomalous scheduled task was created on the device with
+        hostname `vnevado-win10e`. This may be used by an attacker to obtain persistence
+        on the device. The command line used to create the task was executed using
+        `powershell.exe`. The report link for further details is: https://security.microsoft.com/threatanalytics3/c9709a39-ac8d-493d-9a63-71da3ca1e745/analystreport'
+      question: What is the command line that was used to create the anomalous scheduled
+        task, and what is the Process ID associated with this task?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "ProcessId: 1348, CommandLine: \"schtasks.exe\" /create /sc once /tn yrei /tr \"c:\\users\\samuelf\\onedrive - (new) alpineskihouse\\desktop\\winatp-intro-backdoor.exe\" /st 11:58 /f"
+          - 'ProcessId: 1348, CommandLine: "schtasks.exe" /create /sc once /tn yrei
+            /tr "c:\users\samuelf\onedrive - (new) alpineskihouse\desktop\winatp-intro-backdoor.exe"
+            /st 11:58 /f'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The attacker created an anomalous scheduled task using schtasks.exe with the command line `/create /sc once /tn yrei /tr \"c:\\users\\samuelf\\onedrive - (new) alpineskihouse\\desktop\\winatp-intro-backdoor.exe\" /st 11:58 /f` at `2024-06-26t12:00:40.0878355z`, with Process ID `1348`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The attacker created an anomalous scheduled task using schtasks.exe
+          with the command line `/create /sc once /tn yrei /tr "c:\users\samuelf\onedrive
+          - (new) alpineskihouse\desktop\winatp-intro-backdoor.exe" /st 11:58 /f`
+          at `2024-06-26t12:00:40.0878355z`, with Process ID `1348`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
   - task_id: incident_34_task_56
     title: incident_34_task_56
-    description: "In the context of a detected anomaly related to ASEP registry activities, can you identify the IP address involved in this suspicious activity?"
-
+    description: In the context of a detected anomaly related to ASEP registry activities,
+      can you identify the IP address involved in this suspicious activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious LDAP query was executed which might indicate reconnaissance activity targeting the organization. LDAP queries can be used to learn about the organizational structure, which may help an attacker gain higher privileges and access to important assets. It was noted that the process `winword.exe` was executed with the command line `winword.exe c:\\scripts\\rs4_winatp-intro-invoice.docm`."
-      question: "In the context of a detected anomaly related to ASEP registry activities, can you identify the IP address involved in this suspicious activity?"
-
+      incident_context: A suspicious LDAP query was executed which might indicate
+        reconnaissance activity targeting the organization. LDAP queries can be used
+        to learn about the organizational structure, which may help an attacker gain
+        higher privileges and access to important assets. It was noted that the process
+        `winword.exe` was executed with the command line `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`.
+      question: In the context of a detected anomaly related to ASEP registry activities,
+        can you identify the IP address involved in this suspicious activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "72.5.72.208"
+          - 72.5.72.208
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious LDAP query was executed on a host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious LDAP query was executed on a host with AadDeviceId
+          `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "An anomaly was detected in the ASEP registry from an IP address `72.5.72.208`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An anomaly was detected in the ASEP registry from an IP address
+          `72.5.72.208`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_57
     title: incident_34_task_57
-    description: "What file name was discovered during the analysis of the suspicious PowerShell activity?"
-
+    description: What file name was discovered during the analysis of the suspicious
+      PowerShell activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious process on host `vnevado-win10e` connected to an Azure Active Directory Device ID `02b8f519-1123-4228-b32a-ccb78af3449f` executed a PowerShell command. The account `samuelf`, identified by SID `S-1-5-21-1870156660-7534030218-135086563-1193`, is involved in this activity which includes processes like `powershell.exe`."
-      question: "What file name was discovered during the analysis of the suspicious PowerShell activity?"
-
+      incident_context: A suspicious process on host `vnevado-win10e` connected to
+        an Azure Active Directory Device ID `02b8f519-1123-4228-b32a-ccb78af3449f`
+        executed a PowerShell command. The account `samuelf`, identified by SID `S-1-5-21-1870156660-7534030218-135086563-1193`,
+        is involved in this activity which includes processes like `powershell.exe`.
+      question: What file name was discovered during the analysis of the suspicious
+        PowerShell activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winatp-intro-backdoor.exe"
+          - winatp-intro-backdoor.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A command in PowerShell was executed by a suspicious process using the account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A command in PowerShell was executed by a suspicious process
+          using the account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious PowerShell activity was observed involving a file named `winatp-intro-backdoor.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious PowerShell activity was observed involving a file
+          named `winatp-intro-backdoor.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_58
     title: incident_34_task_58
-    description: "What is the command line of the suspicious Task Scheduler activity observed?"
-
+    description: What is the command line of the suspicious Task Scheduler activity
+      observed?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In a security incident involving suspicious PowerShell activity, a process executed PowerShell to download a file or run an encoded command, indicating a potential attacker attempting to bypass security protection mechanisms."
-      question: "What is the command line of the suspicious Task Scheduler activity observed?"
-
+      incident_context: In a security incident involving suspicious PowerShell activity,
+        a process executed PowerShell to download a file or run an encoded command,
+        indicating a potential attacker attempting to bypass security protection mechanisms.
+      question: What is the command line of the suspicious Task Scheduler activity
+        observed?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "1616__2024-06-26t12:00:40.6793914z__\"schtasks.exe\" /run /tn yrei"
+          - 1616__2024-06-26t12:00:40.6793914z__"schtasks.exe" /run /tn yrei
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "There was a suspicious PowerShell download or encoded command execution which resulted in the creation of `winatp-intro-backdoor.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a suspicious PowerShell download or encoded command
+          execution which resulted in the creation of `winatp-intro-backdoor.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There was suspicious Task Scheduler activity associated with Process ID `1616`, created at `2024-06-26t12:00:40.6793914z`, using the command line `schtasks.exe /run /tn yrei`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was suspicious Task Scheduler activity associated with
+          Process ID `1616`, created at `2024-06-26t12:00:40.6793914z`, using the
+          command line `schtasks.exe /run /tn yrei`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_59
     title: incident_34_task_59
-    description: "Related to this alert, an anomalous scheduled task was created around the same time. Can you identify the file name of the process used to create the scheduled task?"
-
+    description: Related to this alert, an anomalous scheduled task was created around
+      the same time. Can you identify the file name of the process used to create
+      the scheduled task?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In a recent security incident, on 2024-07-04, there was a detection of a suspicious PowerShell download or encoded command execution. The process `winword.exe` with Process ID `9780` and command line `\"winword.exe\" c:\\scripts\\rs4_winatp-intro-invoice.docm` was involved. This type of behavior often indicates an attacker trying to download external payloads or execute commands to bypass security mechanisms."
-      question: "Related to this alert, an anomalous scheduled task was created around the same time. Can you identify the file name of the process used to create the scheduled task?"
-
+      incident_context: In a recent security incident, on 2024-07-04, there was a
+        detection of a suspicious PowerShell download or encoded command execution.
+        The process `winword.exe` with Process ID `9780` and command line `"winword.exe"
+        c:\scripts\rs4_winatp-intro-invoice.docm` was involved. This type of behavior
+        often indicates an attacker trying to download external payloads or execute
+        commands to bypass security mechanisms.
+      question: Related to this alert, an anomalous scheduled task was created around
+        the same time. Can you identify the file name of the process used to create
+        the scheduled task?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "schtasks.exe"
+          - schtasks.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A process executed PowerShell to download a file or run an encoded command. This activity is associated with the user account having SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process executed PowerShell to download a file or run an encoded
+          command. This activity is associated with the user account having SID `S-1-5-21-1870156660-7534030218-135086563-1193`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "An anomalous scheduled task was created using the process `schtasks.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An anomalous scheduled task was created using the process `schtasks.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_60
     title: incident_34_task_60
-    description: "A related alert indicates a suspicious LDAP query was executed. Can you identify the file name of the process responsible for executing the LDAP query?"
-
+    description: A related alert indicates a suspicious LDAP query was executed. Can
+      you identify the file name of the process responsible for executing the LDAP
+      query?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident was detected where an uncommon file `winatp-intro-backdoor.exe` was created and added to a Run Key on the machine with IP address `72.5.72.208`. The command executed had the ProcessId__CreatedTimeUtc__CommandLine: `10208__2024-06-26t13:17:18.8268389z__reg add hkcu\\software\\microsoft\\windows\\currentversion\\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\\desktop\\winatp-intro-backdoor.exe`, indicating that it would run on the next startup, potentially as part of a persistence mechanism by an attacker."
-      question: "A related alert indicates a suspicious LDAP query was executed. Can you identify the file name of the process responsible for executing the LDAP query?"
-
+      incident_context: 'A security incident was detected where an uncommon file `winatp-intro-backdoor.exe`
+        was created and added to a Run Key on the machine with IP address `72.5.72.208`.
+        The command executed had the ProcessId__CreatedTimeUtc__CommandLine: `10208__2024-06-26t13:17:18.8268389z__reg
+        add hkcu\software\microsoft\windows\currentversion\runonce /f /v yrei /t reg_expand_sz
+        /d %userprofile%\desktop\winatp-intro-backdoor.exe`, indicating that it would
+        run on the next startup, potentially as part of a persistence mechanism by
+        an attacker.'
+      question: A related alert indicates a suspicious LDAP query was executed. Can
+        you identify the file name of the process responsible for executing the LDAP
+        query?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winword.exe"
+          - winword.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An uncommon file was created and added to a Run Key on host `vnevado-win10e`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An uncommon file was created and added to a Run Key on host `vnevado-win10e`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious LDAP query was executed by the process `winword.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious LDAP query was executed by the process `winword.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

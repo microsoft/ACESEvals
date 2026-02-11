@@ -1,257 +1,525 @@
 tasks:
   - task_id: incident_34_task_61
     title: incident_34_task_61
-    description: "Can you identify the IP address associated with the process that registered a suspicious command or file in the ASEP registry key?"
-
+    description: Can you identify the IP address associated with the process that
+      registered a suspicious command or file in the ASEP registry key?
     inherit_shared: true
-
     initial_context:
-      incident_context: "As part of a security incident reported on 2024-07-04, it was detected that Powershell executed a file named `winatp-intro-backdoor.exe` on a machine. This action was flagged as a suspicious activity as it involved dropping and executing a potentially malicious file."
-      question: "Can you identify the IP address associated with the process that registered a suspicious command or file in the ASEP registry key?"
-
+      incident_context: As part of a security incident reported on 2024-07-04, it
+        was detected that Powershell executed a file named `winatp-intro-backdoor.exe`
+        on a machine. This action was flagged as a suspicious activity as it involved
+        dropping and executing a potentially malicious file.
+      question: Can you identify the IP address associated with the process that registered
+        a suspicious command or file in the ASEP registry key?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "72.5.72.208"
+          - 72.5.72.208
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A Powershell script dropped and executed a suspicious file on the machine with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A Powershell script dropped and executed a suspicious file on
+          the machine with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "An anomaly was detected in the ASEP registry indicating a process registered a suspicious command or file from the IP address `72.5.72.208`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An anomaly was detected in the ASEP registry indicating a process
+          registered a suspicious command or file from the IP address `72.5.72.208`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_62
     title: incident_34_task_62
-    description: "As part of the automated investigation, a suspicious PowerShell operation was detected. Can you find the account SID associated with the suspicious PowerShell download or encoded command execution?"
-
+    description: As part of the automated investigation, a suspicious PowerShell operation
+      was detected. Can you find the account SID associated with the suspicious PowerShell
+      download or encoded command execution?
     inherit_shared: true
-
     initial_context:
-      incident_context: "On 2024-07-04 at 22:35:00.400749+00:00, u141(u141@ash.alpineskihouse.co) initiated an Automated investigation on host `vnevado-win10e.vnevado.alpineskihouse.co`. The investigation aims to automatically identify and review threat artifacts for possible remediation."
-      question: "As part of the automated investigation, a suspicious PowerShell operation was detected. Can you find the account SID associated with the suspicious PowerShell download or encoded command execution?"
-
+      incident_context: On 2024-07-04 at 22:35:00.400749+00:00, u141(u141@ash.alpineskihouse.co)
+        initiated an Automated investigation on host `vnevado-win10e.vnevado.alpineskihouse.co`.
+        The investigation aims to automatically identify and review threat artifacts
+        for possible remediation.
+      question: As part of the automated investigation, a suspicious PowerShell operation
+        was detected. Can you find the account SID associated with the suspicious
+        PowerShell download or encoded command execution?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-1-5-21-1870156660-7534030218-135086563-1193"
+          - S-1-5-21-1870156660-7534030218-135086563-1193
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An Automated investigation was manually started by user `u141` on the host `vnevado-win10e.vnevado.alpineskihouse.co`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An Automated investigation was manually started by user `u141`
+          on the host `vnevado-win10e.vnevado.alpineskihouse.co`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There was a suspicious PowerShell activity detected that included either a download or encoded command execution by an account with SID `S-1-5-21-1870156660-7534030218-135086563-1193` on the same host `vnevado-win10e`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a suspicious PowerShell activity detected that included
+          either a download or encoded command execution by an account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`
+          on the same host `vnevado-win10e`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_63
     title: incident_34_task_63
-    description: "In the context of this incident, what process is associated with the execution of the PowerShell command that might have been used to download a file or run an encoded command?"
-
+    description: In the context of this incident, what process is associated with
+      the execution of the PowerShell command that might have been used to download
+      a file or run an encoded command?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In response to a security incident involving a suspicious PowerShell execution, we've identified that a file `powershell.exe` was launched on host `vnevado-win10e` by the account `samuelf`. The command executed included invoking PowerShell with complex encoded instructions, suggesting the download or execution of an external payload. This type of behavior is consistent with attackers bypassing security measures to execute their payload directly in memory."
-      question: "In the context of this incident, what process is associated with the execution of the PowerShell command that might have been used to download a file or run an encoded command?"
-
+      incident_context: In response to a security incident involving a suspicious
+        PowerShell execution, we've identified that a file `powershell.exe` was launched
+        on host `vnevado-win10e` by the account `samuelf`. The command executed included
+        invoking PowerShell with complex encoded instructions, suggesting the download
+        or execution of an external payload. This type of behavior is consistent with
+        attackers bypassing security measures to execute their payload directly in
+        memory.
+      question: In the context of this incident, what process is associated with the
+        execution of the PowerShell command that might have been used to download
+        a file or run an encoded command?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winword.exe"
+          - winword.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d` executed a suspicious PowerShell command."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`
+          executed a suspicious PowerShell command.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The process `winword.exe` executed PowerShell to download a file or run an encoded command."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The process `winword.exe` executed PowerShell to download a file
+          or run an encoded command.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_64
     title: incident_34_task_64
-    description: "What was the name and command line of the process involved in the suspicious PowerShell activity?"
-
+    description: What was the name and command line of the process involved in the
+      suspicious PowerShell activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During the security investigation into an incident reported on 2024-07-04, it was noted that an uncommon file was created and added to a Run Key, which might indicate an attacker placing malicious software to maintain persistence on the machine. The process involved had an IP address `72.5.72.208` and executed the following command: `reg add hkcu\\software\\microsoft\\windows\\currentversion\\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\\desktop\\winatp-intro-backdoor.exe`. There was also an indication of a suspicious PowerShell download or encoded command execution, which usually suggests an attempt to bypass security mechanisms."
-      question: "What was the name and command line of the process involved in the suspicious PowerShell activity?"
-
+      incident_context: 'During the security investigation into an incident reported
+        on 2024-07-04, it was noted that an uncommon file was created and added to
+        a Run Key, which might indicate an attacker placing malicious software to
+        maintain persistence on the machine. The process involved had an IP address
+        `72.5.72.208` and executed the following command: `reg add hkcu\software\microsoft\windows\currentversion\runonce
+        /f /v yrei /t reg_expand_sz /d %userprofile%\desktop\winatp-intro-backdoor.exe`.
+        There was also an indication of a suspicious PowerShell download or encoded
+        command execution, which usually suggests an attempt to bypass security mechanisms.'
+      question: What was the name and command line of the process involved in the
+        suspicious PowerShell activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "\"winword.exe\" c:\\scripts\\rs4_winatp-intro-invoice.docm"
+          - '"winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An uncommon file was created on host `vnevado-win10e` and added to a Run Key."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An uncommon file was created on host `vnevado-win10e` and added
+          to a Run Key.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A process with Process ID `9780` executed PowerShell through the command line `winword.exe c:\\scripts\\rs4_winatp-intro-invoice.docm` at `2024-06-26t11:57:20.2959493z`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process with Process ID `9780` executed PowerShell through
+          the command line `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`
+          at `2024-06-26t11:57:20.2959493z`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_65
     title: incident_34_task_65
-    description: "Following this activity, an anomaly was detected in the ASEP registry. Can you identify the IP address that corresponds to this anomaly?"
-
+    description: Following this activity, an anomaly was detected in the ASEP registry.
+      Can you identify the IP address that corresponds to this anomaly?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During a security incident investigation on 2024-07-04, a PowerShell command was executed by a suspicious process. This action might be an indicator of an attacker executing commands to bypass security protection mechanisms by running their payload in memory without touching the disk. We tracked the PowerShell process which executed a base64 encoded payload using the command line. This is relevant to the overall threat model where an attacker might leverage such tactics to maintain persistence."
-      question: "Following this activity, an anomaly was detected in the ASEP registry. Can you identify the IP address that corresponds to this anomaly?"
-
+      incident_context: During a security incident investigation on 2024-07-04, a
+        PowerShell command was executed by a suspicious process. This action might
+        be an indicator of an attacker executing commands to bypass security protection
+        mechanisms by running their payload in memory without touching the disk. We
+        tracked the PowerShell process which executed a base64 encoded payload using
+        the command line. This is relevant to the overall threat model where an attacker
+        might leverage such tactics to maintain persistence.
+      question: Following this activity, an anomaly was detected in the ASEP registry.
+        Can you identify the IP address that corresponds to this anomaly?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "72.5.72.208"
+          - 72.5.72.208
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The host `vnevado-win10e` executed a suspicious PowerShell command."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The host `vnevado-win10e` executed a suspicious PowerShell command.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There was an anomaly detected in the ASEP registry from the IP address `72.5.72.208`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was an anomaly detected in the ASEP registry from the IP
+          address `72.5.72.208`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_66
     title: incident_34_task_66
-    description: "Can you find the Azure Active Directory Device ID (AadDeviceId) for the host `vnevado-win10e.vnevado.alpineskihouse.co`?"
-
+    description: Can you find the Azure Active Directory Device ID (AadDeviceId) for
+      the host `vnevado-win10e.vnevado.alpineskihouse.co`?
     inherit_shared: true
-
     initial_context:
-      incident_context: "An automated investigation was manually initiated by u141(u141@ash.alpineskihouse.co) on the host `vnevado-win10e.vnevado.alpineskihouse.co`. This investigation is part of a broader effort to identify and review threat artifacts for possible remediation."
-      question: "Can you find the Azure Active Directory Device ID (AadDeviceId) for the host `vnevado-win10e.vnevado.alpineskihouse.co`?"
-
+      incident_context: An automated investigation was manually initiated by u141(u141@ash.alpineskihouse.co)
+        on the host `vnevado-win10e.vnevado.alpineskihouse.co`. This investigation
+        is part of a broader effort to identify and review threat artifacts for possible
+        remediation.
+      question: Can you find the Azure Active Directory Device ID (AadDeviceId) for
+        the host `vnevado-win10e.vnevado.alpineskihouse.co`?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "02b8f519-1123-4228-b32a-ccb78af3449f"
+          - 02b8f519-1123-4228-b32a-ccb78af3449f
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An automated investigation was manually started by user `u141` (u141@ash.alpineskihouse.co) on the host `vnevado-win10e.vnevado.alpineskihouse.co` with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An automated investigation was manually started by user `u141`
+          (u141@ash.alpineskihouse.co) on the host `vnevado-win10e.vnevado.alpineskihouse.co`
+          with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
   - task_id: incident_34_task_67
     title: incident_34_task_67
-    description: "Who initiated the Automated investigation?"
-
+    description: Who initiated the Automated investigation?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A recent security incident indicated that a suspicious PowerShell command, potentially used by attackers to download a file or run an encoded command, was executed. This command could bypass security mechanisms and execute payloads in memory without leaving traces. During this same incident, an Automated investigation was manually initiated on a device."
-      question: "Who initiated the Automated investigation?"
-
+      incident_context: A recent security incident indicated that a suspicious PowerShell
+        command, potentially used by attackers to download a file or run an encoded
+        command, was executed. This command could bypass security mechanisms and execute
+        payloads in memory without leaving traces. During this same incident, an Automated
+        investigation was manually initiated on a device.
+      question: Who initiated the Automated investigation?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "u141@ash.alpineskihouse.co"
+          - u141@ash.alpineskihouse.co
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A process on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f` executed PowerShell to download a file or run an encoded command."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`
+          executed PowerShell to download a file or run an encoded command.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "An automated investigation was initiated by u141 (u141@ash.alpineskihouse.co) on the host `vnevado-win10e.vnevado.alpineskihouse.co`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An automated investigation was initiated by u141 (u141@ash.alpineskihouse.co)
+          on the host `vnevado-win10e.vnevado.alpineskihouse.co`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_68
     title: incident_34_task_68
-    description: "What is the process name associated with the execution of the suspect LDAP query?"
-
+    description: What is the process name associated with the execution of the suspect
+      LDAP query?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During an investigation into a security incident, it was found that on 2024-07-04, a suspicious PowerShell command was used to drop and execute a file named `winatp-intro-backdoor.exe`. This activity was flagged as it could indicate malicious intent. In addition, the investigation revealed a suspect LDAP query executed around the same time. LDAP queries might be used by attackers for reconnaissance to understand the organizational structure and identify high-value targets."
-      question: "What is the process name associated with the execution of the suspect LDAP query?"
-
+      incident_context: During an investigation into a security incident, it was found
+        that on 2024-07-04, a suspicious PowerShell command was used to drop and execute
+        a file named `winatp-intro-backdoor.exe`. This activity was flagged as it
+        could indicate malicious intent. In addition, the investigation revealed a
+        suspect LDAP query executed around the same time. LDAP queries might be used
+        by attackers for reconnaissance to understand the organizational structure
+        and identify high-value targets.
+      question: What is the process name associated with the execution of the suspect
+        LDAP query?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winword.exe"
+          - winword.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A powershell command initiated by the user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d` dropped a suspicious file on the machine and executed it."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A powershell command initiated by the user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`
+          dropped a suspicious file on the machine and executed it.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious LDAP query was executed by the process `winword.exe`, indicating potential reconnaissance activity."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious LDAP query was executed by the process `winword.exe`,
+          indicating potential reconnaissance activity.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_69
     title: incident_34_task_69
-    description: "Following the automated investigation, Powershell dropped a suspicious file on the machine and executed it. Can you provide the SID of the account involved in this activity?"
-
+    description: Following the automated investigation, Powershell dropped a suspicious
+      file on the machine and executed it. Can you provide the SID of the account
+      involved in this activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "As part of a security incident, u141(u141@ash.alpineskihouse.co) initiated an automated investigation on `vnevado-win10e` which automatically identifies and reviews threat artifacts for possible remediation. The process involved Powershell dropping a suspicious file on the machine and executing it."
-      question: "Following the automated investigation, Powershell dropped a suspicious file on the machine and executed it. Can you provide the SID of the account involved in this activity?"
-
+      incident_context: As part of a security incident, u141(u141@ash.alpineskihouse.co)
+        initiated an automated investigation on `vnevado-win10e` which automatically
+        identifies and reviews threat artifacts for possible remediation. The process
+        involved Powershell dropping a suspicious file on the machine and executing
+        it.
+      question: Following the automated investigation, Powershell dropped a suspicious
+        file on the machine and executed it. Can you provide the SID of the account
+        involved in this activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-1-5-21-1870156660-7534030218-135086563-1193"
+          - S-1-5-21-1870156660-7534030218-135086563-1193
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An Automated investigation was manually initiated by user `u141` with email `u141@ash.alpineskihouse.co` on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An Automated investigation was manually initiated by user `u141`
+          with email `u141@ash.alpineskihouse.co` on the host with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Powershell on this host dropped and executed a suspicious file."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Powershell on this host dropped and executed a suspicious file.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
       - subtask_id: checkpoint_3
         title: Checkpoint 3
-        description: "The suspicious activity involves the account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The suspicious activity involves the account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_34_task_70
     title: incident_34_task_70
-    description: "Who is the Azure Active Directory (AAD) user associated with this suspicious activity?"
-
+    description: Who is the Azure Active Directory (AAD) user associated with this
+      suspicious activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In the security incident where powershell.exe dropped and executed a suspicious file (winatp-intro-backdoor.exe) on machine `vnevado-win10e`, the account named `samuelf` was involved along with multiple associated entities including host (`02b8f519-1123-4228-b32a-ccb78af3449f`) and process ID `8604`."
-      question: "Who is the Azure Active Directory (AAD) user associated with this suspicious activity?"
-
+      incident_context: In the security incident where powershell.exe dropped and
+        executed a suspicious file (winatp-intro-backdoor.exe) on machine `vnevado-win10e`,
+        the account named `samuelf` was involved along with multiple associated entities
+        including host (`02b8f519-1123-4228-b32a-ccb78af3449f`) and process ID `8604`.
+      question: Who is the Azure Active Directory (AAD) user associated with this
+        suspicious activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "16320fec-8d90-403b-b7fe-78f715d4728d"
+          - 16320fec-8d90-403b-b7fe-78f715d4728d
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d` executed a Powershell command that dropped and executed a suspicious file on the machine."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`
+          executed a Powershell command that dropped and executed a suspicious file
+          on the machine.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

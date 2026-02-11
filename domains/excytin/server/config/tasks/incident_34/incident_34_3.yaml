@@ -1,257 +1,537 @@
 tasks:
   - task_id: incident_34_task_21
     title: incident_34_task_21
-    description: "What is the name of the file identified during the suspicious PowerShell command line activity?"
-
+    description: What is the name of the file identified during the suspicious PowerShell
+      command line activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious PowerShell activity involving the execution of `powershell.exe` to download a file or run an encoded command was observed on the machine `vnevado-win10e`. PowerShell is often used by attackers to bypass security protection mechanisms by executing their payload in memory without leaving a trace or touching the disk."
-      question: "What is the name of the file identified during the suspicious PowerShell command line activity?"
-
+      incident_context: A suspicious PowerShell activity involving the execution of
+        `powershell.exe` to download a file or run an encoded command was observed
+        on the machine `vnevado-win10e`. PowerShell is often used by attackers to
+        bypass security protection mechanisms by executing their payload in memory
+        without leaving a trace or touching the disk.
+      question: What is the name of the file identified during the suspicious PowerShell
+        command line activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winatp-intro-backdoor.exe"
+          - winatp-intro-backdoor.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious PowerShell executed a command at `2024-06-26t12:00:39.2886108z` with Process ID `8604` including encoded commands and base64 data."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious PowerShell executed a command at `2024-06-26t12:00:39.2886108z`
+          with Process ID `8604` including encoded commands and base64 data.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "This PowerShell command was involved in creating and running a file named `winatp-intro-backdoor.exe`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: This PowerShell command was involved in creating and running
+          a file named `winatp-intro-backdoor.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_22
     title: incident_34_task_22
-    description: "What is the IP address associated with the detected anomaly in the ASEP registry?"
-
+    description: What is the IP address associated with the detected anomaly in the
+      ASEP registry?
     inherit_shared: true
-
     initial_context:
-      incident_context: "As part of a recent security incident involving suspicious PowerShell commands, potentially used for invoking modules or downloading payloads, a malicious PowerShell script was executed on an unspecified host. An additional alert later flagged an anomaly in the ASEP registry which could indicate an attempt by an attacker to maintain persistence after a reboot."
-      question: "What is the IP address associated with the detected anomaly in the ASEP registry?"
-
+      incident_context: As part of a recent security incident involving suspicious
+        PowerShell commands, potentially used for invoking modules or downloading
+        payloads, a malicious PowerShell script was executed on an unspecified host.
+        An additional alert later flagged an anomaly in the ASEP registry which could
+        indicate an attempt by an attacker to maintain persistence after a reboot.
+      question: What is the IP address associated with the detected anomaly in the
+        ASEP registry?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "72.5.72.208"
+          - 72.5.72.208
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious PowerShell command line activity was observed on the `vnevado-win10e` host."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious PowerShell command line activity was observed on
+          the `vnevado-win10e` host.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "An anomaly was detected in the ASEP registry involving a process that registered a suspicious command or file associated with IP address `72.5.72.208`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An anomaly was detected in the ASEP registry involving a process
+          that registered a suspicious command or file associated with IP address
+          `72.5.72.208`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_23
     title: incident_34_task_23
-    description: "Related to this alert, an anomalous scheduled task was created. Can you identify the file involved in creating this task?"
-
+    description: Related to this alert, an anomalous scheduled task was created. Can
+      you identify the file involved in creating this task?
     inherit_shared: true
-
     initial_context:
-      incident_context: "In a recent security incident, an anomaly was detected in the ASEP registry where a process registered a suspicious command or file. The command involved adding a registry entry to run `winatp-intro-backdoor.exe` located on the desktop. The associated IP address was `72.5.72.208` and the Process ID was 10208."
-      question: "Related to this alert, an anomalous scheduled task was created. Can you identify the file involved in creating this task?"
-
+      incident_context: In a recent security incident, an anomaly was detected in
+        the ASEP registry where a process registered a suspicious command or file.
+        The command involved adding a registry entry to run `winatp-intro-backdoor.exe`
+        located on the desktop. The associated IP address was `72.5.72.208` and the
+        Process ID was 10208.
+      question: Related to this alert, an anomalous scheduled task was created. Can
+        you identify the file involved in creating this task?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "powershell.exe"
+          - powershell.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The account with the name `samuelf` registered a suspicious command or file in ASEP registry key."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The account with the name `samuelf` registered a suspicious command
+          or file in ASEP registry key.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A process named `powershell.exe` was used to create an anomalous scheduled task."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process named `powershell.exe` was used to create an anomalous
+          scheduled task.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_24
     title: incident_34_task_24
-    description: "What is the name of the file that PowerShell dropped and executed on the machine?"
-
+    description: What is the name of the file that PowerShell dropped and executed
+      on the machine?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A command in PowerShell was executed by a suspicious process on a host `vnevado-win10e`. The process may have been initiated by the user `samuelf` whose SID is `S-1-5-21-1870156660-7534030218-135086563-1193`. The file `powershell.exe` was involved and has been linked to potentially malicious activity, likely used by an attacker to bypass security protection mechanisms."
-      question: "What is the name of the file that PowerShell dropped and executed on the machine?"
-
+      incident_context: A command in PowerShell was executed by a suspicious process
+        on a host `vnevado-win10e`. The process may have been initiated by the user
+        `samuelf` whose SID is `S-1-5-21-1870156660-7534030218-135086563-1193`. The
+        file `powershell.exe` was involved and has been linked to potentially malicious
+        activity, likely used by an attacker to bypass security protection mechanisms.
+      question: What is the name of the file that PowerShell dropped and executed
+        on the machine?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winatp-intro-backdoor.exe"
+          - winatp-intro-backdoor.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A command in PowerShell was executed by a suspicious process associated with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A command in PowerShell was executed by a suspicious process
+          associated with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "PowerShell dropped a suspicious file named `winatp-intro-backdoor.exe` on the machine and executed it."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: PowerShell dropped a suspicious file named `winatp-intro-backdoor.exe`
+          on the machine and executed it.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_25
     title: incident_34_task_25
-    description: "In relation to this incident, can you identify the Security Identifier (SID) of the account that executed the suspicious PowerShell command?"
-
+    description: In relation to this incident, can you identify the Security Identifier
+      (SID) of the account that executed the suspicious PowerShell command?
     inherit_shared: true
-
     initial_context:
-      incident_context: "There was an incident where an anomalous scheduled task was created using `schtasks.exe`, which may indicate an attacker attempting to obtain persistence on the device. The task was set to execute a backdoor named `winatp-intro-backdoor.exe` located in the user's OneDrive folder. This incident is a part of a larger series of suspicious events."
-      question: "In relation to this incident, can you identify the Security Identifier (SID) of the account that executed the suspicious PowerShell command?"
-
+      incident_context: There was an incident where an anomalous scheduled task was
+        created using `schtasks.exe`, which may indicate an attacker attempting to
+        obtain persistence on the device. The task was set to execute a backdoor named
+        `winatp-intro-backdoor.exe` located in the user's OneDrive folder. This incident
+        is a part of a larger series of suspicious events.
+      question: In relation to this incident, can you identify the Security Identifier
+        (SID) of the account that executed the suspicious PowerShell command?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "S-1-5-21-1870156660-7534030218-135086563-1193"
+          - S-1-5-21-1870156660-7534030218-135086563-1193
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "There was an anomalous scheduled task created on the host `vnevado-win10e`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was an anomalous scheduled task created on the host `vnevado-win10e`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious process executed a PowerShell command by the user with SID `S-1-5-21-1870156660-7534030218-135086563-1193`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious process executed a PowerShell command by the user
+          with SID `S-1-5-21-1870156660-7534030218-135086563-1193`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_26
     title: incident_34_task_26
-    description: "Can you identify the filename of the process that was registered in the ASEP registry as part of this anomaly?"
-
+    description: Can you identify the filename of the process that was registered
+      in the ASEP registry as part of this anomaly?
     inherit_shared: true
-
     initial_context:
-      incident_context: "An anomaly was detected in the ASEP registry on host `vnevado-win10e`, which indicated that a process registered a suspicious command or file to run after a reboot. The account associated with this activity has the username `samuelf`, and the IP address involved in this alert is `72.5.72.208`. This might be part of an attacker's strategy to maintain persistence on the machine."
-      question: "Can you identify the filename of the process that was registered in the ASEP registry as part of this anomaly?"
-
+      incident_context: An anomaly was detected in the ASEP registry on host `vnevado-win10e`,
+        which indicated that a process registered a suspicious command or file to
+        run after a reboot. The account associated with this activity has the username
+        `samuelf`, and the IP address involved in this alert is `72.5.72.208`. This
+        might be part of an attacker's strategy to maintain persistence on the machine.
+      question: Can you identify the filename of the process that was registered in
+        the ASEP registry as part of this anomaly?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winatp-intro-backdoor.exe"
+          - winatp-intro-backdoor.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A process registered a suspicious command or file `winatp-intro-backdoor.exe` in the ASEP registry key."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process registered a suspicious command or file `winatp-intro-backdoor.exe`
+          in the ASEP registry key.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
   - task_id: incident_34_task_27
     title: incident_34_task_27
-    description: "What is the command involved?"
-
+    description: What is the command involved?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During a security incident on 2024-07-04, a process with ID 10208 executed a suspicious command involving the ASEP registry to run after a reboot. This was detected as an anomaly in the ASEP registry from the IP address `72.5.72.208`. The command used was `reg add hkcu\\software\\microsoft\\windows\\currentversion\\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\\desktop\\winatp-intro-backdoor.exe`. This indicates an attempt to maintain persistence on the compromised machine."
-      question: "What is the command involved?"
-
+      incident_context: During a security incident on 2024-07-04, a process with ID
+        10208 executed a suspicious command involving the ASEP registry to run after
+        a reboot. This was detected as an anomaly in the ASEP registry from the IP
+        address `72.5.72.208`. The command used was `reg add hkcu\software\microsoft\windows\currentversion\runonce
+        /f /v yrei /t reg_expand_sz /d %userprofile%\desktop\winatp-intro-backdoor.exe`.
+        This indicates an attempt to maintain persistence on the compromised machine.
+      question: What is the command involved?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "reg  add hkcu\\software\\microsoft\\windows\\currentversion\\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\\desktop\\winatp-intro-backdoor.exe"
+          - reg  add hkcu\software\microsoft\windows\currentversion\runonce /f /v
+            yrei /t reg_expand_sz /d %userprofile%\desktop\winatp-intro-backdoor.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d` registered a suspicious command or file in the ASEP registry key."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`
+          registered a suspicious command or file in the ASEP registry key.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A process named `powershell.exe` was used to download a file or run an encoded command, which may indicate an attempt by an attacker to execute malicious payloads in memory without leaving a trace."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process named `powershell.exe` was used to download a file
+          or run an encoded command, which may indicate an attempt by an attacker
+          to execute malicious payloads in memory without leaving a trace.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_28
     title: incident_34_task_28
-    description: "What is the name of the process involved in the suspicious Task Scheduler activity following the executed PowerShell command?"
-
+    description: What is the name of the process involved in the suspicious Task Scheduler
+      activity following the executed PowerShell command?
     inherit_shared: true
-
     initial_context:
-      incident_context: "Suspicious Task Scheduler activity was detected immediately after the PowerShell command execution. This process utilized Task Scheduler to create or modify a task, potentially to launch malicious code automatically and establish persistence. The threat analytics report contains further insights on this activity."
-      question: "What is the name of the process involved in the suspicious Task Scheduler activity following the executed PowerShell command?"
-
+      incident_context: Suspicious Task Scheduler activity was detected immediately
+        after the PowerShell command execution. This process utilized Task Scheduler
+        to create or modify a task, potentially to launch malicious code automatically
+        and establish persistence. The threat analytics report contains further insights
+        on this activity.
+      question: What is the name of the process involved in the suspicious Task Scheduler
+        activity following the executed PowerShell command?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "schtasks.exe"
+          - schtasks.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious process `winatp-intro-backdoor.exe` executed a PowerShell command."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious process `winatp-intro-backdoor.exe` executed a PowerShell
+          command.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A process with Process ID `1348` at `2024-06-26t12:00:40.0878355z` used Task Scheduler to create a task to launch `winatp-intro-backdoor.exe` automatically with the command line `schtasks.exe /create /sc once /tn yrei /tr \"c:\\users\\samuelf\\onedrive - (new) alpineskihouse\\desktop\\winatp-intro-backdoor.exe\" /st 11:58 /f`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process with Process ID `1348` at `2024-06-26t12:00:40.0878355z`
+          used Task Scheduler to create a task to launch `winatp-intro-backdoor.exe`
+          automatically with the command line `schtasks.exe /create /sc once /tn yrei
+          /tr "c:\users\samuelf\onedrive - (new) alpineskihouse\desktop\winatp-intro-backdoor.exe"
+          /st 11:58 /f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_29
     title: incident_34_task_29
-    description: "Following the alert where Powershell dropped a suspicious file, there was another alert about a suspicious PowerShell download or encoded command execution. Can you find the process ID and command line of the process used to execute this PowerShell command?"
-
+    description: Following the alert where Powershell dropped a suspicious file, there
+      was another alert about a suspicious PowerShell download or encoded command
+      execution. Can you find the process ID and command line of the process used
+      to execute this PowerShell command?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving a suspicious file named `winatp-intro-backdoor.exe` was reported. The file was dropped and executed on the machine using PowerShell. Attackers often use PowerShell to run encoded commands or download external payloads to bypass security protections."
-      question: "Following the alert where Powershell dropped a suspicious file, there was another alert about a suspicious PowerShell download or encoded command execution. Can you find the process ID and command line of the process used to execute this PowerShell command?"
-
+      incident_context: A security incident involving a suspicious file named `winatp-intro-backdoor.exe`
+        was reported. The file was dropped and executed on the machine using PowerShell.
+        Attackers often use PowerShell to run encoded commands or download external
+        payloads to bypass security protections.
+      question: Following the alert where Powershell dropped a suspicious file, there
+        was another alert about a suspicious PowerShell download or encoded command
+        execution. Can you find the process ID and command line of the process used
+        to execute this PowerShell command?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "ProcessId: 9780, CommandLine: \"winword.exe\" c:\\scripts\\rs4_winatp-intro-invoice.docm"
+          - 'ProcessId: 9780, CommandLine: "winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "The PowerShell run by a user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d` dropped a suspicious file on the machine and executed it."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The PowerShell run by a user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`
+          dropped a suspicious file on the machine and executed it.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A process with Process ID `9780` executed PowerShell to download a file or run an encoded command at `2024-06-26t11:57:20.2959493z` with the command line `winword.exe c:\\scripts\\rs4_winatp-intro-invoice.docm`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A process with Process ID `9780` executed PowerShell to download
+          a file or run an encoded command at `2024-06-26t11:57:20.2959493z` with
+          the command line `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_34_task_30
     title: incident_34_task_30
-    description: "Related to this alert, there is also a suspicious file dropped by Powershell on the machine. Can you find out the name of the file that was dropped?"
-
+    description: Related to this alert, there is also a suspicious file dropped by
+      Powershell on the machine. Can you find out the name of the file that was dropped?
     inherit_shared: true
-
     initial_context:
-      incident_context: "An anomalous scheduled task was created using the executable `schtasks.exe`. This might indicate an attacker trying to gain persistence on the device. For further information on this threat, you can refer to the following threat analytics report: https://security.microsoft.com/threatanalytics3/c9709a39-ac8d-493d-9a63-71da3ca1e745/analystreport."
-      question: "Related to this alert, there is also a suspicious file dropped by Powershell on the machine. Can you find out the name of the file that was dropped?"
-
+      incident_context: 'An anomalous scheduled task was created using the executable
+        `schtasks.exe`. This might indicate an attacker trying to gain persistence
+        on the device. For further information on this threat, you can refer to the
+        following threat analytics report: https://security.microsoft.com/threatanalytics3/c9709a39-ac8d-493d-9a63-71da3ca1e745/analystreport.'
+      question: Related to this alert, there is also a suspicious file dropped by
+        Powershell on the machine. Can you find out the name of the file that was
+        dropped?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "winatp-intro-backdoor.exe"
+          - winatp-intro-backdoor.exe
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An anomalous scheduled task was created using Powershell with the command line `powershell.exe -w movedn -exec bypass -command cd /;$filebase64prefix = '';$filebase64prefix= $filebase64prefix + 'tvq';$filebase64prefix= $filebase64prefix + 'qaam';$filebase64prefix= $filebase64prefix + 'aaaae';$filebase64prefix= $filebase64prefix + 'aaaa';$filebase64prefix= $filebase64prefix + '/';$filebase64prefix= $filebase64prefix + '/';$filebase64prefix= $filebase64prefix + '8aalgaaaaaaaaaqaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaagaaaaa4fug4atannibgbtm0hvghpcybwcm9ncmftignhbm5vdcbizsbydw4gaw4gre9tig1vzguudq0kjaaaaaaaaabqrqaaziycad/vl1oaaaaaaaaaapaaigalajaaabqaaaagaaaaaaaaaaaaaaagaaaaaabaaqaaaaagaaaaagaabaaaaaaaaaagaaaaaaaaaabgaaaaagaaaaaaaamayiuaaeaaaaaaaabaaaaaaaaaaaaqaaaaaaaaiaaaaaaaaaaaaaaqaaaaaaaaaaaaaaaaaaaaaaaaaabaaadmbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaajdiaabwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';$filebase64prefix= $filebase64prefix + 'aaaagaabiaaaaaaaaaaaaaaaudgv4daaaafwtaaaaiaaaabqaaaacaaaaaaaaaaaaaaaaaaagaabglnjzcmmaaadmbaaaaeaaaaagaaaafgaaaaaaaaaaaaaaaaaaqaaaqaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabiaaaaagafajgiaacmdwaaaqaaaasaaayaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeansbaaaekiica30baaaekh4cewiaaaqqigidfqiaaaqqhgj7awaabcoiagn9awaabcoaezafadwaaaabaaaraaj7bgaabhibaabwfgqaaaqsap4vagaaahiaaygcaaagabiabcgeaaagabiabsggaaagaazvaqaakwaqegjygqaacb5+bqaabhmmaaakfqyaaaqcka0aaaoakgatmaqauqaaaa';$filebase64prefix= $filebase64prefix + 'iaabesap4vdwaaariagygoaaakabiaiqaaaaaaiaaaka8aaaoaegagaaagacgqaaakaaaabaaabbingaaaasuwcmcaahcijrdyewaackkabqaabcoaaaatmauauqaaaamaabeafgoaaaqxaliacgaabaqsf3ljaabwbg8raaakcueaahaoegaacisfcuuaahakfgkaaar/cgaabhlnaabwkbmaaaocawyofaaacm8haaagacoaaaabmamaraaaaaqaabeaf3ltaabwfcgkaaagabykacgvaaakcgsbahaofgaacigxaaakcwdvgaaacnmzaaakdah+caaabcgaaaakcgdebsyaan4acp4bahbyrgeaccgbaaakjnkeaqbwck8cahaogwaaciygdqksigbydgmachkqawbwkbsaaaomcp4bahbyrgeaccgbaaakjgaxcrgdahaukaoaaayactodahaohaaacgaohqaaciyqaraaaaaae';$filebase64prefix= $filebase64prefix + 'aaxqqafdgaaasicka0aaaoakozyraqachmzaaakgagaaarzcaaaboajaaaefmqacgaabcoaqlnkqgeaaqaaaaaadaaaahy0ljaumzazmtkaaaaabqbsaaaanaqaacn+aacgbaaaraqaacntdhjpbmdzaaaaaewjaabcbaaai1vtakgnaaaqaaaai0dvsuqaaac4dqaa1aeaacncbg9iaaaaaaaaaaiaaafxhaibcqgaaad6atmafgaaaqaaab4aaaaeaaaacgaaaa0aaaakaaaahqaaaaiaaaauaaaabaaaaaeaaaadaaaabgaaaaeaaaacaaaaaqaaaaaagqibaaaaaaaganub5wmgapub5wmgafwbmgmpaaceaaagaisbyamgae4byamgalgbcqmgaj8bpqigacabigigaoga0wigadmb5wmgaambmgmgahabmgmgahqe0wigaeieigigajcaigigaaed0wigacsd0wikafedmgmg';$filebase64prefix= $filebase64prefix + 'ackeigigaiucigigalodigigab8eigigagyc0wigaaea0wigahse0wigahecmwakafuemgmgam4a0wigahad0wiaaaaakgaaaaaaaqabaakbeac8abmakqabaaeaaqaqajeaewa5aaqabwaaabaaywitadkabwakaaeargc5aaeaxqc8aaeaewc5abyagwo/adeaxqtdaaeaewthafaavwk5abeacadlabeahappabea2gltaeggaaaaaiyiowbyaaeaucaaaaaahgitabuaaqbziaaaaacgcjac1gacagegaaaaaiyioqiqaaiaaiaaaaaahgg/a1gaawbyiaaaaacgcegdfqadahwgaaaaaiyatwdaaaqaxcaaaaaahhinawyabwdkiaaaaacrgjmd4qahaeqhaaaaajea8gdlaacapceaaaaalgdxau0acgbsigaaaacggi0dbgalahuiaaaaajeykwphaasaaaababmcaaababm';$filebase64prefix= $filebase64prefix + 'caaababmcaaabamgaaaacal8caaadah8daaabalicaaacag0cebadadudaaabad0ecqcnaweaeqcnawyagqcnawoakqcnaxaamqcnaxuaoqcnaxuaqqcnaxuasqcnawyawqcnawyaaqcnaxoagqaaasuagqcnazqacqcnawyaeqb7akiaeqcta0gaeqawbe4acqbkalgawqbtbfwayqbkammawqbtbgga0qcvbhca2qdgaggamqbha3samqd2algaiqcnaxuaiqdlaoea4qchbika6qdwajaa6qcnbjuadgacakmaegalalqaiablalmbiqblalmbiqbtalgblgalapsalgataaqblgabacmblgajacwblgaradiblgazafwblga7agkbqablalmbqqblalmbqqbtalgbqwbdamebyablalmbyqblalmbyqbtalgbgablalmboablalmbwablalmbiaa9afqabgacaaeaaadcapmaaa';$filebase64prefix= $filebase64prefix + 'clavcaaab6a/maagabaamaaqacaamaagadaauaaqaeaauaagafaacaaqagaacabiaaaaeaaaaaaaaaaaaaaaaadgiaaaqaaaaaaaaaaaaaajoapqaaaaaabaaaaaaaaaaaaaaamgdtagaaaaaxac8aaaaavuluddy0ahnfc2vuc2vsuzqav2luqvrqsw50cm9cywnrzg9vcljtnaa8tw9kdwxlpgbtexn0zw0usu8abxnjb3jsawiapfn0ywdlpmtfx0jhy2tpbmdgawvszaa8sxntdwnjzxnzznvspmtfx0jhy2tpbmdgawvszaa8sw5mbz5rx19cywnraw5nrmllbgqavhjhy2uarxzlbnrtb3vyy2uaz2v0x1n0ywdlahnldf9tdgfnzqbucmfjzuf0dgfja1n0ywdlahn0ywdlaenvbnnvbguav3jpdgvmaw5laenvbwjpbmuavmfsdwvuexblafryywnlqxr0ywnrughhc2uar';$filebase64prefix= $filebase64prefix + 'gvidwdnzxjccm93c2fibgvtdgf0zqbxcml0zqbfdmvuderhdgfbdhryawj1dguaq29tcglszxjhzw5lcmf0zwrbdhryawj1dguar3vpzef0dhjpynv0zqbezwj1z2dhymxlqxr0cmlidxrlaerlynvnz2vyqnjvd3nhymxlqxr0cmlidxrlaenvbvzpc2libgvbdhryawj1dguavgfyz2v0rnjhbwv3b3jrqxr0cmlidxrlaefzc2vtymx5rmlszvzlcnnpb25bdhryawj1dguaq29tcglsyxrpb25szwxhegf0aw9uc0f0dhjpynv0zqbsdw50aw1lq29tcgf0awjpbgl0euf0dhjpynv0zqb2ywx1zqbucm9qlmv4zqbtexn0zw0urglhz25vc3rpy3muvhjhy2luzwbtexn0zw0uunvudgltzs5wzxjzaw9uaw5nagnfbg9mavn0cmluzwbub1n0cmluzwbtc2caugf0aabucm9q';$filebase64prefix= $filebase64prefix + 'ahnldf9mzxzlbabfdmvudexldmvsagdldf9jc1n1y2nlc3nmdwwac2v0x0lzu3vjy2vzc2z1babpc1n1y2nlc3nmdwwaaxn1y2nlc3nmdwwauhjvz3jhbqbtexn0zw0ac190cmfjzu51bqbvcf9mzxnzvghhbgbnywluagdldf9qcm9kdwn0vmvyc2lvbgbtexn0zw0urumfbmxlmnqgaghlbf9qcm9kdwn0vmvyc2lvbwazmtezadbfdmvudfbstaazmtezadbfdmvudfpjqaaadqblvdvniedmyqqbqzeazmtezadbfdmvudfpjqaaadxrcgkyaaddaadmb5wmgaalgaa9qadaxvvqadzeaqixiyatdavduyaagggoagiccgdvihtqdatjwjukbyanbbbbgglmqkkfgaygczguggazaal4eaajadffbbhxbdagfbgalaggfdqcugsdgaalllchaaacgaiahzghuffccukgggqagajqgzgqafabcdefadsdcqadagsaggbudasbasgggteagtagsg0baaaaaygagetgmesmibgaaagaga';$filebase64prefix= $filebase64prefix + 'aisgycgtltagbkydgrqagasadaawqgradacbgraabagaawcdasafaaaxubbcafags', executed at `2024-06-26t12:00:39.2886108z`, creating Process ID `8604`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An anomalous scheduled task was created using Powershell with
+          the command line `powershell.exe -w movedn -exec bypass -command cd /;$filebase64prefix
+          = '';$filebase64prefix= $filebase64prefix + 'tvq';$filebase64prefix= $filebase64prefix
+          + 'qaam';$filebase64prefix= $filebase64prefix + 'aaaae';$filebase64prefix=
+          $filebase64prefix + 'aaaa';$filebase64prefix= $filebase64prefix + '/';$filebase64prefix=
+          $filebase64prefix + '/';$filebase64prefix= $filebase64prefix + '8aalgaaaaaaaaaqaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaagaaaaa4fug4atannibgbtm0hvghpcybwcm9ncmftignhbm5vdcbizsbydw4gaw4gre9tig1vzguudq0kjaaaaaaaaabqrqaaziycad/vl1oaaaaaaaaaapaaigalajaaabqaaaagaaaaaaaaaaaaaaagaaaaaabaaqaaaaagaaaaagaabaaaaaaaaaagaaaaaaaaaabgaaaaagaaaaaaaamayiuaaeaaaaaaaabaaaaaaaaaaaaqaaaaaaaaiaaaaaaaaaaaaaaqaaaaaaaaaaaaaaaaaaaaaaaaaabaaadmbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaajdiaabwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';$filebase64prefix=
+          $filebase64prefix + 'aaaagaabiaaaaaaaaaaaaaaaudgv4daaaafwtaaaaiaaaabqaaaacaaaaaaaaaaaaaaaaaaagaabglnjzcmmaaadmbaaaaeaaaaagaaaafgaaaaaaaaaaaaaaaaaaqaaaqaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabiaaaaagafajgiaacmdwaaaqaaaasaaayaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaeansbaaaekiica30baaaekh4cewiaaaqqigidfqiaaaqqhgj7awaabcoiagn9awaabcoaezafadwaaaabaaaraaj7bgaabhibaabwfgqaaaqsap4vagaaahiaaygcaaagabiabcgeaaagabiabsggaaagaazvaqaakwaqegjygqaacb5+bqaabhmmaaakfqyaaaqcka0aaaoakgatmaqauqaaaa';$filebase64prefix=
+          $filebase64prefix + 'iaabesap4vdwaaariagygoaaakabiaiqaaaaaaiaaaka8aaaoaegagaaagacgqaaakaaaabaaabbingaaaasuwcmcaahcijrdyewaackkabqaabcoaaaatmauauqaaaamaabeafgoaaaqxaliacgaabaqsf3ljaabwbg8raaakcueaahaoegaacisfcuuaahakfgkaaar/cgaabhlnaabwkbmaaaocawyofaaacm8haaagacoaaaabmamaraaaaaqaabeaf3ltaabwfcgkaaagabykacgvaaakcgsbahaofgaacigxaaakcwdvgaaacnmzaaakdah+caaabcgaaaakcgdebsyaan4acp4bahbyrgeaccgbaaakjnkeaqbwck8cahaogwaaciygdqksigbydgmachkqawbwkbsaaaomcp4bahbyrgeaccgbaaakjgaxcrgdahaukaoaaayactodahaohaaacgaohqaaciyqaraaaaaae';$filebase64prefix=
+          $filebase64prefix + 'aaxqqafdgaaasicka0aaaoakozyraqachmzaaakgagaaarzcaaaboajaaaefmqacgaabcoaqlnkqgeaaqaaaaaadaaaahy0ljaumzazmtkaaaaabqbsaaaanaqaacn+aacgbaaaraqaacntdhjpbmdzaaaaaewjaabcbaaai1vtakgnaaaqaaaai0dvsuqaaac4dqaa1aeaacncbg9iaaaaaaaaaaiaaafxhaibcqgaaad6atmafgaaaqaaab4aaaaeaaaacgaaaa0aaaakaaaahqaaaaiaaaauaaaabaaaaaeaaaadaaaabgaaaaeaaaacaaaaaqaaaaaagqibaaaaaaaganub5wmgapub5wmgafwbmgmpaaceaaagaisbyamgae4byamgalgbcqmgaj8bpqigacabigigaoga0wigadmb5wmgaambmgmgahabmgmgahqe0wigaeieigigajcaigigaaed0wigacsd0wikafedmgmg';$filebase64prefix=
+          $filebase64prefix + 'ackeigigaiucigigalodigigab8eigigagyc0wigaaea0wigahse0wigahecmwakafuemgmgam4a0wigahad0wiaaaaakgaaaaaaaqabaakbeac8abmakqabaaeaaqaqajeaewa5aaqabwaaabaaywitadkabwakaaeargc5aaeaxqc8aaeaewc5abyagwo/adeaxqtdaaeaewthafaavwk5abeacadlabeahappabea2gltaeggaaaaaiyiowbyaaeaucaaaaaahgitabuaaqbziaaaaacgcjac1gacagegaaaaaiyioqiqaaiaaiaaaaaahgg/a1gaawbyiaaaaacgcegdfqadahwgaaaaaiyatwdaaaqaxcaaaaaahhinawyabwdkiaaaaacrgjmd4qahaeqhaaaaajea8gdlaacapceaaaaalgdxau0acgbsigaaaacggi0dbgalahuiaaaaajeykwphaasaaaababmcaaababm';$filebase64prefix=
+          $filebase64prefix + 'caaababmcaaabamgaaaacal8caaadah8daaabalicaaacag0cebadadudaaabad0ecqcnaweaeqcnawyagqcnawoakqcnaxaamqcnaxuaoqcnaxuaqqcnaxuasqcnawyawqcnawyaaqcnaxoagqaaasuagqcnazqacqcnawyaeqb7akiaeqcta0gaeqawbe4acqbkalgawqbtbfwayqbkammawqbtbgga0qcvbhca2qdgaggamqbha3samqd2algaiqcnaxuaiqdlaoea4qchbika6qdwajaa6qcnbjuadgacakmaegalalqaiablalmbiqblalmbiqbtalgblgalapsalgataaqblgabacmblgajacwblgaradiblgazafwblga7agkbqablalmbqqblalmbqqbtalgbqwbdamebyablalmbyqblalmbyqbtalgbgablalmboablalmbwablalmbiaa9afqabgacaaeaaadcapmaaa';$filebase64prefix=
+          $filebase64prefix + 'clavcaaab6a/maagabaamaaqacaamaagadaauaaqaeaauaagafaacaaqagaacabiaaaaeaaaaaaaaaaaaaaaaadgiaaaqaaaaaaaaaaaaaajoapqaaaaaabaaaaaaaaaaaaaaamgdtagaaaaaxac8aaaaavuluddy0ahnfc2vuc2vsuzqav2luqvrqsw50cm9cywnrzg9vcljtnaa8tw9kdwxlpgbtexn0zw0usu8abxnjb3jsawiapfn0ywdlpmtfx0jhy2tpbmdgawvszaa8sxntdwnjzxnzznvspmtfx0jhy2tpbmdgawvszaa8sw5mbz5rx19cywnraw5nrmllbgqavhjhy2uarxzlbnrtb3vyy2uaz2v0x1n0ywdlahnldf9tdgfnzqbucmfjzuf0dgfja1n0ywdlahn0ywdlaenvbnnvbguav3jpdgvmaw5laenvbwjpbmuavmfsdwvuexblafryywnlqxr0ywnrughhc2uar';$filebase64prefix=
+          $filebase64prefix + 'gvidwdnzxjccm93c2fibgvtdgf0zqbxcml0zqbfdmvuderhdgfbdhryawj1dguaq29tcglszxjhzw5lcmf0zwrbdhryawj1dguar3vpzef0dhjpynv0zqbezwj1z2dhymxlqxr0cmlidxrlaerlynvnz2vyqnjvd3nhymxlqxr0cmlidxrlaenvbvzpc2libgvbdhryawj1dguavgfyz2v0rnjhbwv3b3jrqxr0cmlidxrlaefzc2vtymx5rmlszvzlcnnpb25bdhryawj1dguaq29tcglsyxrpb25szwxhegf0aw9uc0f0dhjpynv0zqbsdw50aw1lq29tcgf0awjpbgl0euf0dhjpynv0zqb2ywx1zqbucm9qlmv4zqbtexn0zw0urglhz25vc3rpy3muvhjhy2luzwbtexn0zw0uunvudgltzs5wzxjzaw9uaw5nagnfbg9mavn0cmluzwbub1n0cmluzwbtc2caugf0aabucm9q';$filebase64prefix=
+          $filebase64prefix + 'ahnldf9mzxzlbabfdmvudexldmvsagdldf9jc1n1y2nlc3nmdwwac2v0x0lzu3vjy2vzc2z1babpc1n1y2nlc3nmdwwaaxn1y2nlc3nmdwwauhjvz3jhbqbtexn0zw0ac190cmfjzu51bqbvcf9mzxnzvghhbgbnywluagdldf9qcm9kdwn0vmvyc2lvbgbtexn0zw0urumfbmxlmnqgaghlbf9qcm9kdwn0vmvyc2lvbwazmtezadbfdmvudfbstaazmtezadbfdmvudfpjqaaadqblvdvniedmyqqbqzeazmtezadbfdmvudfpjqaaadxrcgkyaaddaadmb5wmgaalgaa9qadaxvvqadzeaqixiyatdavduyaagggoagiccgdvihtqdatjwjukbyanbbbbgglmqkkfgaygczguggazaal4eaajadffbbhxbdagfbgalaggfdqcugsdgaalllchaaacgaiahzghuffccukgggqagajqgzgqafabcdefadsdcqadagsaggbudasbasgggteagtagsg0baaaaaygagetgmesmibgaaagaga';$filebase64prefix=
+          $filebase64prefix + 'aisgycgtltagbkydgrqagasadaawqgradacbgraabagaawcdasafaaaxubbcafags',
+          executed at `2024-06-26t12:00:39.2886108z`, creating Process ID `8604`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Powershell dropped a file named `winatp-intro-backdoor.exe` on the machine and executed it."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Powershell dropped a file named `winatp-intro-backdoor.exe` on
+          the machine and executed it.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

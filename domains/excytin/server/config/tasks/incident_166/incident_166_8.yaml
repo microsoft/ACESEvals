@@ -1,253 +1,526 @@
 tasks:
   - task_id: incident_166_task_71
     title: incident_166_task_71
-    description: "Can you identify the Azure Active Directory (AAD) User ID associated with the compromised account that signed in to SAP?"
-
+    description: Can you identify the Azure Active Directory (AAD) User ID associated
+      with the compromised account that signed in to SAP?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A business email compromise (BEC)-related user, under the name `Jordan P`, signed in to SAP in a suspicious manner. This incident was flagged by Microsoft Defender XDR. The user account also had the following details: SID `S-1-5-21-1740051960-3534030288-108486866-1602`, IP address `107.253.5.27`, and associated email `Jordan P@vnevado.alpineskihouse.co`. The attacker might have taken control of the account to search through SAP with the intention of recording or modifying sensitive financial information, which could be used in future phishing or social engineering attacks."
-      question: "Can you identify the Azure Active Directory (AAD) User ID associated with the compromised account that signed in to SAP?"
-
+      incident_context: 'A business email compromise (BEC)-related user, under the
+        name `Jordan P`, signed in to SAP in a suspicious manner. This incident was
+        flagged by Microsoft Defender XDR. The user account also had the following
+        details: SID `S-1-5-21-1740051960-3534030288-108486866-1602`, IP address `107.253.5.27`,
+        and associated email `Jordan P@vnevado.alpineskihouse.co`. The attacker might
+        have taken control of the account to search through SAP with the intention
+        of recording or modifying sensitive financial information, which could be
+        used in future phishing or social engineering attacks.'
+      question: Can you identify the Azure Active Directory (AAD) User ID associated
+        with the compromised account that signed in to SAP?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "89e933b9-5b2e-4bd6-bcdf-033db707ef82"
+          - 89e933b9-5b2e-4bd6-bcdf-033db707ef82
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` involved in a business email compromise-related alert signed in to SAP in a suspicious manner. This account may have been controlled by an attacker to search through SAP with the intention of recording or modifying sensitive financial information."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          involved in a business email compromise-related alert signed in to SAP in
+          a suspicious manner. This account may have been controlled by an attacker
+          to search through SAP with the intention of recording or modifying sensitive
+          financial information.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
   - task_id: incident_166_task_72
     title: incident_166_task_72
-    description: "Can you identify the IP address from which the suspicious sign-in to SAP was made?"
-
+    description: Can you identify the IP address from which the suspicious sign-in
+      to SAP was made?
     inherit_shared: true
-
     initial_context:
-      incident_context: "As part of an investigation into a recent security incident, it was found that a user account under the name `Jordan P` with the email `Jordan P@vnevado.alpineskihouse.co` was flagged for a risky sign-in to SAP via Microsoft Entra ID. This security threat indicates that an attacker might have hijacked this user's account to sift through sensitive financial data in SAP for potential misuse. The alert was triggered by a risky sign-in detected in Microsoft Entra ID, which could be indicative of compromised credentials or an unauthorized access attempt."
-      question: "Can you identify the IP address from which the suspicious sign-in to SAP was made?"
-
+      incident_context: As part of an investigation into a recent security incident,
+        it was found that a user account under the name `Jordan P` with the email
+        `Jordan P@vnevado.alpineskihouse.co` was flagged for a risky sign-in to SAP
+        via Microsoft Entra ID. This security threat indicates that an attacker might
+        have hijacked this user's account to sift through sensitive financial data
+        in SAP for potential misuse. The alert was triggered by a risky sign-in detected
+        in Microsoft Entra ID, which could be indicative of compromised credentials
+        or an unauthorized access attempt.
+      question: Can you identify the IP address from which the suspicious sign-in
+        to SAP was made?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "107.253.5.27"
+          - 107.253.5.27
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious SAP authentication was detected from IP address `107.253.5.27`. This indicates that a user account with a risky sign-in alert in Microsoft Entra ID accessed SAP, potentially to record or modify sensitive financial information."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious SAP authentication was detected from IP address
+          `107.253.5.27`. This indicates that a user account with a risky sign-in
+          alert in Microsoft Entra ID accessed SAP, potentially to record or modify
+          sensitive financial information.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
   - task_id: incident_166_task_73
     title: incident_166_task_73
-    description: "Can you identify the user account name associated with the suspicious SAP authentication?"
-
+    description: Can you identify the user account name associated with the suspicious
+      SAP authentication?
     inherit_shared: true
-
     initial_context:
-      incident_context: "There was a security incident where a sign-in was detected from an anonymous IP address `192.238.237.190`, potentially indicating the use of Tor browser or anonymizer VPNs. This incident is connected to another alert where a user account with a risky sign-in alert in Microsoft Entra ID signed in to SAP, the enterprise application software. The intention might be to record or modify sensitive financial information, which could be used for later stages in an attack."
-      question: "Can you identify the user account name associated with the suspicious SAP authentication?"
-
+      incident_context: There was a security incident where a sign-in was detected
+        from an anonymous IP address `192.238.237.190`, potentially indicating the
+        use of Tor browser or anonymizer VPNs. This incident is connected to another
+        alert where a user account with a risky sign-in alert in Microsoft Entra ID
+        signed in to SAP, the enterprise application software. The intention might
+        be to record or modify sensitive financial information, which could be used
+        for later stages in an attack.
+      question: Can you identify the user account name associated with the suspicious
+        SAP authentication?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "Jordan P"
+          - Jordan P
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "There was a sign-in attempt from an anonymous IP address using the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a sign-in attempt from an anonymous IP address using
+          the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A risky user account `Jordan P` with a previous anonymous sign-in attempt signed in to SAP, potentially for malicious purposes."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A risky user account `Jordan P` with a previous anonymous sign-in
+          attempt signed in to SAP, potentially for malicious purposes.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_74
     title: incident_166_task_74
-    description: "During this investigation, it was found that a sign-in occurred from an anonymous IP address. Can you identify the anonymous IP address involved in this suspicious sign-in activity?"
-
+    description: During this investigation, it was found that a sign-in occurred from
+      an anonymous IP address. Can you identify the anonymous IP address involved
+      in this suspicious sign-in activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "There was a suspicious incident where a user's inbox rules were manipulated. This typically indicates that an attacker may have gained access to the user's inbox and is manipulating the rules to exfiltrate data from the organization. The suspicious activity was observed from the account `Jordan P` with associated email `Jordan P@vnevado.alpineskihouse.co` and IP address `255.246.85.58`. It has been discovered that this is possibly linked to an anonymous sign-in activity."
-      question: "During this investigation, it was found that a sign-in occurred from an anonymous IP address. Can you identify the anonymous IP address involved in this suspicious sign-in activity?"
-
+      incident_context: There was a suspicious incident where a user's inbox rules
+        were manipulated. This typically indicates that an attacker may have gained
+        access to the user's inbox and is manipulating the rules to exfiltrate data
+        from the organization. The suspicious activity was observed from the account
+        `Jordan P` with associated email `Jordan P@vnevado.alpineskihouse.co` and
+        IP address `255.246.85.58`. It has been discovered that this is possibly linked
+        to an anonymous sign-in activity.
+      question: During this investigation, it was found that a sign-in occurred from
+        an anonymous IP address. Can you identify the anonymous IP address involved
+        in this suspicious sign-in activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "95.202.65.202"
+          - 95.202.65.202
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user's inbox rules were manipulated suspiciously, and this was linked to the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user's inbox rules were manipulated suspiciously, and this
+          was linked to the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There was a sign-in from an anonymous IP address `95.202.65.202`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a sign-in from an anonymous IP address `95.202.65.202`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_75
     title: incident_166_task_75
-    description: "During this incident, there was a sign-in from an anonymous IP address. Can you identify the IP address that was flagged as anonymous?"
-
+    description: During this incident, there was a sign-in from an anonymous IP address.
+      Can you identify the IP address that was flagged as anonymous?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A security incident involving suspicious SAP authentication occurred where a user account with a risky sign-in alert in Microsoft Entra ID signed in to SAP. The user name is Jordan P and the email is Jordan P@vnevado.alpineskihouse.co. The risky sign-in might indicate an attacker controlling the user account to search or modify sensitive financial information in SAP, potentially for later use in phishing or social engineering."
-      question: "During this incident, there was a sign-in from an anonymous IP address. Can you identify the IP address that was flagged as anonymous?"
-
+      incident_context: A security incident involving suspicious SAP authentication
+        occurred where a user account with a risky sign-in alert in Microsoft Entra
+        ID signed in to SAP. The user name is Jordan P and the email is Jordan P@vnevado.alpineskihouse.co.
+        The risky sign-in might indicate an attacker controlling the user account
+        to search or modify sensitive financial information in SAP, potentially for
+        later use in phishing or social engineering.
+      question: During this incident, there was a sign-in from an anonymous IP address.
+        Can you identify the IP address that was flagged as anonymous?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "192.238.237.190"
+          - 192.238.237.190
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` signed into SAP with a risky sign-in alert."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          signed into SAP with a risky sign-in alert.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The sign-in was from an anonymous IP address `192.238.237.190`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The sign-in was from an anonymous IP address `192.238.237.190`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_76
     title: incident_166_task_76
-    description: "Which mailbox primary address was involved in sending suspicious emails related to the ongoing BEC fraud attempt?"
-
+    description: Which mailbox primary address was involved in sending suspicious
+      emails related to the ongoing BEC fraud attempt?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A multi-stage security incident involving BEC (business email compromise) and financial fraud occurred in our organization. The incident began when a suspicious inbox rule that hides incoming email messages was created in a risky Azure Active Directory session by the user account of Jordan P with email `Jordan P@vnevado.alpineskihouse.co` and IP address `255.246.85.58`. This indicates an attempt to conduct a BEC attack."
-      question: "Which mailbox primary address was involved in sending suspicious emails related to the ongoing BEC fraud attempt?"
-
+      incident_context: A multi-stage security incident involving BEC (business email
+        compromise) and financial fraud occurred in our organization. The incident
+        began when a suspicious inbox rule that hides incoming email messages was
+        created in a risky Azure Active Directory session by the user account of Jordan
+        P with email `Jordan P@vnevado.alpineskihouse.co` and IP address `255.246.85.58`.
+        This indicates an attempt to conduct a BEC attack.
+      question: Which mailbox primary address was involved in sending suspicious emails
+        related to the ongoing BEC fraud attempt?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "tony@avoriaz.alpineskihouse.co"
+          - tony@avoriaz.alpineskihouse.co
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "An attacker created a suspicious inbox rule that hides incoming email messages in a session associated with the user account with SID `S-1-5-21-1740051960-3534030288-108486866-1602`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: An attacker created a suspicious inbox rule that hides incoming
+          email messages in a session associated with the user account with SID `S-1-5-21-1740051960-3534030288-108486866-1602`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "Suspicious emails related to a BEC (business email compromise) fraud attempt were sent from the mailbox with the primary address `tony@avoriaz.alpineskihouse.co`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious emails related to a BEC (business email compromise)
+          fraud attempt were sent from the mailbox with the primary address `tony@avoriaz.alpineskihouse.co`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_77
     title: incident_166_task_77
-    description: "During the investigation of this SAP authentication incident, there was a related alert indicating business email compromise (BEC) financial fraud. Can you identify the IP address associated with this BEC activity?"
-
+    description: During the investigation of this SAP authentication incident, there
+      was a related alert indicating business email compromise (BEC) financial fraud.
+      Can you identify the IP address associated with this BEC activity?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious SAP authentication incident was reported where a user account with a risky sign-in alert in Microsoft Entra ID signed in to SAP, the enterprise application software. This may indicate an attacker attempting to search through SAP to record or modify sensitive financial information. The activity was linked to AppId `100` and originating from the IP address `107.253.5.27`."
-      question: "During the investigation of this SAP authentication incident, there was a related alert indicating business email compromise (BEC) financial fraud. Can you identify the IP address associated with this BEC activity?"
-
+      incident_context: A suspicious SAP authentication incident was reported where
+        a user account with a risky sign-in alert in Microsoft Entra ID signed in
+        to SAP, the enterprise application software. This may indicate an attacker
+        attempting to search through SAP to record or modify sensitive financial information.
+        The activity was linked to AppId `100` and originating from the IP address
+        `107.253.5.27`.
+      question: During the investigation of this SAP authentication incident, there
+        was a related alert indicating business email compromise (BEC) financial fraud.
+        Can you identify the IP address associated with this BEC activity?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "255.246.85.58"
+          - 255.246.85.58
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` signed in to SAP during a risky sign-in alert in Microsoft Entra ID."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          signed in to SAP during a risky sign-in alert in Microsoft Entra ID.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "There was a suspicious inbox rule created in a risky Azure Active Directory session from IP address `255.246.85.58`, potentially indicating a business email compromise (BEC) attempt."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: There was a suspicious inbox rule created in a risky Azure Active
+          Directory session from IP address `255.246.85.58`, potentially indicating
+          a business email compromise (BEC) attempt.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_78
     title: incident_166_task_78
-    description: "What is the AppId of the cloud application that was related to the suspicious inbox manipulation rule in Jordan P's account?"
-
+    description: What is the AppId of the cloud application that was related to the
+      suspicious inbox manipulation rule in Jordan P's account?
     inherit_shared: true
-
     initial_context:
-      incident_context: "During a security incident, a user's inbox rules were manipulated in a suspicious manner at 10:00:07 AM on July 22, 2024. The account related to this manipulation is Jordan P with the email Jordan P@vnevado.alpineskihouse.co. The attacker might have accessed this inbox to move messages or folders, potentially exfiltrating data from your organization. The IP address involved in this alert is 255.246.85.58, and the application with AppId 20893 was also related."
-      question: "What is the AppId of the cloud application that was related to the suspicious inbox manipulation rule in Jordan P's account?"
-
+      incident_context: During a security incident, a user's inbox rules were manipulated
+        in a suspicious manner at 10:00:07 AM on July 22, 2024. The account related
+        to this manipulation is Jordan P with the email Jordan P@vnevado.alpineskihouse.co.
+        The attacker might have accessed this inbox to move messages or folders, potentially
+        exfiltrating data from your organization. The IP address involved in this
+        alert is 255.246.85.58, and the application with AppId 20893 was also related.
+      question: What is the AppId of the cloud application that was related to the
+        suspicious inbox manipulation rule in Jordan P's account?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "11161"
+          - '11161'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A user's inbox rules were manipulated in a suspicious manner. The affected account's email is `Jordan P@vnevado.alpineskihouse.co`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A user's inbox rules were manipulated in a suspicious manner.
+          The affected account's email is `Jordan P@vnevado.alpineskihouse.co`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A suspicious inbox rule was set on the inbox of the user Jordan P with the email `laylaw@vnevado.alpineskihouse.co`. The user created a MoveToFolder rule named ITCleanup on their own inbox, to move messages to a folder named RSS Feeds. The cloud application involved has the AppId `11161`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious inbox rule was set on the inbox of the user Jordan
+          P with the email `laylaw@vnevado.alpineskihouse.co`. The user created a
+          MoveToFolder rule named ITCleanup on their own inbox, to move messages to
+          a folder named RSS Feeds. The cloud application involved has the AppId `11161`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_79
     title: incident_166_task_79
-    description: "What is the IP address involved in the Password Spray attack?"
-
+    description: What is the IP address involved in the Password Spray attack?
     inherit_shared: true
-
     initial_context:
-      incident_context: "There was a suspicious event suggesting a possible BEC financial fraud indicated by traces involving the account Jordan P with the email `Jordan P@vnevado.alpineskihouse.co`. This event was linked to an ongoing Password Spray attack detected during the same timeframe. This suggests that attackers are actively trying to compromise accounts by spraying known passwords across different accounts."
-      question: "What is the IP address involved in the Password Spray attack?"
-
+      incident_context: There was a suspicious event suggesting a possible BEC financial
+        fraud indicated by traces involving the account Jordan P with the email `Jordan
+        P@vnevado.alpineskihouse.co`. This event was linked to an ongoing Password
+        Spray attack detected during the same timeframe. This suggests that attackers
+        are actively trying to compromise accounts by spraying known passwords across
+        different accounts.
+      question: What is the IP address involved in the Password Spray attack?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "95.202.65.202"
+          - 95.202.65.202
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "Suspicious events with business email compromise characteristics were observed with account AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: Suspicious events with business email compromise characteristics
+          were observed with account AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "A password spray attack was detected from IP address `95.202.65.202`."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A password spray attack was detected from IP address `95.202.65.202`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_166_task_80
     title: incident_166_task_80
-    description: "A BEC-related user later signed in to SAP in a suspicious manner. Can you identify the cloud application ID used by the user when this suspicious SAP sign-in occurred?"
-
+    description: A BEC-related user later signed in to SAP in a suspicious manner.
+      Can you identify the cloud application ID used by the user when this suspicious
+      SAP sign-in occurred?
     inherit_shared: true
-
     initial_context:
-      incident_context: "A suspicious inbox rule that hides incoming email messages was created in a risky Azure Active Directory session, which raises concerns of possible business email compromise (BEC) aimed at financial fraud. This activity was associated with an IP address `255.246.85.58`."
-      question: "A BEC-related user later signed in to SAP in a suspicious manner. Can you identify the cloud application ID used by the user when this suspicious SAP sign-in occurred?"
-
+      incident_context: A suspicious inbox rule that hides incoming email messages
+        was created in a risky Azure Active Directory session, which raises concerns
+        of possible business email compromise (BEC) aimed at financial fraud. This
+        activity was associated with an IP address `255.246.85.58`.
+      question: A BEC-related user later signed in to SAP in a suspicious manner.
+        Can you identify the cloud application ID used by the user when this suspicious
+        SAP sign-in occurred?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - "100"
+          - '100'
       scoring:
         max_score: 1.0
     subtasks:
       - subtask_id: checkpoint_1
         title: Checkpoint 1
-        description: "A suspicious inbox rule was created in a risky Azure Active Directory session on an account with SID `S-1-5-21-1740051960-3534030288-108486866-1602`. This might be an attempt at business email compromise (BEC) for financial fraud."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: A suspicious inbox rule was created in a risky Azure Active Directory
+          session on an account with SID `S-1-5-21-1740051960-3534030288-108486866-1602`.
+          This might be an attempt at business email compromise (BEC) for financial
+          fraud.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
       - subtask_id: checkpoint_2
         title: Checkpoint 2
-        description: "The user involved in the BEC signed in to SAP using a cloud application with AppId `100` in a suspicious manner. This might indicate an attacker is accessing sensitive financial information within SAP, possibly for use in phishing or further social engineering attacks."
-        objective: "Identify key details related to the potential compromise that might help in solving the main task."
+        description: The user involved in the BEC signed in to SAP using a cloud application
+          with AppId `100` in a suspicious manner. This might indicate an attacker
+          is accessing sensitive financial information within SAP, possibly for use
+          in phishing or further social engineering attacks.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

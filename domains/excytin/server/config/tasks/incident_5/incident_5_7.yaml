@@ -3,176 +3,235 @@ tasks:
     title: incident_5_task_61
     description: Regarding the system recovery setting tampering, which process was
       used to delete all volume shadow copies on the system?
-
     inherit_shared: true
     initial_context:
-      incident_context: A possible ransomware activity based on a known malicious extension
-        has been observed on a device where numerous file system changes involved appending
-        a suspicious file extension. Files involved include `get-userprttoken.ps1`,
+      incident_context: A possible ransomware activity based on a known malicious
+        extension has been observed on a device where numerous file system changes
+        involved appending a suspicious file extension. Files involved include `get-userprttoken.ps1`,
         `characterical.zip`, and `characterical.zip.lockbit`. The IP address associated
         with this activity is `99.83.111.100`, and the account SID is `S-0-6-5`. The
         activity is indicative of mass encryption of files by ransomware.
-      question: Regarding the system recovery setting tampering, which process was used
-        to delete all volume shadow copies on the system?
-
+      question: Regarding the system recovery setting tampering, which process was
+        used to delete all volume shadow copies on the system?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - vssblatemp.exe
+          - vssblatemp.exe
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: There is a possible ransomware activity on the host `vnevado-win11t`
-        that involves mass encryption of files.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: System recovery setting tampering by running the command `vssblatemp.exe
-        delete shadows /all` was observed on the device at `2024-06-20t09:29:40.8785892z`
-        with Process ID `1900`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: There is a possible ransomware activity on the host `vnevado-win11t`
+          that involves mass encryption of files.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: System recovery setting tampering by running the command `vssblatemp.exe
+          delete shadows /all` was observed on the device at `2024-06-20t09:29:40.8785892z`
+          with Process ID `1900`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_62
     title: incident_5_task_62
     description: In the context of this security incident, can you provide the command
       line that was used to delete all file snapshots and shadow copies?
-
     inherit_shared: true
     initial_context:
       incident_context: A security incident has been observed involving System recovery
-        setting tampering on the device `vnevado-win11u` along with actions aimed at
-        deleting built-in operating system data and disabling recovery services using
-        `vssblatemp.exe` and `bcdedit.exe` commands. The incident indicates an attempt
-        to prevent recovering a corrupted system, potentially associated with Data Destruction
-        and Ransomware infection patterns.
+        setting tampering on the device `vnevado-win11u` along with actions aimed
+        at deleting built-in operating system data and disabling recovery services
+        using `vssblatemp.exe` and `bcdedit.exe` commands. The incident indicates
+        an attempt to prevent recovering a corrupted system, potentially associated
+        with Data Destruction and Ransomware infection patterns.
       question: In the context of this security incident, can you provide the command
         line that was used to delete all file snapshots and shadow copies?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - 5512__2024-06-20t09:10:50.2899021z__vssblatemp.exe delete shadows /all
+          - 5512__2024-06-20t09:10:50.2899021z__vssblatemp.exe delete shadows /all
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: The account named `dp5hn` was involved in tampering with system recovery
-        settings, potentially disabling or deleting system recovery features to prevent
-        system recovery.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: The process with ID `5512` was detected executing the command `vssblatemp.exe
-        delete shadows /all` at `2024-06-20t09:10:50.2899021z`, indicating that all
-        file snapshots and shadow copies were deleted, which is common during ransomware
-        infection.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: The account named `dp5hn` was involved in tampering with system
+          recovery settings, potentially disabling or deleting system recovery features
+          to prevent system recovery.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: The process with ID `5512` was detected executing the command
+          `vssblatemp.exe delete shadows /all` at `2024-06-20t09:10:50.2899021z`,
+          indicating that all file snapshots and shadow copies were deleted, which
+          is common during ransomware infection.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_63
     title: incident_5_task_63
-    description: In connection to the potential ransomware activity, it was found that
-      all file backups were deleted. Can you determine the name of the process that
-      executed this deletion?
-
+    description: In connection to the potential ransomware activity, it was found
+      that all file backups were deleted. Can you determine the name of the process
+      that executed this deletion?
     inherit_shared: true
     initial_context:
-      incident_context: During a potential ransomware incident, several suspicious file
-        modifications were detected on a device. These modifications involved appending
-        a known malicious extension, indicative of mass file encryption. The related
-        files include `kiters.7z.lockbit`, `ponceau.7z.lockbit`, `unstreaming.xlsx.lockbit`,
+      incident_context: During a potential ransomware incident, several suspicious
+        file modifications were detected on a device. These modifications involved
+        appending a known malicious extension, indicative of mass file encryption.
+        The related files include `kiters.7z.lockbit`, `ponceau.7z.lockbit`, `unstreaming.xlsx.lockbit`,
         `earlap.doc.lockbit`, among others. Additionally, an IP address `99.83.111.100`
-        and a host with an AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e` are associated
-        with this alert.
+        and a host with an AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e` are
+        associated with this alert.
       question: In connection to the potential ransomware activity, it was found that
         all file backups were deleted. Can you determine the name of the process that
         executed this deletion?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - vssblatemp.exe
+          - vssblatemp.exe
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: Possible ransomware activity has been detected involving the mass
-        encryption of files indicated by a known malicious extension, associated with
-        the account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: File backups, such as file snapshots and shadow copies, were deleted
-        via WMI or VSSAdmin using the process `vssblatemp.exe`, which is common during
-        ransomware infections.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Possible ransomware activity has been detected involving the
+          mass encryption of files indicated by a known malicious extension, associated
+          with the account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: File backups, such as file snapshots and shadow copies, were
+          deleted via WMI or VSSAdmin using the process `vssblatemp.exe`, which is
+          common during ransomware infections.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_64
     title: incident_5_task_64
     description: What is the IP address associated with the malicious Manatee Tempest
       activity?
-
     inherit_shared: true
     initial_context:
       incident_context: A recent incident occurred where all file snapshots and shadow
-        copies were deleted via WMI or VSSAdmin on the host `vnevado-win11u` using the
-        file `vssblatemp.exe`. This is a common action performed during a ransomware
+        copies were deleted via WMI or VSSAdmin on the host `vnevado-win11u` using
+        the file `vssblatemp.exe`. This is a common action performed during a ransomware
         infection. Additionally, in relation to this incident, there is a historical
-        context that the Manatee Tempest group, a Russia-based cybercriminal group known
-        for its Dridex banking trojan campaigns, was involved. They have been active
-        since June 2014 and use sophisticated methods such as drive-by download attacks
-        and the BLISTER loader to deliver Cobalt Strike beacons.
+        context that the Manatee Tempest group, a Russia-based cybercriminal group
+        known for its Dridex banking trojan campaigns, was involved. They have been
+        active since June 2014 and use sophisticated methods such as drive-by download
+        attacks and the BLISTER loader to deliver Cobalt Strike beacons.
       question: What is the IP address associated with the malicious Manatee Tempest
         activity?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - 198.43.121.209
+          - 198.43.121.209
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: File backups were deleted via WMI or VSSAdmin by a user with SID
-        `S-1-5-21-1840191660-8534830288-125585561-1522`, which is a common tactic during
-        a ransomware infection.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: A suspicious IP address `198.43.121.209` was associated with the
-        Manatee Tempest activity group, known for malicious activities such as malware
-        campaigns and ransomware deployment.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: File backups were deleted via WMI or VSSAdmin by a user with
+          SID `S-1-5-21-1840191660-8534830288-125585561-1522`, which is a common tactic
+          during a ransomware infection.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A suspicious IP address `198.43.121.209` was associated with
+          the Manatee Tempest activity group, known for malicious activities such
+          as malware campaigns and ransomware deployment.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_65
     title: incident_5_task_65
-    description: What was the command line of the process detected with the known credential
-      theft tool execution?
-
+    description: What was the command line of the process detected with the known
+      credential theft tool execution?
     inherit_shared: true
     initial_context:
       incident_context: A serious security incident involving the Mimikatz credential
@@ -184,248 +243,361 @@ tasks:
         attempts.
       question: What was the command line of the process detected with the known credential
         theft tool execution?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - 7948__2024-06-20t08:59:42.8455252z__conhost.exe 0xffffffff -forcev1
+          - 7948__2024-06-20t08:59:42.8455252z__conhost.exe 0xffffffff -forcev1
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: The attacker launched `mimikatz.exe` with the command line `privilege::debug
-        sekurlsa::pth /user:fk8mq /ntlm:96def1a633fc6790124d5f8fe21cc72b /domain:vnevado.alpineskihouse.co
-        /run:..\notepad.exe \vnevado-jump cmd.exe` at `2024-06-20t09:05:15.5627318z`,
-        with Process ID `6600`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: A malicious credential theft tool execution was detected with the
-        command line `conhost.exe 0xffffffff -forcev1` at `2024-06-20t08:59:42.8455252z`,
-        with Process ID `7948`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: The attacker launched `mimikatz.exe` with the command line `privilege::debug
+          sekurlsa::pth /user:fk8mq /ntlm:96def1a633fc6790124d5f8fe21cc72b /domain:vnevado.alpineskihouse.co
+          /run:..\notepad.exe \vnevado-jump cmd.exe` at `2024-06-20t09:05:15.5627318z`,
+          with Process ID `6600`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A malicious credential theft tool execution was detected with
+          the command line `conhost.exe 0xffffffff -forcev1` at `2024-06-20t08:59:42.8455252z`,
+          with Process ID `7948`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_66
     title: incident_5_task_66
-    description: Regarding the system recovery setting tampering observed on this device,
-      what command line was executed by the process using `vssblatemp.exe` and what
-      was the corresponding Process Id and creation time?
-
+    description: Regarding the system recovery setting tampering observed on this
+      device, what command line was executed by the process using `vssblatemp.exe`
+      and what was the corresponding Process Id and creation time?
     inherit_shared: true
     initial_context:
       incident_context: A security incident was reported involving suspicious remote
-        activity on a device named `vnevado-win11u` at IP address `99.83.111.100`. This
-        incident includes multiple flagged processes, one of which involved running
+        activity on a device named `vnevado-win11u` at IP address `99.83.111.100`.
+        This incident includes multiple flagged processes, one of which involved running
         a script using PowerShell (`get-userprttoken.ps1`). One of the commands executed
         was `bcdedit /set recoveryenabled no`, which is commonly used to tamper with
         system recovery settings and disable automatic recovery features.
       question: Regarding the system recovery setting tampering observed on this device,
         what command line was executed by the process using `vssblatemp.exe` and what
         was the corresponding Process Id and creation time?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - 'Process Id: 7236, creation time: 2024-06-20t09:10:51.2193152, command line:
-          vssblatemp.exe delete shadows /all'
+          - 'Process Id: 7236, creation time: 2024-06-20t09:10:51.2193152, command
+            line: vssblatemp.exe delete shadows /all'
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: Suspicious remote activity was detected associated with the executable
-        `vssblatemp.exe`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: System recovery setting tampering was performed using `vssblatemp.exe`
-        with command line `vssblatemp.exe delete shadows /all` at `2024-06-20t09:10:51.2193152z`,
-        with Process ID `7236`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Suspicious remote activity was detected associated with the executable
+          `vssblatemp.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: System recovery setting tampering was performed using `vssblatemp.exe`
+          with command line `vssblatemp.exe delete shadows /all` at `2024-06-20t09:10:51.2193152z`,
+          with Process ID `7236`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_67
     title: incident_5_task_67
     description: What IP address was involved in the ransomware payload that was remotely
       launched following the attempt to access the Primary Refresh Token (PRT)?
-
     inherit_shared: true
     initial_context:
-      incident_context: A possible attempt to access a Primary Refresh Token (PRT) was
-        detected on host `vnevado-win11u`, which could be an indication of attackers
-        attempting to gain further access or perform credential theft. The process involved
-        was `browsercore.exe` with a ProcessId__CreatedTimeUtc__CommandLine of `1640__2024-06-20t09:32:12.1031042z__
+      incident_context: A possible attempt to access a Primary Refresh Token (PRT)
+        was detected on host `vnevado-win11u`, which could be an indication of attackers
+        attempting to gain further access or perform credential theft. The process
+        involved was `browsercore.exe` with a ProcessId__CreatedTimeUtc__CommandLine
+        of `1640__2024-06-20t09:32:12.1031042z__
       question: What IP address was involved in the ransomware payload that was remotely
         launched following the attempt to access the Primary Refresh Token (PRT)?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - 99.83.111.100
+          - 99.83.111.100
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: There was a possible attempt to access their Primary Refresh Token
-        (PRT) by an account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: A ransomware payload was remotely launched from IP address `99.83.111.100`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: There was a possible attempt to access their Primary Refresh
+          Token (PRT) by an account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A ransomware payload was remotely launched from IP address `99.83.111.100`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_68
     title: incident_5_task_68
     description: What is the host name of the device where 'CommandAndControl' malware
       was detected during lateral movement?
-
     inherit_shared: true
     initial_context:
-      incident_context: A security incident involving the Manatee Tempest activity group
-        was detected. This group is known for using drive-by downloads and other methods
-        to gain initial access, followed by using malware tools for lateral movement.
-        The incident started with a suspicious activity involving a URL `http://vectorsandarrows.com`,
-        accessed from host `vnevado-win10r` with IP address `198.43.121.209` via a curl
-        command. The ProcessId__CreatedTimeUtc__CommandLine is `1332__2024-06-20t09:10:52.7298237z__curl
-        http://vectorsandarrows.com`.
+      incident_context: A security incident involving the Manatee Tempest activity
+        group was detected. This group is known for using drive-by downloads and other
+        methods to gain initial access, followed by using malware tools for lateral
+        movement. The incident started with a suspicious activity involving a URL
+        `http://vectorsandarrows.com`, accessed from host `vnevado-win10r` with IP
+        address `198.43.121.209` via a curl command. The ProcessId__CreatedTimeUtc__CommandLine
+        is `1332__2024-06-20t09:10:52.7298237z__curl http://vectorsandarrows.com`.
       question: What is the host name of the device where 'CommandAndControl' malware
         was detected during lateral movement?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - vnevado-win10s
+          - vnevado-win10s
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: Manatee Tempest, a Russia-based cybercriminal group, was involved
-        in the use of access broker Mustard Tempest to facilitate infections and lateral
-        movement using BLISTER loader and Cobalt Strike beacons on various networks.
-        The group used domain fronting for command-and-control of Cobalt Strike.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: A suspicious account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`
-        was identified in the context of the Manatee Tempest group activities.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_3
-      title: Checkpoint 3
-      description: The 'CommandAndControl' malware was detected on the host `vnevado-win10s`,
-        indicating an attempt at lateral movement within the network.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Manatee Tempest, a Russia-based cybercriminal group, was involved
+          in the use of access broker Mustard Tempest to facilitate infections and
+          lateral movement using BLISTER loader and Cobalt Strike beacons on various
+          networks. The group used domain fronting for command-and-control of Cobalt
+          Strike.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A suspicious account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`
+          was identified in the context of the Manatee Tempest group activities.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: The 'CommandAndControl' malware was detected on the host `vnevado-win10s`,
+          indicating an attempt at lateral movement within the network.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
   - task_id: incident_5_task_69
     title: incident_5_task_69
     description: Can you identify the process command used that might have tampered
       with the system recovery settings?
-
     inherit_shared: true
     initial_context:
-      incident_context: An incident occurred involving the potential compromise of devices
-        showing ransomware-like behavior. An IP address associated with this is `99.83.111.100`,
-        and files such as `get-userprttoken.ps1`, `characterical.zip`, and `characterical.zip.lockbit`
-        were detected. Additionally, there was an incident of system recovery setting
-        tampering. The tampering might involve adversaries deleting or removing system
-        data and turning off recovery features to prevent system restoration.
-      question: Can you identify the process command used that might have tampered with
-        the system recovery settings?
-
+      incident_context: An incident occurred involving the potential compromise of
+        devices showing ransomware-like behavior. An IP address associated with this
+        is `99.83.111.100`, and files such as `get-userprttoken.ps1`, `characterical.zip`,
+        and `characterical.zip.lockbit` were detected. Additionally, there was an
+        incident of system recovery setting tampering. The tampering might involve
+        adversaries deleting or removing system data and turning off recovery features
+        to prevent system restoration.
+      question: Can you identify the process command used that might have tampered
+        with the system recovery settings?
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - vssblatemp.exe delete shadows /all
+          - vssblatemp.exe delete shadows /all
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: The device with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`
-        is potentially compromised and exhibiting ransomware-like behavior.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: On 2024-06-20 at 09:29:40.8785892 UTC, the process vssblatemp.exe
-        with Process ID `1900` was executed with the command line `vssblatemp.exe delete
-        shadows /all` to tamper with system recovery settings by deleting volume shadow
-        copies.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: The device with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`
+          is potentially compromised and exhibiting ransomware-like behavior.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: On 2024-06-20 at 09:29:40.8785892 UTC, the process vssblatemp.exe
+          with Process ID `1900` was executed with the command line `vssblatemp.exe
+          delete shadows /all` to tamper with system recovery settings by deleting
+          volume shadow copies.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
   - task_id: incident_5_task_70
     title: incident_5_task_70
     description: What is the hostname of the device where a possible attempt to access
       Primary Refresh Token (PRT) was detected?
-
     inherit_shared: true
     initial_context:
-      incident_context: A security incident started with lateral movement detected from
-        IP address `83.162.58.168`. The alert was flagged as 'Possible lateral movement'
-        and indicated that an attacker might be trying to gather data or elevate privileges
-        by moving across different devices. This alert was based on a Microsoft Defender
-        for Endpoint alert. Shortly after, at 2024-07-04 22:35:03.652724+00:00, a 'Command
-        and Control behavior' alert was triggered due to malware activities. This malware
-        was active and necessitated precautionary measures. Finally, an alert flagged
-        as 'Possible attempt to access Primary Refresh Token (PRT)' was observed, indicating
-        an attempt to access Azure AD authentication resources which could facilitate
-        lateral movement or credential theft.
+      incident_context: A security incident started with lateral movement detected
+        from IP address `83.162.58.168`. The alert was flagged as 'Possible lateral
+        movement' and indicated that an attacker might be trying to gather data or
+        elevate privileges by moving across different devices. This alert was based
+        on a Microsoft Defender for Endpoint alert. Shortly after, at 2024-07-04 22:35:03.652724+00:00,
+        a 'Command and Control behavior' alert was triggered due to malware activities.
+        This malware was active and necessitated precautionary measures. Finally,
+        an alert flagged as 'Possible attempt to access Primary Refresh Token (PRT)'
+        was observed, indicating an attempt to access Azure AD authentication resources
+        which could facilitate lateral movement or credential theft.
       question: What is the hostname of the device where a possible attempt to access
         Primary Refresh Token (PRT) was detected?
-
     submission_evaluation_config:
       strategy: static
       criteria:
         expected_answers:
-        - vnevado-win10s
+          - vnevado-win10s
       scoring:
         max_score: 1.0
-
     subtasks:
-    - subtask_id: checkpoint_1
-      title: Checkpoint 1
-      description: There was possible lateral movement observed on another device associated
-        with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_2
-      title: Checkpoint 2
-      description: Command and control behavior related to malware was blocked, and
-        the associated account name is `dp5hn`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
-
-    - subtask_id: checkpoint_3
-      title: Checkpoint 3
-      description: A possible attempt to access the Primary Refresh Token (PRT) was
-        detected on the host `vnevado-win10s`.
-      objective: Identify key details related to the potential compromise that might
-        help in solving the main task.
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: There was possible lateral movement observed on another device
+          associated with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Command and control behavior related to malware was blocked,
+          and the associated account name is `dp5hn`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: A possible attempt to access the Primary Refresh Token (PRT)
+          was detected on the host `vnevado-win10s`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0

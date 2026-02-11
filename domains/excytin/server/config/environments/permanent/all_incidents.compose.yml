@@ -148,7 +148,7 @@ services:
       test: ["CMD", "/usr/local/bin/healthcheck.sh"]
       interval: 20s
       timeout: 30s
-      retries: 5
+      retries: 10
       start_period: 300s
     deploy:
       resources:

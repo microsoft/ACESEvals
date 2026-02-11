@@ -29,7 +29,7 @@ global_defaults:
           enabled: false
 
   benchmark_config:
-    episode_attempts: 3
+    episode_attempts: 1
 
   # Dependency resolution configuration
   dependency_config:
