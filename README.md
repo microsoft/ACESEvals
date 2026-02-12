@@ -132,7 +132,7 @@ Excytin includes four task sets for different evaluation purposes:
 | `latest_test_set` | New O3-generated test questions | 599 tasks | **Benchmarking & Evaluation** |
 | `latest_train_set` | New O3-generated training questions | 418 tasks | **Training & Fine-tuning** |
 | `legacy_test_set` | Legacy O1-preview generated test tasks | 589 tasks | Paper comparison only |
-| `legacy_train_set` | Legacy O1-ga generated training questions | 418 tasks | Paper comparison only |
+| `legacy_train_set` | Legacy O1-preview generated training questions | 418 tasks | Paper comparison only |
 
 #### Task Set Details
 
