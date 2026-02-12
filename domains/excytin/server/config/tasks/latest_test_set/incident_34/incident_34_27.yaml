@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_27
+    title: incident_34_latest_test_set_task_27
+    description: 'According to the detection for the suspicious PowerShell execution, which user account was associated with the process that ran the PowerShell command?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'An automated investigation was manually triggered on host `vnevado-win10e.vnevado.alpineskihouse.co` (device ID 02b8f519-1123-4228-b32a-ccb78af3449f) by user `u141@ash.alpineskihouse.co`. Shortly after, a detection reported that a suspicious process executed a PowerShell command on the same endpoint, suggesting an attacker may be running commands in memory to avoid leaving traces.'
+      question: 'According to the detection for the suspicious PowerShell execution, which user account was associated with the process that ran the PowerShell command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'samuelf'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'samuelf'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An automated investigation was manually started on the host whose AadDeviceId is `02b8f519-1123-4228-b32a-ccb78af3449f`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, a suspicious process executed a PowerShell command while running under the account Name `samuelf`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

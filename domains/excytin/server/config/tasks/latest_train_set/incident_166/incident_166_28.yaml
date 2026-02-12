@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_train_set_task_28
+    title: incident_166_latest_train_set_task_28
+    description: 'Subsequently, the same risky user account authenticated to an SAP cloud application. What is the application ID of that SAP service?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an incident investigation, a suspicious inbox rule created from the IP address 255.246.85.58 indicated a potential Business Email Compromise (BEC) attempt. The activity originated from a risky Azure Active Directory session and pointed to possible financial-fraud preparations.'
+      question: 'Subsequently, the same risky user account authenticated to an SAP cloud application. What is the application ID of that SAP service?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '100'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '100'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The attacker gained access to the Azure AD account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` and created a malicious inbox-rule to hide incoming emails (BEC financial fraud alert at 2024-07-22 10:00:07 UTC).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Using the same compromised account, the attacker then authenticated to the SAP cloud application with AppId `100`, indicating possible attempts to view or modify sensitive financial data (Suspicious SAP authentication alert at 2024-07-22 12:59:26 UTC).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

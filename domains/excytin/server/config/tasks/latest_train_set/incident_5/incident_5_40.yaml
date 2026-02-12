@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_40
+    title: incident_5_latest_train_set_task_40
+    description: 'According to the "PsExec launched a command on a remote device" alert generated at 2024-07-04 22:35:01 UTC, which executable was launched remotely using PsExec?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a lateral-movement incident, we observed the following sequence: an account named "dp5hn" executed a suspicious curl command from host "vnevado-win11t" (alert titled "''CommandAndControl'' malware was detected during lateral movement"). Moments later, multiple related alerts were raised, eventually leading to an alert at 2024-07-04 22:35:01 UTC indicating that PsExec had been used to launch a command on a remote device. Analysts must identify exactly what binary was executed via PsExec in that final alert.'
+      question: 'According to the "PsExec launched a command on a remote device" alert generated at 2024-07-04 22:35:01 UTC, which executable was launched remotely using PsExec?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'cmd.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'cmd.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'PsExec with ProcessId__CreatedTimeUtc__CommandLine `8656__2024-06-20t09:07:09.5458894z__cmd.exe` was used to launch a remote command, indicating the start of lateral movement.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: '''CommandAndControl'' malware activity was observed next, leveraging the compromised account with Sid `S-1-5-21-1840191660-8534830288-125585561-1522` for further spread.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Possible ransomware behavior was uncovered, communicating with suspicious IP Address `99.83.111.100`, consistent with mass-encryption attempts.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'The attacker ultimately executed PSExec to reach the jump server identified by host AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`, completing the lateral move.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

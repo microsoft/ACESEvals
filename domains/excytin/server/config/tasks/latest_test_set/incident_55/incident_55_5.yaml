@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_5
+    title: incident_55_latest_test_set_task_5
+    description: 'Which user account was implicated in the "Sensitive credential memory read" alert that followed the initial LSASS access?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4 2024 at 22:35 UTC, security monitoring recorded a "Suspicious access to LSASS service" on a host. During this event, several security-related DLLs were touched, including cryptdll.dll, hid.dll, winscard.dll, and vaultcli.dll. Just two seconds later, a follow-up alert titled "Sensitive credential memory read" indicated that a process had dumped the memory of lsass.exe, a common step in credential theft.'
+      question: 'Which user account was implicated in the "Sensitive credential memory read" alert that followed the initial LSASS access?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bjenkins'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'bjenkins'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Account Name: `bjenkins` made a suspicious access to the LSASS service at 2024-07-04 22:35:02.783154+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Account Name: `bjenkins` then performed a sensitive credential memory read from lsass.exe at 2024-07-04 22:35:04.120690+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

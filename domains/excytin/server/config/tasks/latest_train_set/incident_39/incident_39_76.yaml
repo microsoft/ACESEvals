@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_76
+    title: incident_39_latest_train_set_task_76
+    description: 'According to the alert indicating that a suspicious file was registered as a service, what is the SID of the account that performed this registration?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-04, an alert flagged the execution of the credential-theft tool “mimikatz.exe” (process ID 4748) on an endpoint, suggesting an attempt to dump credentials. Seconds later, additional dual-purpose tools were dropped. Almost simultaneously, another alert reported that a suspicious file had been registered as a service on the same machine—an action commonly associated with establishing persistence. The service registration was carried out under a particular user account whose security identifier (SID) was captured by the alert.'
+      question: 'According to the alert indicating that a suspicious file was registered as a service, what is the SID of the account that performed this registration?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-0-6-5'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-0-6-5'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'HostName: vnevado-win10v – A known credential-theft tool was executed on this workstation, indicating the attacker gained code-execution capability.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Name (file): psexesvc.exe – Shortly afterwards, the dual-purpose tool PsExec service binary was dropped on the device, providing the attacker with a means for lateral movement or privilege escalation.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Sid: S-0-6-5 – The attacker then registered a suspicious file as a Windows service under this account SID, establishing persistence on the machine.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_52
+    title: incident_5_latest_train_set_task_52
+    description: 'According to the lateral-movement alert that followed the ransomware payload launch, what IP address is associated with the device to which the attacker attempted to move?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4th, a ransomware payload was remotely launched, originating from account "dp5hn" (SID S-1-5-21-1840191660-8534830288-125585561-1522, AAD ID 731adb71-b11c-4bbf-850b-57989b350e96) and source IP 99.83.111.100. The alert warns that attackers might be attempting to encrypt content on the targeted device. Moments later, Microsoft Defender for Endpoint generated a second alert indicating possible lateral movement to another device, suggesting the attackers were trying to expand their foothold inside the network.'
+      question: 'According to the lateral-movement alert that followed the ransomware payload launch, what IP address is associated with the device to which the attacker attempted to move?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '38.142.109.10'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '38.142.109.10'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Possible lateral movement was detected originating from IP Address `38.142.109.10`, indicating the attacker was attempting to pivot to other devices.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Moments later, a ransomware payload was remotely launched on the host with HostName `vnevado-win11u`, confirming the compromise of that machine.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_27
+    title: incident_5_latest_test_set_task_27
+    description: 'When the attacker moved laterally to the jump server (alert: "PSExec to Vnevado-jump" on July 10, 2024), which file did they attempt to run on that server?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4, 2024 our monitoring detected a malicious credential-theft command line coming from IP 107.224.99.179. The tool mimikatz.exe was executed in a way that suggests an attacker attempted a pass-the-hash operation and then used PSExec for lateral movement to the jump server named "vnevado-jump."'
+      question: 'When the attacker moved laterally to the jump server (alert: "PSExec to Vnevado-jump" on July 10, 2024), which file did they attempt to run on that server?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'notepad.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'notepad.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Alert 1 (2024-07-04 22:35:02 UTC): A malicious credential-theft tool was run on the host whose AadDeviceId = `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Alert 2 (2024-07-10 11:24:45 UTC): The attacker then performed lateral movement via PSExec and launched the file Name = `notepad.exe` on the jump server, indicating execution on the target.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

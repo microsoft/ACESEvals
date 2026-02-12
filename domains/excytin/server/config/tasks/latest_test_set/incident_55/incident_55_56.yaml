@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_56
+    title: incident_55_latest_test_set_task_56
+    description: 'Which user account (provide the full email address) was identified as having accessed the AD FS DKM key in the later alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of an internal phishing campaign, security telemetry showed that the account "Nina Sullivan" (Nina Sullivan@vnevado.alpineskihouse.co) sent malicious emails containing the URL http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/. Shortly after, a suspicious sequence of Windows exploration commands was executed, possibly indicating lateral movement activity. A few days later, another alert reported that an unidentified user managed to read the Data Protection (DKM) key for an AD FS object (ID 4cac49d3-29d3-407e-8c9b-b7ebb21541b2), which is a strong indicator of privilege-escalation or domain takeover attempts.'
+      question: 'Which user account (provide the full email address) was identified as having accessed the AD FS DKM key in the later alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith@niseko.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'gsmith@niseko.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Account SID: `S-1-5-21-561436748-3867387497-1732241745-3701` was observed sending internal phishing emails (possible compromise).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Process ExtractedFileName: `whoami.exe` was executed as part of a suspicious exploration activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Account Name: `gsmith` executed the suspicious sequence of Windows commands (likely the user behind the exploration).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'Account Email: `gsmith@niseko.alpineskihouse.co` subsequently read the AD FS DKM key, confirming lateral movement with elevated objectives.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

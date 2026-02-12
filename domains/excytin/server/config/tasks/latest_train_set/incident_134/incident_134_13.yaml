@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_train_set_task_13
+    title: incident_134_latest_train_set_task_13
+    description: 'In the related "BEC financial fraud" alert, what is the Security Identifier (SID) of the account that created the suspicious inbox rule?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During a recent investigation into a potential Business Email Compromise (BEC) incident, the security team received an alert titled "Suspicious emails sent by BEC-related user." These emails originated from the mailbox nathan@avoriaz.alpineskihouse.co and were sent from the IP address 237.7.81.122 by the user raphaelt@vnevado.alpineskihouse.co. This activity is believed to be linked to an ongoing BEC attempt in which an attacker tries to manipulate inbox rules to hide incoming messages and facilitate financial fraud.'
+      question: 'In the related "BEC financial fraud" alert, what is the Security Identifier (SID) of the account that created the suspicious inbox rule?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1874151667-3554330288-105586563-1715'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1874151667-3554330288-105586563-1715'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-17 11:34:48.803827+00:00, the user account with Sid `S-1-5-21-1874151667-3554330288-105586563-1715` created a suspicious inbox rule linked to a BEC financial-fraud attempt.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'At 2024-07-17 11:55:04.449509+00:00, the same user account with Sid `S-1-5-21-1874151667-3554330288-105586563-1715` sent suspicious emails, reinforcing evidence of an ongoing BEC campaign.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

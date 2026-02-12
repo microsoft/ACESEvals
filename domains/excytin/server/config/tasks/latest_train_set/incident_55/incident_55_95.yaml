@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_55_latest_train_set_task_95
+    title: incident_55_latest_train_set_task_95
+    description: 'Analysts have linked the "Suspicious LDAP query" that followed the ADFS private-key extraction attempt to an external source. According to the alert, which IP address issued this LDAP query?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into an ADFS private-key extraction attempt on host "mb-adfs", we observed the user account "gsmith" running a suspicious executable named "iy2orr1e.rrg.exe" via PowerShell with an encoded command. Only a few seconds later, related activity was seen when the same process leveraged Task Scheduler—suggesting an effort to gain persistence. Immediately after these events, an alert titled "Suspicious LDAP query" was raised, indicating possible reconnaissance against the domain controller.'
+      question: 'Analysts have linked the "Suspicious LDAP query" that followed the ADFS private-key extraction attempt to an external source. According to the alert, which IP address issued this LDAP query?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '72.5.72.208'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '72.5.72.208'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Attackers attempted to extract ADFS private keys by running the process with ExtractedFileName `iy2orr1e.rrg.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Next, they leveraged Task Scheduler using the process with ExtractedFileName `powershell.exe` to maintain persistence.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Finally, a suspicious LDAP query was sent from the IP Address `72.5.72.208`, indicating reconnaissance activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

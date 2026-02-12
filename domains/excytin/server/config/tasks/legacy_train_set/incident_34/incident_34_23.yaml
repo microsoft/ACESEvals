@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_legacy_train_set_task_23
+    title: incident_34_legacy_train_set_task_23
+    description: 'In the context of the uncommon file creation alert, what is the IP address associated with this suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident involved a suspicious LDAP query, indicating potential reconnaissance activity. The process `winword.exe` was executed with the command line `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`. LDAP queries are often exploited by attackers to gather information about the organizational structure by querying the domain controller for users, groups, and assets. This can help gain higher privileges and access important resources. As part of the same incident, an uncommon file was also created on a machine and added to a Run Key in the registry, suggesting that an attacker may be trying to maintain persistence even after a machine reboot.'
+      question: 'In the context of the uncommon file creation alert, what is the IP address associated with this suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '72.5.72.208'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '72.5.72.208'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious LDAP query was executed, indicating potential reconnaissance activity from the device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'An uncommon file was created and added to a Run Key from the IP address `72.5.72.208`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_36
+    title: incident_5_latest_train_set_task_36
+    description: 'Which user account was responsible for the suspicious WMI process creation detected right after the renamed Sysinternals tool was launched on 2024-07-04?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of an attack sequence that began when a Windows Sysinternals tool was renamed and executed (detected on 2024-07-04 22:35 UTC), analysts noted several related events. These included the launch of tools such as "mimikatz.exe" and attempts at lateral movement via PSExec to the server vnevado-jump, followed by SMB file-share activity blocked across multiple devices. Immediately after the renamed Sysinternals execution, another alert flagged a suspicious WMI-based process creation on the same machine—an action frequently used by malware to spawn child processes and evade standard monitoring.'
+      question: 'Which user account was responsible for the suspicious WMI process creation detected right after the renamed Sysinternals tool was launched on 2024-07-04?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'dp5hn'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'dp5hn'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Windows Sysinternals tool renamed and executed by account with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Lateral movement attempt: PSExec connection initiated from IP Address `99.83.111.100` to the jump server.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'SMB-based file operations blocked on host with HostName `vnevado-win11t`, stopping further lateral spread.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'Suspicious WMI process creation detected under account Name `dp5hn`, indicating the attacker’s final attempt to spawn processes covertly.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

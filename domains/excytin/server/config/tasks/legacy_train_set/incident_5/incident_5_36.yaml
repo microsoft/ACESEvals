@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_36
+    title: incident_5_legacy_train_set_task_36
+    description: 'In relation to this incident, there was also a possible attempt to access the Primary Refresh Token (PRT). Can you identify the file name of the process involved in this attempt?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'An active malware infection on the host `vnevado-win11u` involved a process with Process ID 5572 executing the command `curl http://vectorsandarrows.com`. This command and control behavior was blocked as part of the incident. The malware was active, indicating it was running or had persistence mechanisms in place, which necessitates precautionary measures and checking for signs of infection.'
+      question: 'In relation to this incident, there was also a possible attempt to access the Primary Refresh Token (PRT). Can you identify the file name of the process involved in this attempt?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'browsercore.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'browsercore.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was a Command and Control behavior from a malware detected and blocked associated with the account having SID `S-1-5-21-1840191660-8534830288-125585561-1522`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A possible attempt to access the Primary Refresh Token (PRT) was detected involving the process with the extracted file name `browsercore.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

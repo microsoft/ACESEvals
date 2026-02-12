@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_15
+    title: incident_5_latest_train_set_task_15
+    description: 'A few milliseconds later, during the subsequent alert "''CommandAndControl'' malware was detected during lateral movement", which user account was identified on the targeted device?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4 2024, at 22:35 UTC, Microsoft Defender raised an alert titled “Malicious credential theft tool execution detected” after the file “mimikatz.exe” was launched with a pass-the-hash command to run Notepad on the remote host vnevado-jump through cmd.exe. This activity suggests an attacker was attempting to harvest credentials on the device.'
+      question: 'A few milliseconds later, during the subsequent alert "''CommandAndControl'' malware was detected during lateral movement", which user account was identified on the targeted device?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'dp5hn'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'dp5hn'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The host with field AadDeviceId and value `4d8d23e9-a77d-4e33-9435-b8c457e57ca1` executed a malicious credential-theft tool.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Lateral movement to the jump server was performed via PSExec from the IP with field Address and value `99.83.111.100`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Suspicious remote activity was initiated by the account with field AadUserId and value `731adb71-b11c-4bbf-850b-57989b350e96`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'During lateral movement, malware of type ''CommandAndControl'' was linked to the account with field Name and value `dp5hn`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

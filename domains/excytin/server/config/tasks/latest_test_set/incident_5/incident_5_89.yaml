@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_89
+    title: incident_5_latest_test_set_task_89
+    description: 'According to the “System recovery setting tampering” alert, what is the hostname of the device where this tampering occurred?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation you observed a ‘CommandAndControl’ malware detection on host vnevado-win11t (device ID e5799261-6720-4297-961e-bd9ca4275033). The malicious activity originated from a process that executed the command line "curl http://vectorsandarrows.com" at 2024-06-20 09:29:42 UTC (process ID 88). Pivoting from this alert, you found that just seconds earlier a separate alert reported that an attacker tampered with system recovery settings on a different device in the environment.'
+      question: 'According to the “System recovery setting tampering” alert, what is the hostname of the device where this tampering occurred?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win11u'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vnevado-win11u'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Attackers used account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96` to perform lateral movement, and the ''CommandAndControl'' malware was detected.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'On host `vnevado-win11u`, system recovery settings were tampered with—potentially to hinder remediation and solidify the compromise.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

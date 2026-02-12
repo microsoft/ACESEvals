@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_4
+    title: incident_5_latest_test_set_task_4
+    description: 'In the follow-up alert that reported "Potentially compromised assets exhibiting ransomware-like behavior," which specific file name was identified as being affected by the ransomware?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the incident investigation, we observed an alert titled "File backups were deleted" on host vnevado-win10s. The process `vssblatemp.exe` (PID 5512) executed the command `vssblatemp.exe delete shadows /all`, indicating possible ransomware activity that removed all shadow copies and file snapshots. Shortly after, another alert flagged several devices for exhibiting ransomware-like behavior, suggesting the attacker had begun to impact files across the environment.'
+      question: 'In the follow-up alert that reported "Potentially compromised assets exhibiting ransomware-like behavior," which specific file name was identified as being affected by the ransomware?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ponceau.7z.lockbit'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'ponceau.7z.lockbit'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96` deleted all file snapshots and shadow copies, a behavior often seen during ransomware attacks.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Following this action, devices began to display ransomware-like behavior, and the malicious file `ponceau.7z.lockbit` was identified on the affected assets.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

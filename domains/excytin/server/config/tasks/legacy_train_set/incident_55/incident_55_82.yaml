@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_82
+    title: incident_55_legacy_train_set_task_82
+    description: 'During the investigation, it was determined that an account accessed the DKM key of an ADFS object. What is the email address of the account that performed this action?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a suspicious access to the LSASS service, which might indicate an attempt to decrypt user passwords, several suspicious files (`hid.dll`, `winscard.dll`, `cryptdll.dll`, `vaultcli.dll`) were observed being utilized. In addition, a PowerShell command was observed being executed remotely with the following command line: `powershell.exe -noexit -command set-location -literalpath ''c:\users\bjenkins\downloads\midnight14''`. Suspicious remote activities were noted on the machine associated with multiple system and network alterations.'
+      question: 'During the investigation, it was determined that an account accessed the DKM key of an ADFS object. What is the email address of the account that performed this action?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith@niseko.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'gsmith@niseko.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was a suspicious access to the LSASS service using the process `lsass.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious remote activity was detected involving an account with SID `S-2-5-21-571436798-3864380397-1837441745-3206`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'An account with the email `gsmith@niseko.alpineskihouse.co` read the DKM key of ADFS object with ID `4cac49d3-29d3-407e-8c9b-b7ebb21541b2`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

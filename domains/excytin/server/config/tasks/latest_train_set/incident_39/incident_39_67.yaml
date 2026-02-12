@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_67
+    title: incident_39_latest_train_set_task_67
+    description: 'A related alert titled “An active ''Kekeo'' malware was detected” reports another malicious process running on the affected host. What is the name of the executable associated with process ID 2608 in that alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a lateral-movement attempt involving the ‘Kekeo’ malware, analysts observed the service executable psexesvc.exe (PID 5512, created 2024-06-27 14:33:27 UTC) on a device contacted from the external IP 141.216.110.153 under account SID S-0-6-5. This activity triggered the alert “''Kekeo'' malware was detected during lateral movement,” indicating the threat might have spread to additional processes on the same machine.'
+      question: 'A related alert titled “An active ''Kekeo'' malware was detected” reports another malicious process running on the affected host. What is the name of the executable associated with process ID 2608 in that alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'rubeus.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'rubeus.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Active ''Kekeo'' malware was observed running as process (Field: ProcessId__CreatedTimeUtc__CommandLine, Value: `2608__2024-06-27t14:33:27.7927134z__rubeus.exe  dump /service:xfbzkp /user:lucasb`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, the malware was detected attempting lateral movement on host (Field: HostName, Value: `vnevado-win10b`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

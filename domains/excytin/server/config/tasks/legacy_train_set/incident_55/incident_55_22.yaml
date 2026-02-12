@@ -1,0 +1,98 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_22
+    title: incident_55_legacy_train_set_task_22
+    description: 'Can you identify the email of the account that created the suspicious service DDLOXJDSQSNGMUKKFUXQ on MB-ADFS?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'In a recent security incident, the host `MB-DC1` read the DKM key of an ADFS object with id 4cac49d3-29d3-407e-8c9b-b7ebb21541b2, which indicated a suspected AD FS DKM key read. Following this, there was also a suspected DCSync attack where the user Luciano Herrera (CIO) from the host `MB-WINCLIENT` sent a replication request to host `MB-DC1`. Additionally, there was a process executing a suspicious sequence of exploration activities and suspicious execution of a command via the Impacket toolkit, indicating potential lateral movement attempts using this toolkit.'
+      question: 'Can you identify the email of the account that created the suspicious service DDLOXJDSQSNGMUKKFUXQ on MB-ADFS?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith@niseko.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'gsmith@niseko.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The host `MB-DC1` read the DKM key of ADFS object id 4cac49d3-29d3-407e-8c9b-b7ebb21541b2.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Luciano Herrera (CIO) on MB-WINCLIENT with SID `S-1-5-21-551436448-9871687716-9837441745-1903` sent a replication request to MB-DC1, potentially indicating a DCSync attack.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A process named `powershell.exe` executed a suspicious sequence of exploration activities to identify valuable assets and coordinate lateral movement.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'The account `gsmith` executed a command via the Impacket toolkit on a device, potentially for lateral movement or ransomware installation.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_5
+        title: Checkpoint 5
+        description: 'The account `gsmith` with email `gsmith@niseko.alpineskihouse.co` created a suspicious service named `DDLOXJDSQSNGMUKKFUXQ` on MB-ADFS to execute potentially malicious commands.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0

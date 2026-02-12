@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_76
+    title: incident_34_latest_test_set_task_76
+    description: 'According to the “Suspicious LDAP query” alert raised at 22:35:02 UTC on 2024-07-04, what is the Azure AD user ID (AadUserId) of the account that executed the LDAP query?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we observed a process (`powershell.exe`, PID 8604) on 2024-07-04 executing an unusually long, base-64–encoded PowerShell command that created and scheduled a file named “winatp-intro-backdoor.exe”. This activity triggered the alert “Suspicious PowerShell download or encoded command execution”. The same user account soon performed a “Suspicious LDAP query” against the domain controller two seconds earlier (2024-07-04 22:35:02 UTC), suggesting possible reconnaissance. You have been asked to correlate the two alerts and identify the user involved in the LDAP activity.'
+      question: 'According to the “Suspicious LDAP query” alert raised at 22:35:02 UTC on 2024-07-04, what is the Azure AD user ID (AadUserId) of the account that executed the LDAP query?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '16320fec-8d90-403b-b7fe-78f715d4728d'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '16320fec-8d90-403b-b7fe-78f715d4728d'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An account with SID `S-1-5-21-1870156660-7534030218-135086563-1193` executed PowerShell to download a file or run an encoded command on 2024-07-04 22:35:04.145779+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Shortly before, an LDAP reconnaissance query was performed by the Azure AD user `16320fec-8d90-403b-b7fe-78f715d4728d` at 2024-07-04 22:35:02.608830+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

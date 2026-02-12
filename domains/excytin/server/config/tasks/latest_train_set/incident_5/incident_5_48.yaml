@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_48
+    title: incident_5_latest_train_set_task_48
+    description: 'Immediately after the suspicious WMI process creation, an alert titled "File backups were deleted" indicated that all snapshots and shadow copies were removed via WMI or VSSAdmin. What is the Security Identifier (SID) of the account responsible for this deletion activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation we observed a chain of events on a host where several potentially malicious commands were executed in quick succession, including a PowerShell script (get-userprttoken.ps1), multiple bcdedit commands disabling recovery options, and a curl request to an external domain. These actions were recorded in a “Suspicious WMI process creation” alert, suggesting the attacker was using WMI to spawn new processes—behavior often seen during ransomware activity.'
+      question: 'Immediately after the suspicious WMI process creation, an alert titled "File backups were deleted" indicated that all snapshots and shadow copies were removed via WMI or VSSAdmin. What is the Security Identifier (SID) of the account responsible for this deletion activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1840191660-8534830288-125585561-1522'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1840191660-8534830288-125585561-1522'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Account (Sid: S-1-5-21-1840191660-8534830288-125585561-1522) was observed creating a suspicious process through WMI on 2024-07-04 22:35:02.101824+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The same account (Sid: S-1-5-21-1840191660-8534830288-125585561-1522) then deleted all file snapshots and shadow copies on 2024-07-04 22:35:02.352485+00:00, indicating potential ransomware activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

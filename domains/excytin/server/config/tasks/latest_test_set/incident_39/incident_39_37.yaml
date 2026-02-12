@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_37
+    title: incident_39_latest_test_set_task_37
+    description: 'During the "SID history injection" alert raised at 22:35:02 UTC on 2024-07-04, which file was identified as being involved in the activity on host "vnevado-win10b"?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-04, the workstation "vnevado-win10b" generated an alert titled "Potential human-operated malicious activity" involving the user accounts "fk8mq" and "kyleg". Investigators noted that, seconds earlier, a remote session had dropped and executed a suspicious file, and almost immediately afterward the same host raised a critical "SID history injection" alert—an action often linked to privilege-escalation attempts.'
+      question: 'During the "SID history injection" alert raised at 22:35:02 UTC on 2024-07-04, which file was identified as being involved in the activity on host "vnevado-win10b"?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'dkwj.mze'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'dkwj.mze'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Malicious activity was initiated from the IP address (Field: Address) `141.216.110.153`, indicating an external attacker attempting to access the environment.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'From that connection, a remote session dropped and executed a file on the host (Field: HostName) `vnevado-dc`, suggesting lateral movement.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The dropped file (Field: Name) `dkwj.mze` was then used to perform a SID-history injection, granting elevated privileges on the device.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

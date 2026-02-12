@@ -17,7 +17,7 @@ global_defaults:
         timeout: 180
 
   episode_config:
-    max_steps: 15
+    max_steps: 25 
 
     # Transcript coordination configuration
     # Single-agent tasks use default settings (push enabled, pull disabled)

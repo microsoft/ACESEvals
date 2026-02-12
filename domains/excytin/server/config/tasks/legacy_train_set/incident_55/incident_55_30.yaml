@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_30
+    title: incident_55_legacy_train_set_task_30
+    description: 'In the context of the suspicious service creation alert, which user''s email was associated with creating the service DDLOXJDSQSNGMUKKFUXQ?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A suspicious remote activity was observed on the machine `mb-adfs`. This alert indicated attempts to initiate interactive sessions, modify files, pass WMI commands, create scheduled tasks, and other potentially malicious activities from a remote machine. Various processes such as `cmd.exe`, `lsass.exe`, and `powershell.exe` were involved, and the suspicious activity was associated with a user account.'
+      question: 'In the context of the suspicious service creation alert, which user''s email was associated with creating the service DDLOXJDSQSNGMUKKFUXQ?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith@niseko.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'gsmith@niseko.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was suspicious remote activity initiated by the AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The user with email `gsmith@niseko.alpineskihouse.co` created the suspicious service `DDLOXJDSQSNGMUKKFUXQ` on `MB-ADFS`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

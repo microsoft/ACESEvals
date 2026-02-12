@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_84
+    title: incident_34_latest_test_set_task_84
+    description: 'According to the "Suspicious PowerShell command line" alert, what is the name of the executable file that was identified as part of the suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an ongoing investigation, Microsoft Defender raised an alert called "Suspicious PowerShell download or encoded command execution" on a workstation (host name withheld). The alert showed that Word (winword.exe) had launched PowerShell with a potentially malicious command, likely used to pull down or run additional payloads in memory. Just seconds earlier, another alert titled "Suspicious PowerShell command line" was triggered on the same device, indicating that a specific executable file was involved in the activity.'
+      question: 'According to the "Suspicious PowerShell command line" alert, what is the name of the executable file that was identified as part of the suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winatp-intro-backdoor.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winatp-intro-backdoor.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious PowerShell command attempted to execute the file (Field: Name, Value: `winatp-intro-backdoor.exe`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The activity occurred on the host (Field: HostName, Value: `vnevado-win10e`), where PowerShell was used for a possible malicious download or encoded command execution.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

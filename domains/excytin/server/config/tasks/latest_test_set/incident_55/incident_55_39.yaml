@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_39
+    title: incident_55_latest_test_set_task_39
+    description: 'A few days after this hardware-discovery activity, credentials of type "Password" were unusually added to the OAuth application "SimulandApp". Which user account carried out that credential addition?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During a recent investigation, a "Suspicious System Hardware Discovery" alert was raised on host "mb-winclient". The activity involved processes such as "svchost.exe" (PID 2880) and a PowerShell script "contosoadfsblatempcreds.ps1" executed under the account "pwilson". Network traffic to the external IP address 72.5.72.208 was also observed. This alert suggests an attacker may have been enumerating hardware information on the device as a precursor to further malicious actions.'
+      question: 'A few days after this hardware-discovery activity, credentials of type "Password" were unusually added to the OAuth application "SimulandApp". Which user account carried out that credential addition?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Luciano Herrera'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Luciano Herrera'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious System Hardware Discovery was executed by the account with Sid `S-1-5-21-551436448-9871687716-9837441745-1903`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Later, the account with Name `Luciano Herrera` performed an unusual addition of a password credential to the OAuth application SimulandApp.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

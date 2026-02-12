@@ -1,0 +1,621 @@
+tasks:
+  - task_id: incident_5_legacy_test_set_task_1
+    title: incident_5_legacy_test_set_task_1
+    description: What is the IP address associated with the Manatee Tempest activity
+      group detected in this security incident?
+    inherit_shared: true
+    initial_context:
+      incident_context: A command and control behavior was blocked on host `vnevado-win10r`,
+        which indicated an active infection by malware that could replicate and receive
+        commands from remote attackers. This malware was active, and precautionary
+        measures should be taken to check for residual signs of infection. The process
+        involved had the ID 1332 and ran the command `curl http://vectorsandarrows.com`.
+      question: What is the IP address associated with the Manatee Tempest activity
+        group detected in this security incident?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '198.43.121.209'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '198.43.121.209'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: The account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`
+          was involved in a Command and Control behavior that was blocked.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: The cybercriminal group known as Manatee Tempest, which is associated
+          with the IP address `198.43.121.209`, was active during the incident.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_2
+    title: incident_5_legacy_test_set_task_2
+    description: What is the command line of the suspicious process involved in the
+      user behavior change on device `vnevado-win11u`?
+    inherit_shared: true
+    initial_context:
+      incident_context: An incident involving a ransomware payload remotely launched
+        on device `vnevado-win11u` with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`
+        and IP address `99.83.111.100` has been detected. The attackers might be attempting
+        to encrypt content on this device. Additionally, there is a notable change
+        in typical user behavior that may indicate a compromise.
+      question: What is the command line of the suspicious process involved in the
+        user behavior change on device `vnevado-win11u`?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '88__2024-06-20t09:29:42.3927529z__curl http://vectorsandarrows.com'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '88__2024-06-20t09:29:42.3927529z__curl http://vectorsandarrows.com'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A ransomware payload was remotely launched by the user with SID
+          `S-1-5-21-1840191660-8534830288-125585561-1522` at `2024-07-04 22:35:03.038773+00:00`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Suspicious hands on keyboard user behavior was detected on this
+          device, involving a process with Process ID `88` launched with the command
+          line `curl http://vectorsandarrows.com` at `2024-06-20t09:29:42.3927529z`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_3
+    title: incident_5_legacy_test_set_task_3
+    description: Can you identify the IP address involved in the malicious credential
+      theft tool execution detected?
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A Mimikatz credential theft tool was detected on a device
+        at 2024-07-04 22:35:03.797541+00:00. Mimikatz is a tool used to harvest plaintext
+        passwords, password hashes, smartcard PINs, and Kerberos tickets. The attacker
+        might be leveraging this tool to harvest credentials to log into this or other
+        devices on the network by impersonating a valid user. Several command line
+        executions involving `mimikatz.exe` were observed, along with connected mimikatz-related
+        files like `mimidrv.sys`, `mimispool.dll`, and `mimilove.exe`. More information
+        can be found in the Mimikatz tool profile Threat Analytics report and the
+        Actor profile: Storm-0875 Threat Analytics report provided by Microsoft.'
+      question: Can you identify the IP address involved in the malicious credential
+        theft tool execution detected?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.224.99.179'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: The Mimikatz credential theft tool was detected on the device
+          with IP address `107.224.99.179`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A malicious credential theft tool execution was detected on the
+          same device with IP address `107.224.99.179`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_4
+    title: incident_5_legacy_test_set_task_4
+    description: What is the URL associated with the Manatee Tempest activity group
+      in this incident?
+    inherit_shared: true
+    initial_context:
+      incident_context: On July 4, 2024, a security incident involving malware behavior
+        named 'GenRansom' was detected on host `vnevado-win11t`. This malware was
+        identified as active on the machine, and immediate precautionary measures
+        were recommended. This incident is part of a broader malicious activity linked
+        to the Manatee Tempest activity group. Manatee Tempest is a Russia-based cybercriminal
+        group known for engaging in various sophisticated cyberattacks targeting numerous
+        industries.
+      question: What is the URL associated with the Manatee Tempest activity group
+        in this incident?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vectorsandarrows.com'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vectorsandarrows.com'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Suspicious 'GenRansom' behavior was detected on the host with
+          AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: The Manatee Tempest activity group, a Russia-based cybercriminal
+          group, has potential malicious activity related to the URL `vectorsandarrows.com`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_5
+    title: incident_5_legacy_test_set_task_5
+    description: Can you identify the hostname of the device where system recovery
+      setting tampering was observed?
+    inherit_shared: true
+    initial_context:
+      incident_context: During a recent investigation involving potentially compromised
+        assets exhibiting ransomware-like behavior, it was observed that an attacker
+        might be using the specified user account, IP, or device to move laterally
+        across the network. Some of the files involved are `syncretic.7z.lockbit`,
+        `earlap.doc`, `ponceau.7z`, and `unstreaming.xlsx.lockbit`. The suspicious
+        activities were noted on the host `vnevado-win11u`, with associated account
+        SID `S-0-6-5`. Automated remediation actions might be taken to disable the
+        account or device being used by the attacker.
+      question: Can you identify the hostname of the device where system recovery
+        setting tampering was observed?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win10s'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vnevado-win10s'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: The user with SID `S-1-5-21-1840191660-8534830288-125585561-1522`
+          is potentially compromised and exhibiting ransomware-like behavior, affecting
+          multiple devices.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: System recovery settings have been tampered with on the device
+          with hostname `vnevado-win10s`, which could indicate an attempt by adversaries
+          to disable system recovery features and prevent system recovery.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_6
+    title: incident_5_legacy_test_set_task_6
+    description: As per the recent observation, what is the IP address identified
+      in connection with the Manatee Tempest activity group?
+    inherit_shared: true
+    initial_context:
+      incident_context: On 2024-07-04, a suspicious WMI process creation was observed
+        on the machine named `vnevado-win10r`. Various processes including `vssblatemp.exe`
+        and `get-userprttoken.ps1` were executed. This type of behavior is often associated
+        with malware using WMI to spawn new processes, breaking process trees and
+        further infecting a machine.
+      question: As per the recent observation, what is the IP address identified in
+        connection with the Manatee Tempest activity group?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '198.43.121.209'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '198.43.121.209'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Suspicious WMI process creation was observed on the machine by
+          an account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Manatee Tempest, a Russia-based cybercriminal group, conducted
+          suspicious activities. One of the IP addresses used by the group is `198.43.121.209`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_7
+    title: incident_5_legacy_test_set_task_7
+    description: Alongside the usage of `vssblatemp.exe`, another process was used
+      to disable recovery features. What was the command and process ID of the other
+      process involved?
+    inherit_shared: true
+    initial_context:
+      incident_context: A recent security incident involved the tampering of system
+        recovery settings on the device `vnevado-win10r`. The process `vssblatemp.exe`
+        was executed with the command `vssblatemp.exe delete shadows /all`, indicating
+        an attempt to delete or remove built-in operating system data and turn off
+        recovery services to prevent recovering a corrupted system. This may include
+        deleting all volume shadow copies to impede system restoration.
+      question: Alongside the usage of `vssblatemp.exe`, another process was used
+        to disable recovery features. What was the command and process ID of the other
+        process involved?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Command: bcdedit /set recoveryenabled no, Process ID: 4312'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Command: bcdedit /set recoveryenabled no, Process ID: 4312'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: System recovery setting tampering has been detected on this device.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: The adversary used the command `bcdedit /set recoveryenabled
+          no` with Process ID `4312` on `2024-06-20t09:10:48.0676225z` to disable
+          automatic Windows recovery features.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_8
+    title: incident_5_legacy_test_set_task_8
+    description: What is the host name of the device involved in this tampering incident?
+    inherit_shared: true
+    initial_context:
+      incident_context: A security incident involving system recovery setting tampering
+        was observed on a device. Adversaries might be attempting to delete or remove
+        built-in operating system data and turn off recovery services to prevent recovering
+        a corrupted system. This may deny access to available backups and recovery
+        options. The process `vssblatemp.exe` was executed with the command to delete
+        all volume shadow copies, and the process `bcdedit` was used to disable automatic
+        Windows recovery features.
+      question: What is the host name of the device involved in this tampering incident?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win10s'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vnevado-win10s'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Potential tampering of system recovery settings observed on host
+          `vnevado-win10s`. Adversaries might use utilities like vssblatemp.exe, wmic,
+          wbblatemp.exe, or bcdedit.exe to disable or delete system recovery features.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_9
+    title: incident_5_legacy_test_set_task_9
+    description: Related to this alert, there was an active malware detected subsequently.
+      Can you identify the name of the malware file detected on the machine?
+    inherit_shared: true
+    initial_context:
+      incident_context: A possible attempt to access Primary Refresh Token (PRT) was
+        detected on the host `vnevado-win10s` involving user with username `dp5hn`.
+        The PRT is a key artifact of Azure AD authentication used to enable single
+        sign-on (SSO) across applications on supported devices, and attackers attempting
+        to access this resource could be aiming for lateral movement or credential
+        theft. The attempt was carried out by the process `browsercore.exe` as observed
+        from the process ID `2676`.
+      question: Related to this alert, there was an active malware detected subsequently.
+        Can you identify the name of the malware file detected on the machine?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'mimikatz.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: There was a possible attempt to access Primary Refresh Token
+          (PRT) through the process `browsercore.exe` detected on 2024-07-04.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Another possible attempt to access Primary Refresh Token (PRT)
+          was detected involving the account with SID `S-5-7-21-1843151660-3234030288-105586167-1422`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: Active unknown malware, specifically `mimikatz.exe`, was detected
+          and running on the machine.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.167
+            weight: 1.0
+  - task_id: incident_5_legacy_test_set_task_10
+    title: incident_5_legacy_test_set_task_10
+    description: What is the name of the file associated with the ransomware-like
+      behavior identified in the potentially compromised assets?
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A ransomware payload was remotely launched on a host named
+        `vnevado-win11t` with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`.
+        Attackers might be attempting to encrypt content on this device, rendering
+        it unusable to users. For more information, refer to the Threat Analytics
+        report, Threat overview: Human-operated ransomware: https://security.microsoft.com/threatanalytics3/05658b6c-dc62-496d-ad3c-c6a795a33c27/analystreport.
+        Soon after, potentially compromised assets began exhibiting ransomware-like
+        behavior, impacting multiple devices.'
+      question: What is the name of the file associated with the ransomware-like behavior
+        identified in the potentially compromised assets?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'syncretic.7z.lockbit'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'syncretic.7z.lockbit'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A ransomware payload was remotely launched by the user with AadUserId
+          `731adb71-b11c-4bbf-850b-57989b350e96`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Potentially compromised assets are exhibiting ransomware-like
+          behavior involving the file `syncretic.7z.lockbit`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

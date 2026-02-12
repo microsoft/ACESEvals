@@ -1,0 +1,59 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_57
+    title: incident_134_latest_test_set_task_57
+    description: 'According to the "Password Spray" alert that occurred on 2024-07-18, what IP address was identified as the source of the attack?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-17 a security alert was raised after user Nina Park clicked the suspicious link
+"http://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/" that had been delivered to
+raphaelt@vnevado.alpineskihouse.co from alyssat@vnevado.alpineskihouse.co. The event was reported as
+"A potentially malicious URL click was detected" and involved several mail-related entities (sender,
+recipient, mailbox) as well as the user account of Nina Park. During follow-up monitoring, another
+alert titled "Password Spray" was triggered the next day, indicating that an attacker attempted to
+guess passwords for multiple accounts in rapid succession.'
+      question: 'According to the "Password Spray" alert that occurred on 2024-07-18, what IP address was identified as the source of the attack?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '170.54.121.63'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '170.54.121.63'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'On 2024-07-17, a malicious URL was clicked by the account with field AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'On 2024-07-18, a password spray attack was detected coming from the IP with field Address `170.54.121.63`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_train_set_task_25
+    title: incident_34_latest_train_set_task_25
+    description: 'According to the follow-up alert, what is the exact name of the executable file that PowerShell dropped and ran on the host?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation, we observed a suspicious Task Scheduler activity where the process "schtasks.exe" (PID 1616, created at 2024-06-26T12:00:40Z) was used to run the task named "yrei." Just a couple of seconds later, another alert reported that PowerShell had dropped a suspicious file onto the same machine and immediately executed it.'
+      question: 'According to the follow-up alert, what is the exact name of the executable file that PowerShell dropped and ran on the host?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winatp-intro-backdoor.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winatp-intro-backdoor.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A process with ExtractedFileName `powershell.exe` was used in Task Scheduler activity, potentially establishing persistence (Time: 2024-07-04 22:35:01.761898+00:00).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'That same PowerShell process subsequently dropped and executed a suspicious file with Name `winatp-intro-backdoor.exe` on the machine (Time: 2024-07-04 22:35:03.736539+00:00).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

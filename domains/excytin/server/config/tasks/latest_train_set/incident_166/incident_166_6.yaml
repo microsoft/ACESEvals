@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_train_set_task_6
+    title: incident_166_latest_train_set_task_6
+    description: 'According to the "Anonymous IP address" alert associated with this incident, which IP address was used for the anonymized sign-in attempt?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the BEC investigation, we noted that the user account "Jordan P" (Jordan P@vnevado.alpineskihouse.co, SID S-1-5-21-1740051960-3534030288-108486866-1602) sent suspicious emails from the source IP 255.246.85.58 to tony@avoriaz.alpineskihouse.co, triggering the alert "Suspicious emails sent by BEC-related user" on 2024-07-22. In the same incident, a separate alert titled "Anonymous IP address" reported that someone had signed in using an anonymizing service shortly before the suspicious emails were sent.'
+      question: 'According to the "Anonymous IP address" alert associated with this incident, which IP address was used for the anonymized sign-in attempt?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '192.238.237.190'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '192.238.237.190'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Sign-in from anonymous IP address with Address `192.238.237.190` was detected.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Later, suspicious emails were sent from a potentially compromised account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`, indicating a BEC attempt.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

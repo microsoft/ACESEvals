@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_8
+    title: incident_5_latest_test_set_task_8
+    description: 'A follow-up alert indicates that a ‘CommandAndControl’ malware payload was detected while the attacker attempted lateral movement to another endpoint. What is the hostname of the device where this malware was detected?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a possible compromised user account delivering ransomware-related files, security telemetry shows that the file get-userprttoken.ps1 as well as the archive characterical.zip (and its .lockbit variant) were dropped from host vnevado-win11t. The activity originated from IP address 99.83.111.100 and was associated with the user whose SID is S-0-6-5. Analysts suspect the attacker is attempting to move laterally to additional machines after staging these files.'
+      question: 'A follow-up alert indicates that a ‘CommandAndControl’ malware payload was detected while the attacker attempted lateral movement to another endpoint. What is the hostname of the device where this malware was detected?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win11u'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vnevado-win11u'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A potentially compromised user account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96` was observed delivering ransomware-related files across the network.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, ''CommandAndControl'' malware was detected during lateral movement on the host with HostName `vnevado-win11u`, indicating the attack has reached this device.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_legacy_train_set_task_13
+    title: incident_166_legacy_train_set_task_13
+    description: 'As part of this incident investigation, a password spray attack was detected the next day. Can you get the IP address from which the password spray attack originated?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident involving a sign-in from an anonymous IP address `192.238.237.190`, which could be from a Tor browser or anonymizer VPNs, was detected on 2024-07-22. This incident is part of a broader investigation into a potential security threat where multiple alerts have been flagged.'
+      question: 'As part of this incident investigation, a password spray attack was detected the next day. Can you get the IP address from which the password spray attack originated?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '95.202.65.202'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '95.202.65.202'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was a sign-in from an anonymous IP address for user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A password spray attack was detected from IP address `95.202.65.202`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

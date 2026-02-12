@@ -1,0 +1,618 @@
+tasks:
+  - task_id: incident_34_legacy_test_set_task_71
+    title: incident_34_legacy_test_set_task_71
+    description: During the automated investigation, a suspicious PowerShell command
+      line activity was detected. Can you identify the file name associated with this
+      suspicious activity?
+    inherit_shared: true
+    initial_context:
+      incident_context: An automated investigation was manually started by user u141
+        (u141@ash.alpineskihouse.co) on host `vnevado-win10e.vnevado.alpineskihouse.co`.
+        The investigation aims to identify and review threat artifacts for possible
+        remediation. This incident involved the host device identified by AadDeviceId
+        `02b8f519-1123-4228-b32a-ccb78af3449f`.
+      question: During the automated investigation, a suspicious PowerShell command
+        line activity was detected. Can you identify the file name associated with
+        this suspicious activity?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winatp-intro-backdoor.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winatp-intro-backdoor.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: An automated investigation started manually by user `u141(u141@ash.alpineskihouse.co)`
+          on the device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A suspicious PowerShell command was executed on the device, associated
+          with the file named `winatp-intro-backdoor.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_72
+    title: incident_34_legacy_test_set_task_72
+    description: Related to this incident, a suspicious PowerShell command was executed.
+      What was the command line and the associated process ID for this execution?
+    inherit_shared: true
+    initial_context:
+      incident_context: In relation to this, we also detected suspicious PowerShell
+        activity where an attacker might be trying to download external payloads or
+        execute commands in the device.
+      question: Related to this incident, a suspicious PowerShell command was executed.
+        What was the command line and the associated process ID for this execution?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ProcessId: 9780, CommandLine: "winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'ProcessId: 9780, CommandLine: "winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A suspicious command or file was registered in ASEP registry
+          key on host `vnevado-win10e`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: PowerShell was used to download a file or execute an encoded
+          command with command line `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`
+          at `2024-06-26t11:57:20.2959493z`, with Process ID `9780`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_73
+    title: incident_34_legacy_test_set_task_73
+    description: Which filename was associated with the process that created the anomalous
+      scheduled task on the device?
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident was identified that involves suspicious
+        LDAP query activities and the creation of an anomalous scheduled task. The
+        LDAP query, which indicates potential reconnaissance activity, was executed
+        by the process `winword.exe` with the command line: `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`.
+        The alert flagged this as potentially malicious as attackers often use LDAP
+        queries to learn about the organization''s structure by querying the domain
+        controller for administrative users, groups, and assets. This intelligence
+        allows them to gain higher privileges and access important assets in the organization.'
+      question: Which filename was associated with the process that created the anomalous
+        scheduled task on the device?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'schtasks.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'schtasks.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A suspicious LDAP query was executed on host `vnevado-win10e`.
+          This indicates potential reconnaissance activity that may align with attackers
+          attempting to learn the organization's structure.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: An anomalous scheduled task was created using the process `schtasks.exe`.
+          This may be an indication of an attacker trying to gain persistence on the
+          device.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_74
+    title: incident_34_legacy_test_set_task_74
+    description: In relation to this incident, a suspicious PowerShell command line
+      was also observed. Can you identify the potentially malicious file associated
+      with this PowerShell activity?
+    inherit_shared: true
+    initial_context:
+      incident_context: There was a suspicious LDAP query executed from the host `vnevado-win10e`,
+        which belonged to account `samuelf` with SID `S-1-5-21-1870156660-7534030218-135086563-1193`.
+        This is indicative of potential reconnaissance activity. Attackers often use
+        LDAP queries to learn an organization's structure, including administrative
+        users and groups, and important assets. This information can then be used
+        to gain higher privileges.
+      question: In relation to this incident, a suspicious PowerShell command line
+        was also observed. Can you identify the potentially malicious file associated
+        with this PowerShell activity?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winatp-intro-backdoor.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winatp-intro-backdoor.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A suspicious PowerShell command line was executed involving the
+          file `winatp-intro-backdoor.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A suspect LDAP query was executed by the account with SID `S-1-5-21-1870156660-7534030218-135086563-1193`
+          which might indicate potential reconnaissance activity.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_75
+    title: incident_34_legacy_test_set_task_75
+    description: Which host was the Automated investigation manually initiated on,
+      and who started it?
+    inherit_shared: true
+    initial_context:
+      incident_context: During the investigation of a suspicious LDAP query generated
+        by `samuelf`, an automated investigation was manually initiated by user `u141(u141@ash.alpineskihouse.co)`.
+      question: Which host was the Automated investigation manually initiated on,
+        and who started it?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Host Name: vnevado-win10e, Initiated by: u141(u141@ash.alpineskihouse.co)'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Host Name: vnevado-win10e, Initiated by: u141(u141@ash.alpineskihouse.co)'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A suspicious LDAP query was executed from the device with AadDeviceId
+          `02b8f519-1123-4228-b32a-ccb78af3449f` indicating potential reconnaissance
+          activity.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: An automated investigation was manually started by user `u141`
+          (u141@ash.alpineskihouse.co) on the host `vnevado-win10e.vnevado.alpineskihouse.co`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_76
+    title: incident_34_legacy_test_set_task_76
+    description: What was the command line used by the process that ran the suspicious
+      task scheduled named `yrei`?
+    inherit_shared: true
+    initial_context:
+      incident_context: As part of the recent security incident, an anomalous scheduled
+        task was created involving the file `winatp-intro-backdoor.exe` on host `vnevado-win10e`.
+        The incident involves a user account named `samuelf`. Attackers might have
+        used Task Scheduler to run malicious code automatically to establish persistence.
+      question: What was the command line used by the process that ran the suspicious
+        task scheduled named `yrei`?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '1616__2024-06-26t12:00:40.6793914z__"schtasks.exe" /run /tn yrei'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '1616__2024-06-26t12:00:40.6793914z__"schtasks.exe" /run /tn yrei'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: An anomalous scheduled task was created, using the command line
+          `schtasks.exe /create /sc once /tn yrei /tr "c:\users\samuelf\onedrive -
+          (new) alpineskihouse\desktop\winatp-intro-backdoor.exe" /st 11:58 /f` at
+          `2024-06-26T12:00:40.0878355Z`, with Process ID `1348`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Suspicious Task Scheduler activity was detected, using the command
+          line `schtasks.exe /run /tn yrei` at `2024-06-26T12:00:40.6793914Z`, with
+          Process ID `1616`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_77
+    title: incident_34_legacy_test_set_task_77
+    description: Following this suspicious LDAP query, a Powershell command dropped
+      and executed a suspicious file. Can you identify the name of this suspicious
+      file?
+    inherit_shared: true
+    initial_context:
+      incident_context: On July 4, 2024, a suspect LDAP query was executed, which
+        might indicate potential reconnaissance activity. LDAP queries are often used
+        by attackers to learn an organization's structure by querying the domain controller
+        for administrative users, groups, and interesting assets. This information
+        can potentially be used by an attacker to gain higher privileges and access
+        critical assets within the organization. Prior to this alert, a `winword.exe`
+        process was observed running a document `rs4_winatp-intro-invoice.docm`.
+      question: Following this suspicious LDAP query, a Powershell command dropped
+        and executed a suspicious file. Can you identify the name of this suspicious
+        file?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winatp-intro-backdoor.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winatp-intro-backdoor.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A suspicious LDAP query was executed by the account `samuelf`,
+          indicating potential reconnaissance activity.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Powershell dropped a suspicious file named `winatp-intro-backdoor.exe`
+          on the machine and executed it.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_78
+    title: incident_34_legacy_test_set_task_78
+    description: Can you identify the AadDeviceId of the host where the Automated
+      investigation was manually started?
+    inherit_shared: true
+    initial_context:
+      incident_context: As part of investigating a Powershell-based security incident
+        on July 4th, 2024, a suspicious file `winatp-intro-backdoor.exe` was dropped
+        and executed on the machine by the user `samuelf`. The attacker used a base64
+        encoded command to create and execute the backdoor file using Powershell.
+        The process ID related to this incident was `8604`, and the file `winatp-intro-backdoor.exe`
+        was involved. Subsequently, an automated investigation was initiated manually
+        by `u141(u141@ash.alpineskihouse.co)`, which started on the host device identified
+        by its AKADeviceId. Can you identify the AKADeviceId for the host involved
+        in this automated investigation?
+      question: Can you identify the AadDeviceId of the host where the Automated investigation
+        was manually started?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '02b8f519-1123-4228-b32a-ccb78af3449f'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '02b8f519-1123-4228-b32a-ccb78af3449f'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Powershell dropped a suspicious file on the machine with AadDeviceId
+          `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: An automated investigation was manually started on the machine
+          with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f` by the user `u141@ash.alpineskihouse.co`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_79
+    title: incident_34_legacy_test_set_task_79
+    description: Following the creation of the anomalous scheduled task, whose account
+      was used for a suspicious PowerShell download or encoded command execution?
+    inherit_shared: true
+    initial_context:
+      incident_context: 'An anomalous scheduled task was created on 2024-07-04 at
+        22:35:01.260626+00:00 using `schtasks.exe`. This may indicate that an attacker
+        is trying to obtain persistence on the device. Further investigation is required
+        to understand the extent of the threat. An associated report can be read for
+        more information: https://security.microsoft.com/threatanalytics3/c9709a39-ac8d-493d-9a63-71da3ca1e745/analystreport.'
+      question: Following the creation of the anomalous scheduled task, whose account
+        was used for a suspicious PowerShell download or encoded command execution?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'samuelf'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'samuelf'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: An anomalous scheduled task was created using the process `powershell.exe`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: The account `samuelf` triggered a suspicious PowerShell download
+          or executed an encoded command.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_34_legacy_test_set_task_80
+    title: incident_34_legacy_test_set_task_80
+    description: Related to this activity, can you find the account name associated
+      with the suspicious PowerShell command that was executed?
+    inherit_shared: true
+    initial_context:
+      incident_context: A suspicious PowerShell activity was observed involving a
+        command line that invoked PowerShell on a specific machine. This behavior
+        usually indicates that PowerShell was used during installation, exploration,
+        or lateral movement activities by attackers who aim to bypass security mechanisms
+        by executing their payloads in memory without leaving any trace on the disk.
+        Such activities involve downloading external payloads or running encoded commands.
+      question: Related to this activity, can you find the account name associated
+        with the suspicious PowerShell command that was executed?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'samuelf'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'samuelf'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: There was a suspicious PowerShell command line activity observed
+          on the machine with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A process executed PowerShell to download a file or run an encoded
+          command on an account with the name `samuelf`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

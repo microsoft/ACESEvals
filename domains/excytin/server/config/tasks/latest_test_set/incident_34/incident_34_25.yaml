@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_25
+    title: incident_34_latest_test_set_task_25
+    description: 'Which user account was associated with the process that executed the suspicious PowerShell command?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a suspicious Task Scheduler activity, we observed that the process "schtasks.exe" (PID 1616, created at 2024-06-26T12:00:40Z) was used to run a scheduled task named "yrei". This behaviour may indicate an attempt to launch malicious code and gain persistence. Pivoting from this task, a related alert indicated that a suspicious process later executed a PowerShell command on the same endpoint.'
+      question: 'Which user account was associated with the process that executed the suspicious PowerShell command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'samuelf'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'samuelf'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Alert ''Suspicious Task Scheduler activity'' shows the process with ExtractedFileName `powershell.exe` was used to create or modify a scheduled task.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Alert ''Suspicious process executed PowerShell command'' indicates that the account Name `samuelf` executed a suspicious PowerShell command.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

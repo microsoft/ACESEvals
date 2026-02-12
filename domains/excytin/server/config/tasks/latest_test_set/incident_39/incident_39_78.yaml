@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_78
+    title: incident_39_latest_test_set_task_78
+    description: 'What is the Azure AD user ID (AadUserId) of the account that executed the PsExec command on the remote device?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we observed that, on host vnevado-win10b, the account fk8mq (SID S-1-5-21-1540151660-3530000288-105586595-1517) executed several commands, including psexesvc.exe and rubeus.exe, which are typical of kerberoasting activity. Only a few seconds later, telemetry shows PsExec being used to start a command on a remote device—an action that could indicate lateral movement by a different user.'
+      question: 'What is the Azure AD user ID (AadUserId) of the account that executed the PsExec command on the remote device?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Rubeus activity dumped Kerberos ticket data to the file `adminticket.txt` (process.ExtractedFileName = adminticket.txt).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Minutes later, PsExec executed a remote command using the Azure AD account whose AadUserId is `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1` (account.AadUserId = 1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

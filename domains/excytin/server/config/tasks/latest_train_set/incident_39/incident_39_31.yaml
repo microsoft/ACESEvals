@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_31
+    title: incident_39_latest_train_set_task_31
+    description: 'According to the deceptive sign-in alert that occurred moments after the Mimikatz activity, what IP address was the sign-in attempt made from?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Shortly after a Mimikatz credential theft tool was detected running multiple commands on the device, our logs show a "Sign-in attempt with deceptive user account" alert, indicating that someone may have tried to log in using a fake account—possibly leveraging credentials harvested by Mimikatz. The two alerts are linked through the same investigation timeline.'
+      question: 'According to the deceptive sign-in alert that occurred moments after the Mimikatz activity, what IP address was the sign-in attempt made from?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '141.216.110.153'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '141.216.110.153'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Mimikatz credential theft activity was detected on the device, executed by an account with Sid `S-5-7-21-1843151660-3234030288-105586167-1422`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Immediately afterward, a sign-in attempt was observed using the deceptive account name `kyleg`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The deceptive sign-in originated from the suspicious IP address `141.216.110.153`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_21
+    title: incident_55_legacy_train_set_task_21
+    description: 'What is the email address of the account that created the suspicious service DDLOXJDSQSNGMUKKFUXQ?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident included an alert where a Windows executable file that had been renamed was launched. This indicates attackers might attempt to use the executable for malicious activities, such as running harmful code or connecting to an attacker-controlled network address. The account involved was `SYSTEM` with SID `S-2-2-78`. Shortly after, suspicious remote activities were observed on the same machine, potentially indicating attempts to modify files, initiate interactive sessions, or other malicious activities from a remote machine. Later, further investigation revealed suspicious service creation under the account gsmith on the machine MB-ADFS.'
+      question: 'What is the email address of the account that created the suspicious service DDLOXJDSQSNGMUKKFUXQ?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith@niseko.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'gsmith@niseko.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A Windows executable `powershell.exe` was renamed and launched, potentially indicating an attempt to bypass detection.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious remote activity was initiated by an account with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`, indicating possible remote malicious actions.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'An account with email `gsmith@niseko.alpineskihouse.co` created a suspicious service `DDLOXJDSQSNGMUKKFUXQ` on machine `MB-ADFS` to potentially execute malicious commands.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

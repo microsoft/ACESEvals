@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_82
+    title: incident_5_latest_test_set_task_82
+    description: 'During the "System recovery setting tampering" alert that concluded this activity, what is the Azure AD device ID of the affected host?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident was raised after a suspicious network event from the external IP address 83.162.58.168 was immediately followed by a lateral-movement alert on an internal device. Minutes later, the same chain of activity culminated in an alert indicating that system recovery settings were tampered with on a particular host—suggesting the attacker tried to disable Windows recovery features as part of a potential ransomware campaign.'
+      question: 'During the "System recovery setting tampering" alert that concluded this activity, what is the Azure AD device ID of the affected host?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Lateral movement activity was detected on host with HostName `vnevado-win11t`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Ransomware-like behavior was observed involving the account with Name `dp5hn`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'System recovery settings were tampered with on the host whose AadDeviceId is `bc00e484-d0e5-4da4-9472-95568cccc07e`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

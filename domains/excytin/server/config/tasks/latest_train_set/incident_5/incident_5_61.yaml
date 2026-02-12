@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_61
+    title: incident_5_latest_train_set_task_61
+    description: 'According to the Mimikatz credential-theft alert raised during this incident, which specific file (DLL) was identified on the device?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into activity attributed to the Russia-based group Manatee Tempest, a device connected out to the domain vectorsandarrows.com from the external IP 198.43.121.209. Moments later, Defender flagged suspicious remote activity and recorded a PSExec-based lateral movement attempt toward a jump server. Around the same timeframe, Microsoft Defender generated an additional alert indicating that the Mimikatz credential-theft tool had been discovered on the compromised host.'
+      question: 'According to the Mimikatz credential-theft alert raised during this incident, which specific file (DLL) was identified on the device?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimilib.dll'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'mimilib.dll'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Actor Manatee Tempest is associated with the user account that has field AadUserId = `731adb71-b11c-4bbf-850b-57989b350e96`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious remote activity originated from the IP address with field Address = `99.83.111.100`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The attacker then performed lateral movement via PSExec to the jump-server with field HostName = `vnevado-win10v`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'On that host, the credential-theft component of Mimikatz with file field Name = `mimilib.dll` was detected, confirming the attacker’s presence.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

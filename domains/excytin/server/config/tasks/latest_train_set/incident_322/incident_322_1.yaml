@@ -1,0 +1,38 @@
+tasks:
+  - task_id: incident_322_latest_train_set_task_1
+    title: incident_322_latest_train_set_task_1
+    description: 'Identify the name of the Azure Resource Group that was involved in the suspicious Resource Manager operation.'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Microsoft Defender for Resource Manager has raised an alert about a resource-management operation originating from a proxy-linked IP address (253.1.244.215). The activity was performed under the Azure subscription ID 7e838342-601f-4552-9baf-0dfb300cf555 and is associated with the user account “Hailey Johnson” (AadUserId: 5e5dd0bd-f7ed-4583-8e9e-52f91e31a360), who was connected from host “vnevado-dc”. Investigators noted that two Azure resource IDs were accessed, both pertaining to the same (redacted) resource group within the subscription.'
+      question: 'Identify the name of the Azure Resource Group that was involved in the suspicious Resource Manager operation.'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ctfcat'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'ctfcat'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A resource management operation was detected from a suspicious proxy IP targeting ResourceGroup `ctfcat`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 1.0
+            weight: 1.0

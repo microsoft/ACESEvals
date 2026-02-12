@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_89
+    title: incident_39_latest_train_set_task_89
+    description: 'What is the username that appeared in the alert indicating a possible use of the Rubeus Kerberoasting tool?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an ongoing investigation, a malicious credential-theft tool ("mimikatz.exe") was executed on an endpoint at 2024-07-04 22:35:00 UTC with the command line indicating an attempt to perform a DCSync against the vnevado.alpineskihouse.co domain. Only a few seconds later, PsExec was used to run commands on a remote device, suggesting possible lateral movement. Within the same timeframe, another alert flagged a suspected use of the Rubeus Kerberoasting tool on the affected host, which is often leveraged to request and crack Kerberos service tickets.'
+      question: 'What is the username that appeared in the alert indicating a possible use of the Rubeus Kerberoasting tool?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'fk8mq'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'fk8mq'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A malicious credential-theft tool execution was detected on the host with AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'PsExec was used to run a remote command whose process carried the ExtractedFileName `adminticket.txt`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Activity consistent with the Rubeus kerberoasting tool was observed originating from the account Name `fk8mq`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

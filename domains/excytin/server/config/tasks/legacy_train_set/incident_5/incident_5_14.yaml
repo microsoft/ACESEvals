@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_14
+    title: incident_5_legacy_train_set_task_14
+    description: 'In line with this activity, a Windows Sysinternals tool was renamed and then launched. Can you identify the name of the file that was used for this tool?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident was detected involving a possible attempt to access a Primary Refresh Token (PRT). This is concerning as PRT is a key artifact of Azure AD authentication across multiple devices and versions. Attackers can use this resource to move laterally or perform credential theft. The incident involves the host `vnevado-win11t` and a process `browsercore.exe` with the Process ID 7036 and commit timestamp 2024-06-20T09:29:49.304018Z. The activity was observed around the same time and is related to a midnight credential attack attempt.'
+      question: 'In line with this activity, a Windows Sysinternals tool was renamed and then launched. Can you identify the name of the file that was used for this tool?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'mimikatz.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was a possible attempt to access the Primary Refresh Token (PRT) using the process `browsercore.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The host involved in the attempt to access the PRT is `vnevado-win10v`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A Windows Sysinternals tool `mimikatz.exe` was renamed and launched, potentially for covert malicious use.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

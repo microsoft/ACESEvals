@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_322_latest_test_set_task_22
+    title: incident_322_latest_test_set_task_22
+    description: 'Identify the exact URL that was clicked, as recorded in the "Malicious URL was clicked on that device" alert generated at 13:49:58 UTC on 2024-08-01.'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident began when suspicious Azure Resource Management (ARM) activities were observed from the public IP address 253.1.244.215 at 2024-08-01 13:19 UTC, indicating that a risky user session might have been abused. Roughly thirty minutes later, another alert in the same incident reported that a user on the same device clicked a malicious link, raising additional concerns about potential compromise.'
+      question: 'Identify the exact URL that was clicked, as recorded in the "Malicious URL was clicked on that device" alert generated at 13:49:58 UTC on 2024-08-01.'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A risky user with account Sid `S-1-5-21-1840151686-3534835288-156286563-1127` performed suspicious Azure Resource Management activities.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Later, a malicious URL `https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/` was clicked from a device associated with this activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

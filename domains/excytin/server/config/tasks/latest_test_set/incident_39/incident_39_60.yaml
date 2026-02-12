@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_60
+    title: incident_39_latest_test_set_task_60
+    description: 'According to the final alert in this sequence, what is the name of the file that was executed to perform credential theft on host "vnevado-win10b"?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-04 an alert was raised on host "vnevado-win10b" (AadDeviceId: fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb) after account "fk8mq" (SID: S-1-5-21-1540151660-3530000288-105586595-1517) registered a suspicious file as a Windows service. Just seconds later, additional alerts indicated that multiple dual-purpose tools were dropped on the same machine, suggesting preparation for further malicious activity. Immediately after, Defender detected the execution of a well-known credential-theft tool on that device.'
+      question: 'According to the final alert in this sequence, what is the name of the file that was executed to perform credential theft on host "vnevado-win10b"?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'get-krbticket.ps1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'get-krbticket.ps1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious file was registered as a service for persistence (file.Name = `psexesvc.exe`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A malicious credential-theft script was executed to dump Kerberos tickets (file.Name = `get-krbticket.ps1`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Multiple dual-purpose tools were dropped onto the host via a PowerShell process (process.ExtractedFileName = `powershell.exe`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

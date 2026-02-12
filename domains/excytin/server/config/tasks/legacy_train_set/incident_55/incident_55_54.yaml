@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_54
+    title: incident_55_legacy_train_set_task_54
+    description: 'Who was the sender of the email containing the malicious URL that was later removed after delivery?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'As part of a recent incident where a process was injected with potentially malicious code, it was found that the PowerShell script `contosoadfsblatempcreds.ps1` was executed on the host `mb-winclient` and this might be associated with suspicious code running in the target process memory of a user account. This account''s unique identifier, its SID value, and related behaviors indicate potential malicious activities.'
+      question: 'Who was the sender of the email containing the malicious URL that was later removed after delivery?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'santiago@vnevado.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'santiago@vnevado.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There has been malicious code injection detected, associated with the account having AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'An email containing a malicious URL was delivered from the sender `santiago@vnevado.alpineskihouse.co` and subsequently removed.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

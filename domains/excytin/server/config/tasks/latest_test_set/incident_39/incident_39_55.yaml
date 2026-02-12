@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_55
+    title: incident_39_latest_test_set_task_55
+    description: 'During the ‘Kekeo’ active-malware detection that followed the reconnaissance and kerberoasting activity, which user account was reported as being involved?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Security monitoring has revealed that the user Ethan Brooks (Account Executive) on host VNEVADO-Win10V carried out SMB session enumeration against the domain controller VNEVADO-DC on 2024-07-10. This reconnaissance activity is often an early stage in credential-theft attacks. In the same incident timeline, a few days earlier (2024-07-04) the endpoint also showed indications of the Rubeus kerberoasting tool execution, suggesting attempts to abuse Kerberos tickets. Shortly after that, Defender flagged an active infection of the ‘Kekeo’ malware on the machine, indicating the attacker may already have established persistence and is interacting with the system.'
+      question: 'During the ‘Kekeo’ active-malware detection that followed the reconnaissance and kerberoasting activity, which user account was reported as being involved?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'fk8mq'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'fk8mq'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An active ''Kekeo'' malware instance was detected running under the account Name `fk8mq`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Soon after, the attacker executed the process with ExtractedFileName `rubeus.exe`, indicating use of the Rubeus kerberoasting tool.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Days later, the account with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1` performed SMB reconnaissance from VNEVADO-Win10V, enumerating sessions on VNEVADO-DC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

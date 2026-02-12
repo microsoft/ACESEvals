@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_63
+    title: incident_5_latest_test_set_task_63
+    description: 'According to the "Suspicious WMI process creation" alert that followed the ransomware-like behavior, what was the name of the script (extracted file name) that was executed?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into ransomware-like activity, several files ending with ".lockbit" (for example, "unstreaming.xlsx.lockbit" and "kiters.7z.lockbit") were detected, all tied to an alert titled "Potentially compromised assets exhibiting ransomware-like behavior". The same timeline also contains a follow-up alert indicating that a suspicious WMI process was created on a host—often a sign that malware is spawning additional processes to extend its reach. The exact script launched via WMI was not recorded in the first alert and needs verification.'
+      question: 'According to the "Suspicious WMI process creation" alert that followed the ransomware-like behavior, what was the name of the script (extracted file name) that was executed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'get-userprttoken.ps1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'get-userprttoken.ps1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Account Name `dp5hn` is flagged as a potentially compromised asset exhibiting ransomware-like behavior.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A suspicious WMI process creation spawned the script with ExtractedFileName `get-userprttoken.ps1`, indicating possible malicious activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

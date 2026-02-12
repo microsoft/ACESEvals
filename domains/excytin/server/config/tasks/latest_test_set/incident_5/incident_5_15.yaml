@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_15
+    title: incident_5_latest_test_set_task_15
+    description: 'According to the follow-up alert about a possible attempt to access a Primary Refresh Token (PRT), which executable was identified as the process involved in this suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Investigation into a system recovery setting tampering alert on host "vnevado-win11t" revealed that the utilities "vssblatemp.exe" and "bcdedit.exe" were executed (for example with the command line "vssblatemp.exe delete shadows /all"). Such activity is often used by attackers to remove shadow copies and disable recovery options, making it harder to restore affected systems. Shortly after this tampering activity, another alert was raised on the same device indicating a possible attempt to access an Azure AD Primary Refresh Token (PRT)—a technique frequently used for lateral movement and credential theft.'
+      question: 'According to the follow-up alert about a possible attempt to access a Primary Refresh Token (PRT), which executable was identified as the process involved in this suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'browsercore.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'browsercore.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-04 22:35:01.158784+00:00, the alert ''System recovery setting tampering'' showed suspicious activity by the account with Field ''Name'' and Value `dp5hn`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Moments later, at 2024-07-04 22:35:01.972458+00:00, the alert ''Possible attempt to access Primary Refresh Token (PRT)'' involved the process with Field ''ExtractedFileName'' and Value `browsercore.exe`, indicating a likely follow-up attempt to steal authentication tokens.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_33
+    title: incident_134_latest_test_set_task_33
+    description: 'According to the related email-based alert, what was the sender address of the messages that were removed after delivery?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into a password-spray-related account compromise originating from the unusual IP address 170.54.121.63, we noted a related alert stating that email messages containing a malicious URL were delivered to users’ mailboxes but subsequently removed by security defenses.'
+      question: 'According to the related email-based alert, what was the sender address of the messages that were removed after delivery?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'alyssat@vnevado.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'alyssat@vnevado.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Alert indicates that an account with field Sid = `S-1-5-21-1874151667-3554330288-105586563-1715` was compromised following a password-spray attack (time 2024-07-18 14:54:18 UTC).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Another alert shows an email message where the mailmessage field Sender = `alyssat@vnevado.alpineskihouse.co` contained a malicious URL and was removed after delivery (time 2024-07-17 11:04:19 UTC).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

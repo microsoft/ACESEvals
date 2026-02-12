@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_29
+    title: incident_34_latest_test_set_task_29
+    description: 'According to the alert titled “Suspicious PowerShell download or encoded command execution” raised at 22:35:01 UTC on 2024-07-04, which executable was responsible for launching the PowerShell activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we observed that an uncommon file (winatp-intro-backdoor.exe) was added to the HKCU RunOnce registry key via a command executed from IP address 72.5.72.208 at 22:35:02 UTC on 2024-07-04. Just moments earlier, another alert was raised because a process invoked PowerShell to download a file or run an encoded script on the same device.'
+      question: 'According to the alert titled “Suspicious PowerShell download or encoded command execution” raised at 22:35:01 UTC on 2024-07-04, which executable was responsible for launching the PowerShell activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'powershell.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A process executed PowerShell with ExtractedFileName `powershell.exe`, performing a suspicious download or encoded command at 2024-07-04 22:35:01.807662+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Immediately after, on the host with HostName `vnevado-win10e`, an uncommon file was created and added to a Run registry key at 2024-07-04 22:35:02.252731+00:00, indicating possible persistence.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

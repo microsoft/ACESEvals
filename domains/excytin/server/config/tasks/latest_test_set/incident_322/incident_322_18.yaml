@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_322_latest_test_set_task_18
+    title: incident_322_latest_test_set_task_18
+    description: 'According to the final alert in this sequence ("Ntdsutil collecting Active Directory information"), what is the name of the executable that was observed running on the host?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Security monitoring flagged a series of related alerts beginning with outbound traffic from 231.60.52.209 (host vnevado-win11h.vnevado.alpineskihouse.co) to the suspicious URL login.micro.demo.antoinetest.ovh. Shortly after, a user on the same device clicked another malicious link, and an Azure Resource Manager operation was initiated from a proxy-associated IP address. Minutes later, a new alert indicated that a utility commonly abused for harvesting Active Directory data was executed on the host—a strong sign of possible credential-theft activity.'
+      question: 'According to the final alert in this sequence ("Ntdsutil collecting Active Directory information"), what is the name of the executable that was observed running on the host?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ntdsutil.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'ntdsutil.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Malicious network traffic was detected on host HostName=`vnevado-win11h`, which accessed the suspicious site login.micro.demo.antoinetest.ovh.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'On the same device, the user with AadUserId=`5e5dd0bd-f7ed-4583-8e9e-52f91e31a360` actively clicked the malicious URL, confirming initial compromise.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Shortly after, a resource-management operation coming from a proxy IP was recorded on host HostName=`vnevado-dc`, suggesting the attacker laterally moved to the domain controller.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'Once on the domain controller, the attacker ran the process ExtractedFileName=`ntdsutil.exe` to gather Active Directory information, completing the attack chain.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

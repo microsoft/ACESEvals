@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_9
+    title: incident_39_latest_train_set_task_9
+    description: 'According to the follow-up alert "Possible use of the Rubeus kerberoasting tool" raised at 2024-07-04 22:35:04 UTC, what is the Azure AD user ID (AadUserId) of the account associated with this suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a device named "vnevado-win10b", security telemetry flagged a sequence of suspicious events described in an alert titled "Potential human-operated malicious activity". The alert shows that a process called "psexesvc.exe" (PID 5512) was launched from IP 141.216.110.153 while accounts such as "kyleg" and "fk8mq" were active on the system. The presence of the file "rubeus.exe" on this host suggests an attacker might be attempting credential-theft techniques.'
+      question: 'According to the follow-up alert "Possible use of the Rubeus kerberoasting tool" raised at 2024-07-04 22:35:04 UTC, what is the Azure AD user ID (AadUserId) of the account associated with this suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A potential human-operated malicious activity was detected where process ExtractedFileName=`rubeus.exe` was observed executing.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, the use of Rubeus for kerberoasting was linked to account AadUserId=`1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

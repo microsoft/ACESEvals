@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_69
+    title: incident_5_latest_train_set_task_69
+    description: 'What is the name of the file that was detected on the device in the "Mimikatz credential theft tool" alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation, security telemetry shows that a connection attempt to the URL "http://vectorsandarrows.com/" was blocked as Command-and-Control (C2) behaviour on 2024-07-04 22:35:02 UTC. Shortly after, additional alerts indicated possible ransomware-related file-system changes and a PSExec lateral-movement attempt to the jump server. A few seconds before the C2 block, the endpoint also raised an alert for the presence of the Mimikatz credential-theft tool. Analysts need to know which specific file associated with Mimikatz was identified on the system.'
+      question: 'What is the name of the file that was detected on the device in the "Mimikatz credential theft tool" alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimilib.dll'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'mimilib.dll'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Alert at 2024-07-04 22:35:02.906798+00:00: Command-and-Control behavior was blocked for the account with Sid `S-1-5-21-1840191660-8534830288-125585561-1522`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Alert at 2024-07-04 22:35:03.423858+00:00: Possible ransomware activity observed communicating with IP address `99.83.111.100` (Field: Address).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Alert at 2024-07-10 11:24:45.260113+00:00: Lateral movement detected via PSExec to the host with HostName `vnevado-win10v`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'Alert at 2024-07-04 22:35:00.846286+00:00: The credential-theft tool Mimikatz was detected loading the file `mimilib.dll` (Field: Name).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

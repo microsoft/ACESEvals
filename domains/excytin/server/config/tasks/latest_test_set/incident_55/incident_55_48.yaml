@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_48
+    title: incident_55_latest_test_set_task_48
+    description: 'What exact URL was clicked that triggered the "A potentially malicious URL click was detected" alert on July 10 2024?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On host "mb-adfs", investigators observed a renamed executable ("iy2orr1e.rrg.exe") launched through a base-64 encoded PowerShell command while running under the SYSTEM account (SID S-2-2-78). This activity generated a "System executable renamed and launched" alert on July 4 2024. Around the same time a "Suspicious System Hardware Discovery" alert also fired for the same system. Several days later, the incident escalated when a user clicked a link that was subsequently determined to be malicious, resulting in the alert titled "A potentially malicious URL click was detected" (timestamp: July 10 2024 11:24 UTC).'
+      question: 'What exact URL was clicked that triggered the "A potentially malicious URL click was detected" alert on July 10 2024?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'On 2024-07-04 22:35:01.543723+00:00, a renamed Windows system executable was launched (process ExtractedFileName = "powershell.exe").'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Just a second earlier, on 2024-07-04 22:35:00.746663+00:00, the account carrying out the activity had Sid = "S-1-5-21-561436748-3867387497-1732241745-3701", which was observed performing suspicious system-hardware discovery.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Several days later, on 2024-07-10 11:24:45.507742+00:00, the same attack path culminated in a user clicking the potentially malicious Url = "http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/".'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

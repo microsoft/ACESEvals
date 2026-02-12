@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_train_set_task_91
+    title: incident_55_latest_train_set_task_91
+    description: 'Which user account on MB-WINCLIENT initiated the directory-service replication (DCSync) request to MB-DC1?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we observed that the domain controller MB-DC1 performed a suspicious read of the AD FS Distributed Key Manager (DKM) secret. Around the same time, another alert indicated that host MB-WINCLIENT sent a single directory-service replication request to MB-DC1, suggesting a possible DCSync attempt. The alert notes that this replication was triggered by a specific user account on MB-WINCLIENT, but the username was not included in the initial summary.'
+      question: 'Which user account on MB-WINCLIENT initiated the directory-service replication (DCSync) request to MB-DC1?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Luciano Herrera'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Luciano Herrera'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'HostName `MB-DC1` read the AD FS DKM key, indicating suspicious activity on the domain controller.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Account Name `Luciano Herrera` initiated a DCSync replication request, suggesting a potential directory-service replication attack.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

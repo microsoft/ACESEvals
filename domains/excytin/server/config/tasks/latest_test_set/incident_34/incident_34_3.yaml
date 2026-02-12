@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_3
+    title: incident_34_latest_test_set_task_3
+    description: 'Provide the Azure AD user ID (AadUserId) associated with the earlier "Suspicious PowerShell download or encoded command execution" alert raised at 22:35:01 UTC on 2024-07-04.'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security investigation uncovered that a Microsoft Word document with macros (winword.exe, PID 9780, launched from the path c:\scripts\...) invoked PowerShell, leading to an alert titled "Suspicious PowerShell download or encoded command execution" on 2024-07-04 at 22:35:04 UTC. Log correlation shows that just a few seconds earlier, at 22:35:01 UTC, a separate but related alert with the same title was triggered and mapped to a single Azure AD user account. Analysts need to reference the unique Azure AD user identifier tied to that earlier alert for further triage, but the identifier itself is not shown in the investigation summary.'
+      question: 'Provide the Azure AD user ID (AadUserId) associated with the earlier "Suspicious PowerShell download or encoded command execution" alert raised at 22:35:01 UTC on 2024-07-04.'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '16320fec-8d90-403b-b7fe-78f715d4728d'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '16320fec-8d90-403b-b7fe-78f715d4728d'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious PowerShell download or encoded command was executed on the host (HostName=`vnevado-win10e`) at 2024-07-04 22:35:04 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'This activity is tied to the user account (AadUserId=`16320fec-8d90-403b-b7fe-78f715d4728d`), which triggered its own suspicious PowerShell execution at 2024-07-04 22:35:01 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

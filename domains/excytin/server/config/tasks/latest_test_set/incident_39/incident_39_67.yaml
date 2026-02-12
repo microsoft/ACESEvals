@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_67
+    title: incident_39_latest_test_set_task_67
+    description: 'Identify the name of the executable that was used to launch the remote command in the "PsExec launched a command on a remote device" alert.'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of the Mimikatz credential-theft activity observed on 04 Jul 2024, we also noted a nearly simultaneous alert indicating that a separate utility was used to execute a command on the remote domain controller (\\vnevado-dc). The process (PID 5612, created at 2024-06-27 14:33:48 UTC) issued a command to stop the NTDS service, add SID history to the account ‘bdadmin’, and then restart the service—strong signs of attempted privilege escalation and lateral movement.'
+      question: 'Identify the name of the executable that was used to launch the remote command in the "PsExec launched a command on a remote device" alert.'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'psexec.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'psexec.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Mimikatz was detected on the device, executed through the process whose ExtractedFileName field is `powershell.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Almost simultaneously, PsExec was used to run a remote command; the full process identifier (ProcessId__CreatedTimeUtc__CommandLine) is `5612__2024-06-27t14:33:48.8916656z__"psexec.exe" \\vnevado-dc -accepteula cmd /c "powershell.exe -command "net.exe stop ntds /y; add-addbsidhistory -samaccountname bdadmin -sidhistory \"s-1-5-32-544\" -databasepath (get-itemproperty -path registry::hklm\system\currentcontrolset\services\ntds\parameters).\"dsa database file\" -force; net.exe start ntds""`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

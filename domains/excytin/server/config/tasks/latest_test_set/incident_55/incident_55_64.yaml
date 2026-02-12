@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_64
+    title: incident_55_latest_test_set_task_64
+    description: 'According to the "Suspicious sequence of exploration activities" alert raised at 22:35:03 UTC on 2024-07-04, what is the Security Identifier (SID) of the account associated with these exploration commands?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a suspicious remote activity detected on host "mb-adfs", several processes were observed, including "lsass.exe" and an encoded PowerShell command, all initiated around 22:35 UTC on 2024-07-04. Shortly after this remote activity alert, another alert titled "Suspicious sequence of exploration activities" was triggered, indicating that a process executed multiple Windows discovery commands—behavior often linked to lateral-movement preparation.'
+      question: 'According to the "Suspicious sequence of exploration activities" alert raised at 22:35:03 UTC on 2024-07-04, what is the Security Identifier (SID) of the account associated with these exploration commands?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-551436448-9871687716-9837441745-1903'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-551436448-9871687716-9837441745-1903'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-04T22:35:02.377104Z, suspicious remote activity was initiated using process ExtractedFileName `powershell.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'At 2024-07-04T22:35:03.197761Z, a suspicious sequence of exploration commands was executed by the account with Sid `S-1-5-21-551436448-9871687716-9837441745-1903`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

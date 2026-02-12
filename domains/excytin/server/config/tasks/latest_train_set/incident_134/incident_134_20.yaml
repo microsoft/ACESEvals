@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_train_set_task_20
+    title: incident_134_latest_train_set_task_20
+    description: 'Which user account was identified in the related "Email messages containing malicious URL removed after delivery" alert that occurred on July 17, 2024?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A password spray attempt was detected on July 18, 2024 at 14:36 UTC coming from the external IP address 170.54.121.63. The attack was aimed at Azure AD accounts (AadUserId unknown) and triggered a "Password Spray" alert. During the same incident investigation, analysts noticed that a related alert from the previous day reported that certain email messages containing a malicious URL were delivered and subsequently removed by security systems.'
+      question: 'Which user account was identified in the related "Email messages containing malicious URL removed after delivery" alert that occurred on July 17, 2024?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Nina Park'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Nina Park'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Password spray attack detected on 2024-07-18 14:36:59.143748+00:00 targeting account with field AadUserId = `e036dee7-fa23-42ef-a019-468c8d3401f1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'An email containing a malicious URL was delivered and later removed on 2024-07-17 11:04:19.964546+00:00 for account with field Name = `Nina Park`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

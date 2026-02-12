@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_21
+    title: incident_5_latest_train_set_task_21
+    description: 'Which user account name was associated with the blocked SMB remote file-access attempt that occurred later in the incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into Manatee Tempest activity, we observed that the account "dp5hn" on host "vnevado-win10s" executed the command `curl http://vectorsandarrows.com` (process ID 6460) on June 20. This behavior is associated with tactics commonly used by the Manatee Tempest threat group, such as drive-by downloads and follow-on attacks. Several days later, a separate alert reported that a contained user’s attempt to modify files over SMB was automatically blocked, indicating a thwarted lateral-movement attempt.'
+      question: 'Which user account name was associated with the blocked SMB remote file-access attempt that occurred later in the incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Grace Chen'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Grace Chen'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Alert 1 identifies activity associated with suspected attacker group ''Manatee Tempest''; the affected user account has SID `S-1-5-21-1840191660-8534830288-125585561-1522` (Field: Sid).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Alert 2 shows a lateral-movement attempt via SMB that was automatically blocked; the contained user account is `Grace Chen` (Field: Name).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

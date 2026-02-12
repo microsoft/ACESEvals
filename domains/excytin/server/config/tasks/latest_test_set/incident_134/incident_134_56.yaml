@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_56
+    title: incident_134_latest_test_set_task_56
+    description: 'According to the “Suspicious inbox manipulation rule” alert related to Nina Park’s mailbox, what is the AppId of the cloud application involved in the suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 17 2024, an alert titled “BEC financial fraud” was raised after a risky Azure AD session in which the user Nina Park (email: Nina Park@vnevado.alpineskihouse.co, SID S-1-5-21-1874151667-3554330288-105586563-1715) connected from IP address 237.7.81.122 and created an inbox rule designed to hide incoming messages—activity typical of business-email-compromise attempts. This alert is linked to a second alert, “Suspicious inbox manipulation rule,” indicating that the same mailbox’s rules were further tampered with. The second alert references a particular cloud application by its unique AppId, which could help identify the service leveraged in the attack.'
+      question: 'According to the “Suspicious inbox manipulation rule” alert related to Nina Park’s mailbox, what is the AppId of the cloud application involved in the suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '20893'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '20893'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The BEC financial fraud alert shows a suspicious inbox rule created for the account with Email `Nina Park@vnevado.alpineskihouse.co`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The suspicious inbox manipulation rule alert indicates that the cloud application with AppId `20893` was used to manipulate the inbox.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

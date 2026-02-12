@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_legacy_train_set_task_21
+    title: incident_34_legacy_train_set_task_21
+    description: 'What is the SID of the account that executed the suspicious PowerShell command?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A suspicious PowerShell command execution was detected on the host `vnevado-win10e`. The file `winatp-intro-backdoor.exe` was also involved, which might indicate that an attacker is trying to download external payloads or executing commands in the device. PowerShell is commonly utilized by attackers to bypass security protection mechanisms and execute their payloads in memory.'
+      question: 'What is the SID of the account that executed the suspicious PowerShell command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1870156660-7534030218-135086563-1193'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1870156660-7534030218-135086563-1193'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The account `samuelf` executed a PowerShell command to download a file or run an encoded command on 2024-07-04 at 22:35:01.807662+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The user with SID `S-1-5-21-1870156660-7534030218-135086563-1193` executed a suspicious PowerShell command on 2024-07-04 at 22:35:00.698474+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

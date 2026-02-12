@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_17
+    title: incident_5_latest_train_set_task_17
+    description: 'In the related ''Suspicious hands on keyboard user behavior'' alert, what was the process ID of the curl command that was executed?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the incident investigation, we noted a ''CommandAndControl'' malware detection on host vnevado-win11u (device ID bc00e484-d0e5-4da4-9472-95568cccc07e). At 2024-06-20 09:32:04Z, a curl command (`curl http://vectorsandarrows.com`) was launched under process ID 5572. This activity is linked to a later alert flagging suspicious hands-on-keyboard behavior by the same user on the same machine.'
+      question: 'In the related ''Suspicious hands on keyboard user behavior'' alert, what was the process ID of the curl command that was executed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '88'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '88'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Malware ''CommandAndControl'' was detected during lateral movement activity involving the account with Sid `S-1-5-21-1840191660-8534830288-125585561-1522`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious hands-on-keyboard behavior occurred when the process identified by ProcessId__CreatedTimeUtc__CommandLine `88__2024-06-20t09:29:42.3927529z__curl http://vectorsandarrows.com` executed a curl command to reach an external site.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

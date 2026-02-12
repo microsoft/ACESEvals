@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_96
+    title: incident_5_legacy_train_set_task_96
+    description: 'Can you identify the IP address associated with the lateral movement to the jump server Vnevado-jump?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A potential attempt to access a Primary Refresh Token (PRT) through the process `browsercore.exe` was detected on 2024-07-04. PRT is crucial for Azure AD authentication across various devices, and attackers might try to exploit it to move laterally or steal credentials. Subsequently, it was identified that a compromised user account was involved in delivering ransomware-related files across multiple devices. This indicates potential lateral movement and broader infection attempts within the network.'
+      question: 'Can you identify the IP address associated with the lateral movement to the jump server Vnevado-jump?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '141.216.110.153'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '141.216.110.153'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was a possible attempt to access the Primary Refresh Token (PRT) associated with the AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A user account may have been compromised and used to deliver ransomware-related files from IP address `99.83.111.100`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Lateral movement using PSExec was detected to the jump server with IP address `141.216.110.153`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

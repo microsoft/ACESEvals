@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_33
+    title: incident_166_latest_test_set_task_33
+    description: 'A few hours earlier, a separate alert titled "BEC financial fraud" was triggered because a hidden-inbox rule was created in a risky Azure AD session. From which IP address did this BEC financial fraud activity originate?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we noticed a "Suspicious SAP authentication" alert on 2024-07-22 12:59:26 UTC. The activity targeted cloud-application ID 100 and came from the external IP address 107.253.5.27, indicating that a risky sign-in might have been used to access SAP.'
+      question: 'A few hours earlier, a separate alert titled "BEC financial fraud" was triggered because a hidden-inbox rule was created in a risky Azure AD session. From which IP address did this BEC financial fraud activity originate?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '255.246.85.58'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '255.246.85.58'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious SAP authentication: A risky sign-in was observed for account (Field: Name, Value: `Jordan P`) accessing SAP on 2024-07-22 12:59:26 UTC, suggesting the account may be compromised.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'BEC financial fraud attempt: A malicious inbox rule was created from IP address (Field: Address, Value: `255.246.85.58`) on 2024-07-22 10:00:07 UTC, indicating possible business email compromise activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

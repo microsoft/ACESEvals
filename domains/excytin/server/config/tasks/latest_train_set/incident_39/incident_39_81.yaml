@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_81
+    title: incident_39_latest_train_set_task_81
+    description: 'What is the name of the PowerShell script that was executed during the anomalous account lookup activity detected moments after the credential theft tool ran?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-04 at 22:35:01 UTC, a "Malicious credential theft tool execution" alert was raised after the process "mimikatz.exe" (launched via "powershell.exe" and the script "get-krbticket.ps1") was executed with parameters indicating an attempt to dump credentials for user "fk8mq" in the vnevado.alpineskihouse.co domain. Only a few seconds later, another alert flagged a surge of suspicious user-account enumeration activity, suggesting the attacker moved on to gather further information about accounts in the environment.'
+      question: 'What is the name of the PowerShell script that was executed during the anomalous account lookup activity detected moments after the credential theft tool ran?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'domaindominance27.ps1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'domaindominance27.ps1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-04 22:35:01.182306+00:00 a malicious credential-theft tool was executed by the account with Sid `S-5-7-21-1843151660-3234030288-105586167-1422`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Shortly after, anomalous account lookups were performed via the script file with Name `domaindominance27.ps1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

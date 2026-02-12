@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_14
+    title: incident_39_legacy_train_set_task_14
+    description: 'During the incident, some malware named ''Kekeo'' was also detected. Can you find the Security Identifier (SID) of the account that was associated with the ''Kekeo'' malware detection?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident related to malicious credential theft tool execution was detected. The process `mimikatz.exe` with the command line indicating a credential dump was executed on the device with IP address `65.233.23.156`. Furthermore, activity indicating the use of the Rubeus kerberoasting tool was also observed, which can be used for various attacks, including kerberoasting and pass-the-ticket.'
+      question: 'During the incident, some malware named ''Kekeo'' was also detected. Can you find the Security Identifier (SID) of the account that was associated with the ''Kekeo'' malware detection?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1540151660-3530000288-105586595-1517'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1540151660-3530000288-105586595-1517'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A known credential theft tool execution was detected on the host with AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The Rubeus kerberoasting tool (`rubeus.exe`) was possibly used, indicating Kerberos ticket attacks on the endpoint.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: '''Kekeo'' malware was detected and was active in the environment, with potential risks associated to the account with Sid `S-1-5-21-1540151660-3530000288-105586595-1517`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

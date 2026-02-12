@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_10
+    title: incident_5_latest_test_set_task_10
+    description: 'According to the "LSASS process memory modified" alert raised on 4 July 2024, what external IP address was associated with the activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a suspected ransomware outbreak on 4 July 2024, security telemetry showed that multiple files on a device (AadDeviceId: bc00e484-d0e5-4da4-9472-95568cccc07e) were suddenly renamed with the “.lockbit” extension (e.g., ponceau.7z.lockbit, syncretic.7z.lockbit, unstreaming.xlsx.lockbit). This behaviour triggered the alert “Possible ransomware activity based on a known malicious extension.”  Just seconds earlier, another alert, “LSASS process memory modified,” indicated that an attacker tampered with the LSASS process on the same endpoint, suggesting credential-dumping or defense-evasion activity.  That LSASS-related alert recorded an external IP address that may represent the adversary’s control point.'
+      question: 'According to the "LSASS process memory modified" alert raised on 4 July 2024, what external IP address was associated with the activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.224.99.179'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Ransomware-style file changes were observed coming from the IP.Address `99.83.111.100` (alert: “Possible ransomware activity based on a known malicious extension”).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Shortly afterwards, the adversary leveraged PsExec to laterally move to the HostName `vnevado-win10v` (alert: “PSExec to Vnevado-jump”).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The intrusion culminated with the attacker tampering with LSASS memory from the IP.Address `107.224.99.179`, indicating credential-dumping activity (alert: “LSASS process memory modified”).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

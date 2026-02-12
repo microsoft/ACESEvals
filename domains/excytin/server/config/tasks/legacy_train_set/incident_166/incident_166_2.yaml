@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_legacy_train_set_task_2
+    title: incident_166_legacy_train_set_task_2
+    description: 'During the investigation of this BEC financial fraud, it was found that there was a sign-in from an anonymous IP address earlier. What was the anonymous IP address identified?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'As part of investigating the BEC financial fraud case involving Jordan P (Email: Jordan P@vnevado.alpineskihouse.co) using IP address 255.246.85.58, a connection to a sign-in from an anonymous IP address was observed on 2024-07-22 09:11:31.290020+00:00.'
+      question: 'During the investigation of this BEC financial fraud, it was found that there was a sign-in from an anonymous IP address earlier. What was the anonymous IP address identified?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '192.238.237.190'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '192.238.237.190'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An attacker created a suspicious inbox rule in the Azure Active Directory session using the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`, potentially aiming at business email compromise (BEC) for financial fraud.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'There was a sign-in attempt from an anonymous IP address `192.238.237.190`, which might be related to the same attacker activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

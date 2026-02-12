@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_91
+    title: incident_55_latest_test_set_task_91
+    description: 'In the follow-up alert titled "System executable renamed and launched", what is the Security Identifier (SID) of the account that ran the renamed executable?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation of an ongoing hands-on-keyboard attack that leveraged the Impacket toolkit, Microsoft Defender for Endpoint flagged a process (PID 780) launching lsass.exe on 2024-06-20 at 08:30:13 UTC. The suspicious activity involved the LocalSystem account and the user gsmith. A few seconds later, another alert indicated that a Windows system executable had been renamed and executed, suggesting an attempt to evade signature-based detections.'
+      question: 'In the follow-up alert titled "System executable renamed and launched", what is the Security Identifier (SID) of the account that ran the renamed executable?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-2-2-78'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-2-2-78'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Step 1: ProcessId__CreatedTimeUtc__CommandLine = 6808__2024-07-02t09:48:12.7628138z__"powershell.exe  -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcafiazqbuageabqblafaabwb3aguacgbzaggazqbsagwalgbwahmamqa="  ➔ The attacker used Impacket to remotely run an encoded PowerShell command (process ID 6808, created 2024-07-02 09:48:12 UTC).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Step 2: Sid = S-2-2-78  ➔ Shortly after, a system executable that had been renamed was launched under the account with SID S-2-2-78, indicating the attacker is continuing activity with that compromised account.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

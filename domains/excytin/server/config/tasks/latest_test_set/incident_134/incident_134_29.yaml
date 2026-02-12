@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_29
+    title: incident_134_latest_test_set_task_29
+    description: 'What is the primary email address of the mailbox from which the suspicious emails were sent in the later BEC-related alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an ongoing Business Email Compromise (BEC) investigation, an alert reported that the user account "Nina Park" (sign-in from IP 237.7.81.122) created a suspicious inbox rule designed to hide incoming messages. Roughly twenty minutes later, another alert indicated that suspicious emails were actually sent from a mailbox associated with the same BEC activity.'
+      question: 'What is the primary email address of the mailbox from which the suspicious emails were sent in the later BEC-related alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'nathan@avoriaz.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'nathan@avoriaz.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious inbox rule was created during a risky session coming from IP Address `237.7.81.122`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, suspicious emails were sent from the mailbox with MailboxPrimaryAddress `nathan@avoriaz.alpineskihouse.co`, indicating possible BEC activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

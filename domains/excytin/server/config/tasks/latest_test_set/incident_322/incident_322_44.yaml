@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_322_latest_test_set_task_44
+    title: incident_322_latest_test_set_task_44
+    description: 'In the "Suspicious credential dump from NTDS.dit" alert, what was the Process ID (PID) of the PowerShell process that executed the encoded command?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of the recent activity on host "vnevado-dc", we observed an alert titled "Ntdsutil collecting Active Directory information" at 12:54 UTC on 2024-08-01. The attacker launched the tool "ntdsutil.exe" (PID 6748) via PowerShell, suggesting an attempt to gather domain information. Pivoting from this alert, we found a related alert about a "Suspicious credential dump from NTDS.dit" that was triggered shortly beforehand. This second alert involves a PowerShell process that ran an encoded command to dump credentials.'
+      question: 'In the "Suspicious credential dump from NTDS.dit" alert, what was the Process ID (PID) of the PowerShell process that executed the encoded command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '2556'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '2556'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious execution of Ntdsutil observed – field ProcessId__CreatedTimeUtc__CommandLine has value `6748__2024-08-01t12:37:30.2769191z__"ntdsutil.exe" "ac i ntds" ifm "create full c:\temp" q q`, indicating creation of a full Active-Directory IFM dump.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Immediately afterwards, PowerShell is launched to dump credentials – field ProcessId__CreatedTimeUtc__CommandLine has value `2556__2024-08-01t12:37:29.6522416z__"powershell.exe" -encodedcommand <base64-payload>`, showing a base64-encoded command that extracts data from NTDS.dit.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
