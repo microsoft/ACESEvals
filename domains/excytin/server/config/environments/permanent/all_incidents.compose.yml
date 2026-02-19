@@ -256,6 +256,51 @@ services:
       - "saber.service.type=permanent"
       - "saber.service.name=incident-322-db"
 
+  # Permanent sandbox for agent tool execution (shared across all episodes)
+  # Replaces per-episode sandbox containers — targeted by name via executor target_container config
+  excytin-sandbox:
+    image: saber/excytin/sandbox:latest
+    container_name: saber-excytin-sandbox
+    working_dir: /workspace
+    depends_on:
+      incident-5-db:
+        condition: service_healthy
+      incident-34-db:
+        condition: service_healthy
+      incident-38-db:
+        condition: service_healthy
+      incident-39-db:
+        condition: service_healthy
+      incident-55-db:
+        condition: service_healthy
+      incident-134-db:
+        condition: service_healthy
+      incident-166-db:
+        condition: service_healthy
+      incident-322-db:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.0'
+    labels:
+      - "saber.domain=excytin"
+      - "saber.service.type=permanent"
+      - "saber.service.name=excytin-sandbox"
+
 networks:
   excytin-database:
     driver: bridge

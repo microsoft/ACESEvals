@@ -8,4 +8,6 @@ initial_context:
     ssl_mode: disabled
     connection_example: mysql -h incident-322-db --skip-ssl -u admin -padmin env_monitor_db
 prompt_template_file: excytin_demo.md
-sandbox_environment: excytin_sandbox
+
+# Executors target the permanent sandbox container (no per-episode sandbox needed)
+# target_container is configured in global.yaml execution_config

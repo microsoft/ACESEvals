@@ -13,8 +13,10 @@ global_defaults:
     executors:
       bash:
         timeout: 180
+        target_container: saber-excytin-sandbox
       python:
         timeout: 180
+        target_container: saber-excytin-sandbox
 
   episode_config:
     max_steps: 25
