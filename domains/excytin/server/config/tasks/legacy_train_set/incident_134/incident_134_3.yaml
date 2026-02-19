@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_legacy_train_set_task_3
+    title: incident_134_legacy_train_set_task_3
+    description: 'Can you identify the IP address involved in the suspicious Azure Active Directory session related to the BEC financial fraud?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-17, an email containing a malicious URL `https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/` was sent from `alyssat@vnevado.alpineskihouse.co` to `raphaelt@vnevado.alpineskihouse.co`. The email was initially delivered but later removed. The incident revealed a suspicious activity where a suspicious inbox rule hiding incoming email messages was created. This was identified in the context of a risky Azure Active Directory session, indicating a potential business email compromise (BEC) and financial fraud attempt.'
+      question: 'Can you identify the IP address involved in the suspicious Azure Active Directory session related to the BEC financial fraud?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '237.7.81.122'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '237.7.81.122'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The email account `Nina Park` received emails with a malicious URL which were later removed.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'There is an attempt of business email compromise (BEC) and financial fraud involving a suspicious inbox rule creation from an IP address `237.7.81.122`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

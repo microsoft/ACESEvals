@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_92
+    title: incident_5_latest_test_set_task_92
+    description: 'According to the Manatee Tempest activity alert raised at 22:35:01 UTC, what is the name of the suspicious website (URL) associated with this threat actor’s campaign?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During a recent incident, the device received a connection from the external IP address 99.83.111.100, after which a ransomware payload was remotely launched, triggering an alert. Within the same investigation, analysts also detected activity attributed to the Russia-based threat group known as Manatee Tempest, which frequently uses drive-by downloads and malicious websites to stage further attacks.'
+      question: 'According to the Manatee Tempest activity alert raised at 22:35:01 UTC, what is the name of the suspicious website (URL) associated with this threat actor’s campaign?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vectorsandarrows.com'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vectorsandarrows.com'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'HostName: vnevado-win11t – A ransomware payload was remotely launched on this host, indicating an active attempt to encrypt its data.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Url: vectorsandarrows.com – This URL is tied to the Manatee Tempest activity group, suggesting the ransomware execution on host vnevado-win11t is associated with this threat actor’s infrastructure.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

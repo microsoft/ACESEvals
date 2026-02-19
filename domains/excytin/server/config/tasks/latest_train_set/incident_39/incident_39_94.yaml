@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_94
+    title: incident_39_latest_train_set_task_94
+    description: 'According to the "An active ''Kekeo'' malware was detected" alert raised at 22:35:03 UTC on 2024-07-04, what is the Security Identifier (SID) of the account associated with this malware activity on host "vnevado-dc"?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation of a lateral-movement attempt, a remote session to host "vnevado-dc" dropped and executed the file "psexesvc.exe" under the user account "lucasb" (SID: S-1-5-21-1440151660-4837038288-105596163-1120). This activity triggered the alert "File dropped and launched from remote location" on 2024-07-04 at 22:35:02 UTC. Immediately afterward, additional alerts suggested potential human-operated malicious activity on the same device, culminating in a malware alert identifying an active instance of the tool "Kekeo."'
+      question: 'According to the "An active ''Kekeo'' malware was detected" alert raised at 22:35:03 UTC on 2024-07-04, what is the Security Identifier (SID) of the account associated with this malware activity on host "vnevado-dc"?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1540151660-3530000288-105586595-1517'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1540151660-3530000288-105586595-1517'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Step 1 – File dropped remotely: A remote session originating from IP Address `141.216.110.153` (Field: Address) dropped and executed a file on the target device.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Step 2 – Malicious process execution: That dropped file ran as process `2608__2024-06-27t14:33:27.7927134z__rubeus.exe  dump /service:xfbzkp /user:lucasb` (Field: ProcessId__CreatedTimeUtc__CommandLine), signalling potential human-operated malicious activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Step 3 – Active malware under a compromised account: The malicious activity culminated in an active “Kekeo” malware instance running under the account with SID `S-1-5-21-1540151660-3530000288-105586595-1517` (Field: Sid).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

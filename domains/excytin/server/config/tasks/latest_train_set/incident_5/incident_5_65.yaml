@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_65
+    title: incident_5_latest_train_set_task_65
+    description: 'According to the follow-up alert titled "Malicious credential theft tool execution detected" at 22:35:04 UTC, what is the name of the executable that was identified as running during this suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Security monitoring detected a possible attempt to access a Primary Refresh Token (PRT) on host "vnevado-win11t" under account "dp5hn" (SID S-1-5-21-1840191660-8534830288-125585561-1522). Just a few seconds later, another alert was raised on the same machine indicating that a known credential-theft tool was executed, suggesting the attacker may have tried to dump user credentials.'
+      question: 'According to the follow-up alert titled "Malicious credential theft tool execution detected" at 22:35:04 UTC, what is the name of the executable that was identified as running during this suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'cmd.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'cmd.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-04 22:35:00.619840+00:00, suspicious activity was observed from account with Name `tgs2z`, indicating a possible attempt to access a Primary Refresh Token (PRT).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'One second later, at 2024-07-04 22:35:01.208400+00:00, the process with ExtractedFileName `browsercore.exe` was also flagged for a possible attempt to access a PRT, suggesting the attacker may be leveraging the browser process to steal credentials tied to the same session.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Finally, at 2024-07-04 22:35:04.193072+00:00, a malicious credential-theft tool was executed via the process with ExtractedFileName `cmd.exe`, confirming the attacker’s progression from reconnaissance (attempting PRT access) to active credential dumping.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

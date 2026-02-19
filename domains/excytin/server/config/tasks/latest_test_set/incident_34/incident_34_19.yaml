@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_19
+    title: incident_34_latest_test_set_task_19
+    description: 'Which user account is associated with the later alert that reported the suspicious PowerShell download or encoded command execution?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we saw the process "schtasks.exe" (PID 1616) start with the command line "schtasks.exe /run /tn yrei", shortly before a file named "winatp-intro-backdoor.exe" appeared. This sequence raised an alert titled "Suspicious PowerShell command line" indicating potentially malicious PowerShell use on the device. Only a few seconds later a second alert, "Suspicious PowerShell download or encoded command execution", was generated for the same host, showing that PowerShell had likely been used to pull down additional payloads or run an obfuscated command.'
+      question: 'Which user account is associated with the later alert that reported the suspicious PowerShell download or encoded command execution?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'samuelf'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'samuelf'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious PowerShell command line was detected on the host with HostName `vnevado-win10e`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Immediately after, a process executed PowerShell to download or run an encoded command under the account with Name `samuelf`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

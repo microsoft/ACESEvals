@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_train_set_task_30
+    title: incident_34_latest_train_set_task_30
+    description: 'According to the alert about the newly-created anomalous scheduled task, which executable file was specified to run in that task?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation, a process originating from IP address 72.5.72.208 executed the command `reg  add hkcu\software\microsoft\windows\currentversion\runonce /f /v yrei /t reg_expand_sz /d %userprofile%\desktop\winatp-intro-backdoor.exe`, triggering the alert "Anomaly detected in ASEP registry" because it attempted to add a potentially malicious autorun entry. Shortly after, on the same device, security telemetry reported that an anomalous scheduled task was created—often a technique attackers use to maintain persistence.'
+      question: 'According to the alert about the newly-created anomalous scheduled task, which executable file was specified to run in that task?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'powershell.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious command was registered in an ASEP registry key on the host (HostName: `vnevado-win10e`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Soon after, an anomalous scheduled task was created that runs the process (ExtractedFileName: `powershell.exe`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

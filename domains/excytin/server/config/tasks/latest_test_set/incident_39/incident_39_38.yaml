@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_38
+    title: incident_39_latest_test_set_task_38
+    description: 'According to the alert about the potentially malicious URL click detected on July 10, which mailbox (primary email address) is associated with the user who clicked the link?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4th, a suspicious service (psexesvc.exe launched through services.exe) started on an endpoint, raising concerns about possible persistence or privilege-escalation activity. The same host soon generated alerts for a SID history injection and indications of the Rubeus kerberoasting tool. Several days later, on July 10th, the investigation noted another related alert: a user on this device clicked a link that was subsequently identified as malicious. The alert includes the primary address of the user’s mailbox involved in that click.'
+      question: 'According to the alert about the potentially malicious URL click detected on July 10, which mailbox (primary email address) is associated with the user who clicked the link?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tgs2z@vnevado.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'tgs2z@vnevado.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'HostName: vnevado-dc – A suspicious service was launched on the domain controller, indicating the host itself may be compromised.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'ExtractedFileName: powershell.exe – On the same host, PowerShell was used to perform a SID-history injection, suggesting the attacker attempted to give a user elevated privileges.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Sid: S-5-7-21-1843151660-3234030288-105586167-1422 – Rubeus activity shows this (now-elevated) account was abused for Kerberos ticket requests (kerberoasting).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'MailboxPrimaryAddress: tgs2z@vnevado.alpineskihouse.co – Days later, the same threat actor (or compromised account) clicked a malicious URL in email, confirming the mailbox `tgs2z@vnevado.alpineskihouse.co` is the end entity affected.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

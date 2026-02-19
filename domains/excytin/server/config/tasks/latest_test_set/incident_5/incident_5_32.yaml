@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_32
+    title: incident_5_latest_test_set_task_32
+    description: 'According to the 22:35:00 UTC alert titled "Possible attempt to access Primary Refresh Token (PRT)", what is the username of the account involved in that activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During investigation of suspicious ''GenRansom'' behaviour reported on host "vnevado-win11t" (device ID e5799261-6720-4297-961e-bd9ca4275033), we observed follow-up alerts indicating a possible attempt to access a Primary Refresh Token (PRT) just seconds earlier on the same device. Understanding which user account was associated with that PRT access attempt is essential for scoping potential credential compromise.'
+      question: 'According to the 22:35:00 UTC alert titled "Possible attempt to access Primary Refresh Token (PRT)", what is the username of the account involved in that activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tgs2z'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'tgs2z'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious ''GenRansom'' behavior was detected on the host (HostName: `vnevado-win11t`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A possible attempt to access a Primary Refresh Token was carried out by the process (ExtractedFileName: `browsercore.exe`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Another PRT-access attempt was associated with the account (Name: `tgs2z`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

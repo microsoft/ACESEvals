@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_45
+    title: incident_39_latest_train_set_task_45
+    description: 'According to the alert about the suspected DCSync attack from VNEVADO-Win10V to VNEVADO-DC, what is the name of the user account that initiated the replication request?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a potential human-operated intrusion that began on host vnevado-win10b, several suspicious events were observed. Shortly after files were remotely dropped and executed, a later alert ("Suspected DCSync attack – replication of directory services") was raised on 2024-07-10 when a workstation named VNEVADO-Win10V initiated an unexpected directory-replication request to the domain controller VNEVADO-DC. Analysts must determine which user account was responsible for issuing this replication request.'
+      question: 'According to the alert about the suspected DCSync attack from VNEVADO-Win10V to VNEVADO-DC, what is the name of the user account that initiated the replication request?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Julian Burke'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Julian Burke'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-04 22:35:04.075398+00:00 a Potential human-operated malicious activity alert flagged traffic originating from the IP address field `Address` with value `141.216.110.153`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Two seconds earlier, on 2024-07-04 22:35:02.050095+00:00, a File dropped and launched from remote location alert showed that the attacker was acting under the account field `Sid` with value `S-1-5-21-1440151660-4837038288-105596163-1120`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Six days later, on 2024-07-10 11:24:45.337245+00:00, a Suspected DCSync attack alert indicated the adversary had escalated privileges and was using the account field `Name` with value `Julian Burke` to request Active Directory replication.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

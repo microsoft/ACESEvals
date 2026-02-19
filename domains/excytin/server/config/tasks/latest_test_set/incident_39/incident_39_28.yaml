@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_28
+    title: incident_39_latest_test_set_task_28
+    description: 'What is the process ID (PID) of the process that suspiciously stopped services on the device?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4 2024, a “SID history injection” alert was raised after a file named "dkwj.mze" appeared and the command line "net1 stop ntds /y" was executed by process 7712. This suggests an attacker may have been attempting to tamper with Active Directory-related services. Shortly before this, another alert flagged that a different process had suspiciously stopped services on the same device.'
+      question: 'What is the process ID (PID) of the process that suspiciously stopped services on the device?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '6428'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '6428'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious process (Field: ProcessId__CreatedTimeUtc__CommandLine, Value: `6428__2024-06-27t14:34:10.8607851z__"net.exe" stop ntds /y`) was executed, using net.exe with PID 6428 on 2024-06-27 to stop the NTDS service – a typical precursor action to avoid detection before privilege escalation.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Immediately after, a SID history injection (Field: Sid, Value: `S-1-5-21-1440151660-4837038288-105596163-1120`) was detected, indicating the attacker modified this account’s SID history to inherit elevated privileges.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

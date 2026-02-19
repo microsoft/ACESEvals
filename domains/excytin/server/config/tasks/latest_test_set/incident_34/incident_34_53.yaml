@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_53
+    title: incident_34_latest_test_set_task_53
+    description: 'In the follow-up alert titled "Suspicious PowerShell command line" that occurred moments later, which executable file name was associated with the activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security alert flagged host "vnevado-win10e" after the user account "samuelf" ran a potentially dangerous PowerShell command. The alert ("Suspicious process executed PowerShell command") warns that attackers often leverage PowerShell to execute payloads in-memory and avoid leaving traces on disk.'
+      question: 'In the follow-up alert titled "Suspicious PowerShell command line" that occurred moments later, which executable file name was associated with the activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winatp-intro-backdoor.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winatp-intro-backdoor.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious PowerShell command was executed by the account with Name = `samuelf`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'That PowerShell activity launched the file with Name = `winatp-intro-backdoor.exe`, indicating possible backdoor installation.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

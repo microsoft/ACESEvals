@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_59
+    title: incident_166_latest_test_set_task_59
+    description: 'During the follow-up "Possible BEC financial fraud" alert on July 23 2024, what was the Security Identifier (SID) associated with the user account involved in the suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 22, 2024, an alert titled "BEC financial fraud" was raised after a suspicious inbox rule—likely used to hide incoming emails—was created from the external IP address 255.246.85.58 during a risky Azure AD session. This activity suggests an attempted business-email-compromise (BEC) attack aiming at financial fraud. The investigation later uncovered another related alert on July 23, 2024, flagged as "Possible BEC financial fraud," indicating further suspicious behavior by the same user account.'
+      question: 'During the follow-up "Possible BEC financial fraud" alert on July 23 2024, what was the Security Identifier (SID) associated with the user account involved in the suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1740051960-3534030288-108486866-1602'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1740051960-3534030288-108486866-1602'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-22 10:00:07.521914+00:00, a suspicious inbox-rule was created for the account whose AadUserId is `89e933b9-5b2e-4bd6-bcdf-033db707ef82`, pointing to a potential BEC financial-fraud attempt.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'On 2024-07-23 16:09:13.506099+00:00, further BEC-related activity was detected for the account with Sid `S-1-5-21-1740051960-3534030288-108486866-1602`, reinforcing the suspicion of an ongoing business-email-compromise fraud.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

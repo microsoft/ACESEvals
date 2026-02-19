@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_55
+    title: incident_39_latest_train_set_task_55
+    description: 'What is the exact name of the file associated with the SID history injection alert that was dropped and executed on host ''vnevado-win10b''?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Analysts are reviewing a sequence of related alerts that began with a successful logon using an overpass-the-hash technique. The activity was performed by account ''fk8mq'' (SID S-1-5-21-1540151660-3530000288-105586595-1517) on host ''vnevado-win10b''. Immediately after this, a remote session reportedly dropped and executed a new file on the same device, culminating in a SID history injection detection only milliseconds later. The name of that dropped file is key to understanding how the attacker attempted to maintain illicit privileges.'
+      question: 'What is the exact name of the file associated with the SID history injection alert that was dropped and executed on host ''vnevado-win10b''?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'dkwj.mze'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'dkwj.mze'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Step 1 – ip.Address: `141.216.110.153` performed an overpass-the-hash logon, giving the attacker valid Kerberos credentials.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Step 2 – host.HostName: `vnevado-dc` received a remote session from that attacker, where a file was dropped and immediately executed.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Step 3 – file.Name: `dkwj.mze` (the dropped executable) carried out a SID-history injection to grant itself elevated domain privileges.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

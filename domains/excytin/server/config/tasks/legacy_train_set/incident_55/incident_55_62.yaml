@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_62
+    title: incident_55_legacy_train_set_task_62
+    description: 'In a subsequent related alert, it was detected that one of the users clicked on a malicious URL. Can you retrieve the primary email address of the user''s mailbox involved in this suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A suspicious sequence of exploration activities involving certain windows commands was detected, which can be used by attackers to identify assets and coordinate lateral movement after compromising a machine. One of the processes involved was `whoami.exe` and it was executed on a device with AadDeviceId `7661dfd4-218f-4016-8a87-66d68a7f098e`.'
+      question: 'In a subsequent related alert, it was detected that one of the users clicked on a malicious URL. Can you retrieve the primary email address of the user''s mailbox involved in this suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bjenkins@niseko.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'bjenkins@niseko.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The user with SID `S-1-5-21-561436748-3867387497-1732241745-3701` initiated a suspicious sequence of exploration activities.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The email account `bjenkins@niseko.alpineskihouse.co` clicked on a potentially malicious URL.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

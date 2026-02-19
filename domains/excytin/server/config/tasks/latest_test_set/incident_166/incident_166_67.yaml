@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_67
+    title: incident_166_latest_test_set_task_67
+    description: 'According to the alert that flagged an anonymous network connection, from which IP address did the risky sign-in originate?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a suspicious inbox manipulation rule affecting user Jordan P (who uses the email address Jordan P@vnevado.alpineskihouse.co), analysts noted that the mailbox rules were altered in a way that could enable data exfiltration. The same incident also includes a separate alert indicating that the same user account signed in from an anonymous network, suggesting use of Tor or an anonymizer VPN.'
+      question: 'According to the alert that flagged an anonymous network connection, from which IP address did the risky sign-in originate?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '192.238.237.190'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '192.238.237.190'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Step 1 – IP Address: A sign-in originated from the anonymous IP address `192.238.237.190` (Field: Address) at 2024-07-22 09:11:31 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Step 2 – Account: Shortly after, the mailbox for the account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` (Field: AadUserId) was altered through a suspicious inbox manipulation rule at 2024-07-22 10:00:07 UTC, indicating the session from the anonymous IP was likely used to tamper with the user’s email.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

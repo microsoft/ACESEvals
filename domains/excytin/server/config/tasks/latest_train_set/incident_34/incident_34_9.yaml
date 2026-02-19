@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_train_set_task_9
+    title: incident_34_latest_train_set_task_9
+    description: 'Which executable (process name) launched the activity that triggered the "Suspicious PowerShell download or encoded command execution" alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'An investigation is underway after an attacker was observed creating an uncommon file and adding it to the RunOnce registry key via a command-line process (PID 10208) from IP 72.5.72.208. Just two seconds later, on the same device, Defender raised a second alert: "Suspicious PowerShell download or encoded command execution," indicating that a parent application spawned PowerShell to fetch or run a potentially malicious payload.'
+      question: 'Which executable (process name) launched the activity that triggered the "Suspicious PowerShell download or encoded command execution" alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winword.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winword.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Step 1 – host.AadDeviceId = `02b8f519-1123-4228-b32a-ccb78af3449f`: An uncommon file was created on this device and placed in a Run registry key, suggesting the attacker is establishing persistence.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Step 2 – process.ProcessId__CreatedTimeUtc__CommandLine = `9780__2024-06-26t11:57:20.2959493z__"winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm`: A suspicious PowerShell download or encoded command was executed from this WinWord-spawned process, indicating the attacker is attempting to download or run additional payloads.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

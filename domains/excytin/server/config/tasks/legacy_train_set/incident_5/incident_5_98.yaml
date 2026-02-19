@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_98
+    title: incident_5_legacy_train_set_task_98
+    description: 'What is the URL that was blocked due to command and control behavior in the subsequent alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'As part of a multi-stage investigation, a command `curl http://vectorsandarrows.com` was executed on the host `vnevado-win10r` which raised a Manatee Tempest activity group alert. Please note that Manatee Tempest is a known Russia-based cybercriminal group active since June 2014, notorious for their malvertising campaigns and use of Cobalt Strike beacons. The subsequent alert indicated a block due to command and control behavior on malware detected on the same machine.'
+      question: 'What is the URL that was blocked due to command and control behavior in the subsequent alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'http://vectorsandarrows.com/'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'http://vectorsandarrows.com/'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Manatee Tempest, a Russia-based cybercriminal group active since 2014, utilizes methods such as drive-by download, malvertising, and FakeUpdates infections to obtain initial access.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The actor uses BLISTER loader to deliver Cobalt Strike beacons for lateral movement and ransomware deployment, with domain fronting to establish command-and-control channels for the beacons.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'An account with SID `S-1-5-21-1840191660-8534830288-125585561-1522` is associated with Manatee Tempest activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'A command and control behavior originating from the URL `http://vectorsandarrows.com/` was detected and blocked.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

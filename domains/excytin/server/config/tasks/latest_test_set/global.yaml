@@ -1,0 +1,37 @@
+domain: excytin
+# Permanent environment with all 8 incident databases
+permanent_environment: all_incidents
+
+global_defaults:
+  prompts:
+    instruction: "instructions/excytin_demo.md"
+    assistant: "assistants/inspect_assistant.md"
+    submit: "submits/inspect_submit.md"
+    continue: "continues/inspect_continue.md"
+
+  execution_config:
+    executors:
+      bash:
+        timeout: 180
+      python:
+        timeout: 180
+
+  episode_config:
+    max_steps: 25
+
+    # Transcript coordination configuration
+    transcript_config:
+      websocket:
+        push:
+          enabled: true
+        pull:
+          enabled: false
+
+  benchmark_config:
+    episode_attempts: 1
+
+  # Dependency resolution configuration
+  dependency_config:
+    wait_seconds: 10.0
+    retry_interval: 0.5
+    max_retry_interval: 2.0

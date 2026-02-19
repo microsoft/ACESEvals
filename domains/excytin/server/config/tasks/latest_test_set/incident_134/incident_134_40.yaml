@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_40
+    title: incident_134_latest_test_set_task_40
+    description: 'During the password-spray attack that ultimately compromised the account, from which IP address did the attacker sign in?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Security monitoring recently detected that the mailbox belonging to nathan@avoriaz.alpineskihouse.co was used to send suspicious emails from the IP address 237.7.81.122. This activity was flagged as part of a business-email-compromise (BEC) attempt. Investigators linked this email activity to a specific user account (AadUserId redacted here). During the follow-up investigation, it was discovered that the same user later experienced a successful password-spray attack that resulted in the account being compromised.'
+      question: 'During the password-spray attack that ultimately compromised the account, from which IP address did the attacker sign in?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '170.54.121.63'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '170.54.121.63'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The possibly compromised user account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` was observed sending suspicious emails related to a BEC fraud attempt.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A password-spray attack originating from IP address `170.54.121.63` resulted in a successful sign-in, indicating that an account has likely been compromised.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_train_set_task_34
+    title: incident_166_latest_train_set_task_34
+    description: 'According to the earlier alert from 2024-07-22 titled "Suspicious emails sent by BEC-related user," which email address was listed as the sender of those suspicious messages?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a potential business email compromise (BEC) incident, we observed suspicious financial-fraud activity tied to the user account "Jordan P" (email: Jordan P@vnevado.alpineskihouse.co). While reviewing related alerts, we noted that an earlier alert—raised on 2024-07-22 at 10:14 UTC—reported that a different (possibly compromised) user had sent multiple suspicious emails, indicating the attack may have started before the activity attributed to Jordan P.'
+      question: 'According to the earlier alert from 2024-07-22 titled "Suspicious emails sent by BEC-related user," which email address was listed as the sender of those suspicious messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'laylaw@vnevado.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'laylaw@vnevado.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An alert for Possible BEC financial fraud flagged the user account with Name `Jordan P` at 2024-07-23 16:09:13.506099+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Earlier, on 2024-07-22 10:14:23.841423+00:00, suspicious emails were detected coming from Sender `laylaw@vnevado.alpineskihouse.co`, indicating possible compromise tied to the same BEC activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

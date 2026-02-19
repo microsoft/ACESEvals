@@ -1,0 +1,38 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_28
+    title: incident_166_latest_test_set_task_28
+    description: 'During the investigation, analysts isolated a single public IP address responsible for the password-spray attempts. What is that IP address?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-23 at 14:23 UTC, a Password Spray alert was raised after multiple failed sign-in attempts were recorded against the Azure AD user whose object ID is 89e933b9-5b2e-4bd6-bcdf-033db707ef82. Further investigation showed that all the suspicious authentication attempts originated from the same public IP address, indicating a coordinated attack source.'
+      question: 'During the investigation, analysts isolated a single public IP address responsible for the password-spray attempts. What is that IP address?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '95.202.65.202'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '95.202.65.202'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A password spray attack was detected originating from IP Address `95.202.65.202` at `2024-07-23 14:23:51.925093+00:00`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 1.0
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_74
+    title: incident_5_latest_train_set_task_74
+    description: 'What is the Azure AD device ID of the host where the "Ransomware behavior detected in the file system" alert was raised?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into lateral movement in our environment, we observed a suspicious command issued by account "dp5hn" (SID S-1-5-21-1840191660-8534830288-125585561-1522, Azure AD user ID 731adb71-b11c-4bbf-850b-57989b350e96). The user executed a process (PID 88) at 2024-06-20T09:29:42Z with the command line "curl http://vectorsandarrows.com", which triggered the alert "''CommandAndControl'' malware was detected during lateral movement" on an as-yet-unidentified device. Roughly one second earlier, a separate alert was raised indicating ransomware-style file-system activity on another device in the same incident.'
+      question: 'What is the Azure AD device ID of the host where the "Ransomware behavior detected in the file system" alert was raised?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'e5799261-6720-4297-961e-bd9ca4275033'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'e5799261-6720-4297-961e-bd9ca4275033'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The host with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033` showed ransomware-like file system activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Moments later, CommandAndControl malware was detected on the same host with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`, indicating possible lateral movement.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_80
+    title: incident_55_latest_test_set_task_80
+    description: 'What is the Azure AD user ID (AadUserId) of the account that executed the malicious PowerShell cmdlet reported in the final alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation we noted that, on 6 July 2024, the executable "iy2orr1e.rrg.exe" was launched in a hidden window with a long encoded PowerShell command – behaviour flagged as an "Attempt to hide use of a dual-purpose tool". A few minutes earlier the same host generated a "Suspicious remote activity" alert, and immediately afterwards another alert reported that a malicious PowerShell cmdlet had been invoked on the machine. You have pivoted from the initial process to that final PowerShell-related alert and are now reviewing which identity was behind it.'
+      question: 'What is the Azure AD user ID (AadUserId) of the account that executed the malicious PowerShell cmdlet reported in the final alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '2de70991-2799-4a95-b734-8e3df3a50118'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '2de70991-2799-4a95-b734-8e3df3a50118'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'On 2024-07-04 22:35:02.377104+00:00, suspicious remote activity launched the process with ExtractedFileName `powershell.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'At 2024-07-04 22:35:03.012758+00:00, a malicious PowerShell Cmdlet was run by the Azure AD account with AadUserId `2de70991-2799-4a95-b734-8e3df3a50118`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Later, on 2024-07-06 00:09:58.973357+00:00, the account with SID `S-2-5-21-571436798-3864380397-1837441745-3206` attempted to hide use of a dual-purpose tool by renaming it.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

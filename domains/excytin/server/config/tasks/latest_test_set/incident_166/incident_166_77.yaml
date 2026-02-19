@@ -1,0 +1,38 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_77
+    title: incident_166_latest_test_set_task_77
+    description: 'During the follow-up investigation, security logs showed the same risky user connecting from an external IP address. What was this external IP address?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Security monitoring tools raised an alert titled "Suspicious SAP authentication" indicating that the user account "Jordan P" (AadUserId 89e933b9-5b2e-4bd6-bcdf-033db707ef82, SID S-1-5-21-1740051960-3534030288-108486866-1602) successfully signed in to the corporate SAP application (AppId 100) while the account was already flagged as risky in Microsoft Entra ID. This event may suggest that an attacker gained control of the user and attempted to access sensitive financial data in SAP for potential further exploitation.'
+      question: 'During the follow-up investigation, security logs showed the same risky user connecting from an external IP address. What was this external IP address?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.253.5.27'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.253.5.27'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious SAP authentication originated from IP address `107.253.5.27` (Field: Address).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 1.0
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_23
+    title: incident_134_latest_test_set_task_23
+    description: 'What external IP address was observed in the later "Account compromised following a password-spray attack" alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-17 an alert titled "BEC financial fraud" was raised because an inbox rule that hides incoming messages was created from the external IP address 237.7.81.122. This behaviour is often associated with business-email-compromise attempts. During the same incident, another alert appeared the next day indicating that a user account had been compromised following a password-spray attack and had signed in from an unusual location and browser.'
+      question: 'What external IP address was observed in the later "Account compromised following a password-spray attack" alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '170.54.121.63'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '170.54.121.63'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious inbox rule was created in a risky session for the account (Field: Name, Value: `Nina Park`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'During a subsequent password-spray attack, the user was signed in from an unusual IP (Field: Address, Value: `170.54.121.63`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

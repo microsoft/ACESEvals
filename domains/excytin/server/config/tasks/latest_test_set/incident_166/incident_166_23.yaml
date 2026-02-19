@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_23
+    title: incident_166_latest_test_set_task_23
+    description: 'According to the alert about the suspicious emails sent by the BEC-related user, what is the email address of the recipient who received those messages?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we noted that an anonymous sign-in was observed from the IP address 95.202.65.202. Later in the timeline, another alert reported that the same (or related) user account sent out suspicious messages consistent with a business-email-compromise attempt.'
+      question: 'According to the alert about the suspicious emails sent by the BEC-related user, what is the email address of the recipient who received those messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tony@avoriaz.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'tony@avoriaz.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Step 1 – Account:AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82` signed in from an anonymous IP address (Tor / anonymizer VPN) at 2024-07-22 08:45:32 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Step 2 – MailMessage:Recipient `tony@avoriaz.alpineskihouse.co` later received suspicious BEC-related emails that were sent from the (likely compromised) user account referenced in Step 1.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

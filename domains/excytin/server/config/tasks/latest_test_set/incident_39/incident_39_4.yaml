@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_4
+    title: incident_39_latest_test_set_task_4
+    description: 'According to the later "Possible lateral movement" alert raised on 2024-07-04, what is the hostname of the device where this suspicious lateral movement activity was detected?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an ongoing investigation, security monitoring flagged a suspected DCSync attack in which the account belonging to Julian Burke on workstation VNEVADO-Win10V attempted to replicate data from the domain controller VNEVADO-DC. Moments later, a pass-the-ticket incident involving the same user and multiple endpoints was recorded, suggesting that an adversary might be leveraging stolen Kerberos credentials to widen access. Analysts are now examining a related alert that indicates the attacker may have progressed to moving laterally inside the network.'
+      question: 'According to the later "Possible lateral movement" alert raised on 2024-07-04, what is the hostname of the device where this suspicious lateral movement activity was detected?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win10b'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vnevado-win10b'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Account (Sid: S-1-5-21-1440151660-4837038288-105596163-1120) initiated a DCSync replication request from host VNEVADO-Win10V to VNEVADO-DC on 2024-07-10.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'IP address (Address: 35.202.74.47) was involved in a pass-the-ticket attack, re-using the Kerberos ticket of the same account on host VNEVADO-Win10V.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Host (HostName: vnevado-win10b) later showed signs of lateral movement, indicating the attacker likely pivoted to this device.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

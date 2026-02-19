@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_77
+    title: incident_39_legacy_train_set_task_77
+    description: 'Can you identify the AadUserId for the account linked to the deceptive sign-in attempt in this security incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A sequence of alerts that might be indicative of human-operated malicious activity was observed on this device `vnevado-win10b` and might lead to ransomware or other payloads installed on the device. The suspicious activity involved an account with SID `S-1-5-21-1540151660-3530000288-105586595-1517` and IP address `141.216.110.153`.'
+      question: 'Can you identify the AadUserId for the account linked to the deceptive sign-in attempt in this security incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A potential human-operated malicious activity was detected on the account `kyleg`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A sign-in attempt was detected using a deceptive user account with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`. The attacker might be using this account to perform attack activities.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

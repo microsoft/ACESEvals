@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_5
+    title: incident_5_latest_test_set_task_5
+    description: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:02 UTC on 2024-07-04, which IP address was associated with this credential-theft activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of ransomware-like behavior on host "vnevado-win11t", security telemetry showed the user account "dp5hn" running suspicious files such as "get-userprttoken.ps1" and "characterical.zip.lockbit" on 2024-07-04. This activity triggered the alert "Potentially compromised assets exhibiting ransomware-like behavior". Shortly afterward, another alert indicated the execution of a known credential-theft tool, suggesting the attacker was attempting to dump credentials from the environment.'
+      question: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:02 UTC on 2024-07-04, which IP address was associated with this credential-theft activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.224.99.179'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The attacker first executed a known credential-theft tool from the IP address (Address) `107.224.99.179`, indicating an attempt to dump credentials.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Soon after, ransomware-like behavior was observed coming from another compromised IP (Address) `99.83.111.100`, suggesting the threat actor began encrypting assets.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Days later, the adversary used the account (Name) `tgs2z` to run PSExec and laterally move to the jump server `Vnevado-jump`, expanding their foothold inside the network.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

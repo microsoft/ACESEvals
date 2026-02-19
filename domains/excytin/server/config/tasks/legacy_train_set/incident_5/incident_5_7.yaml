@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_7
+    title: incident_5_legacy_train_set_task_7
+    description: 'What is the IP address associated with the possible attempt to access the Primary Refresh Token (PRT)?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident revealed possible ransomware activity due to numerous file system changes on a device, including files like `get-userprttoken.ps1`, `characterical.zip`, and `characterical.zip.lockbit`. This activity may indicate mass encryption of files by ransomware. At the same time, a related suspicious behavior involved an attempt to access the Primary Refresh Token (PRT), a crucial authentication artifact in Azure AD, which could facilitate lateral movement or credential theft within the organization.'
+      question: 'What is the IP address associated with the possible attempt to access the Primary Refresh Token (PRT)?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.224.99.179'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Numerous file system changes have been observed and are indicative of mass encryption by ransomware on the account with SID `S-1-5-21-1840191660-8534830288-125585561-1522`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'There was a possible attempt to access the Primary Refresh Token (PRT) by the process `browsercore.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The attempt to access the Primary Refresh Token (PRT) was made from the IP address `107.224.99.179`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

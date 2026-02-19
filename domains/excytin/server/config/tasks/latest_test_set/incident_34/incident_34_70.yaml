@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_70
+    title: incident_34_latest_test_set_task_70
+    description: 'According to the follow-up alert ("Suspicious PowerShell download or encoded command execution" at 22:35:04 UTC), which executable was the parent process that invoked PowerShell?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a security incident on host "vnevado-win10e" under user account "samuelf", we observed a suspicious PowerShell command execution (Process ID 8604) that attempted to create and run a back-door executable via a scheduled task. This activity was flagged by the alert titled "Suspicious process executed PowerShell command" on 2024-07-04 22:35 UTC. A follow-up alert, generated only a few seconds later, indicates that another process leveraged PowerShell to download a file or execute an encoded script, suggesting a potential attempt to bring additional malicious payloads onto the device.'
+      question: 'According to the follow-up alert ("Suspicious PowerShell download or encoded command execution" at 22:35:04 UTC), which executable was the parent process that invoked PowerShell?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winword.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winword.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious PowerShell command was executed by the process with ExtractedFileName `powershell.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A suspicious PowerShell download or encoded command was observed from a process with ProcessId `9780`, CreatedTimeUtc `2024-06-26t11:57:20.2959493z`, and CommandLine `"winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

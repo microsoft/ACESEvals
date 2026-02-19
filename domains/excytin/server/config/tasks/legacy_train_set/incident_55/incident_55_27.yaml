@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_27
+    title: incident_55_legacy_train_set_task_27
+    description: 'Can you provide the App ID for the OAuth application SimulandApp where the unusual addition of credentials took place?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident involving a malicious PowerShell Cmdlet being invoked on the machine `mb-winclient` occurred. The relevant file is `contosoadfsblatempcreds.ps1`, executed by user `bjenkins` using `powershell.exe`. This event was followed up with an unusual addition of credentials to an OAuth app called SimulandApp by the user Luciano Herrera (pwilson@niseko.alpineskihouse.co). This behavior may indicate that an attacker has compromised the app, potentially using it to spread phishing, exfiltrate data, or gain access to other accounts and devices. The user added a credential type Password.'
+      question: 'Can you provide the App ID for the OAuth application SimulandApp where the unusual addition of credentials took place?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '11161'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '11161'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A malicious PowerShell Cmdlet was invoked on the machine by the user with SID `S-1-5-21-551436448-9871687716-9837441745-1903`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The user Luciano Herrera (pwilson@niseko.alpineskihouse.co) performed an unusual addition of credentials to the application SimulandApp with AppId `11161`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

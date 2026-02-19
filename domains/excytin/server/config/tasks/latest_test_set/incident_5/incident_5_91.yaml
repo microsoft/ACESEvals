@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_91
+    title: incident_5_latest_test_set_task_91
+    description: 'Which IP address was highlighted in the associated "Manatee Tempest activity group" alert as part of the threat actor’s infrastructure?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-04 at 22:35 UTC, Microsoft Defender for Endpoint raised a "Command and Control behavior was blocked" alert on host "vnevado-win11t" (device ID: e5799261-6720-4297-961e-bd9ca4275033). The malicious activity involved a process (PID 88) launching the command "curl http://vectorsandarrows.com", indicating an attempted outbound connection to a suspicious site. Investigation linked this activity to follow-on threat intelligence that attributes related infrastructure to the Russia-based cybercriminal group tracked by Microsoft as Manatee Tempest.'
+      question: 'Which IP address was highlighted in the associated "Manatee Tempest activity group" alert as part of the threat actor’s infrastructure?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '198.43.121.209'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '198.43.121.209'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Command-and-control behavior was blocked for the account with Sid `S-1-5-21-1840191660-8534830288-125585561-1522`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Manatee Tempest activity was traced to the IP address `198.43.121.209`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

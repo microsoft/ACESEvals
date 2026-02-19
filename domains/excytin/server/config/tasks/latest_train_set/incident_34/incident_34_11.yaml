@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_train_set_task_11
+    title: incident_34_latest_train_set_task_11
+    description: 'Which executable (process name) was responsible for creating the scheduled task "yrei" as reported in the "Suspicious Task Scheduler activity" alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation on host "vnevado-win10e" (AadDeviceId: 02b8f519-1123-4228-b32a-ccb78af3449f), we observed a suspicious PowerShell session (PID 8604, created 2024-06-26 12:00:39 UTC) that wrote a file named "winatp-intro-backdoor.exe" to the user’s Desktop and immediately set up a new scheduled task called "yrei" configured to run that executable. Seconds later, Microsoft Defender generated a "Suspicious Task Scheduler activity" alert indicating that another process was used to create the task, suggesting the attacker was attempting to establish persistence.'
+      question: 'Which executable (process name) was responsible for creating the scheduled task "yrei" as reported in the "Suspicious Task Scheduler activity" alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'schtasks.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'schtasks.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Alert 1 shows a suspicious PowerShell activity with entity field `ProcessId__CreatedTimeUtc__CommandLine` and value `8604__2024-06-26t12:00:39.2886108z__"powershell.exe" -w movedn -exec bypass -command ...`, indicating the attacker used PowerShell (PID 8604) at 2024-06-26 12:00:39 UTC to build and drop a backdoor executable on the victim’s desktop.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Alert 2 reveals persistence creation through Task Scheduler with entity field `ProcessId__CreatedTimeUtc__CommandLine` and value `1348__2024-06-26t12:00:40.0878355z__"schtasks.exe" /create /sc once /tn yrei /tr "c:\users\samuelf\onedrive - (new) alpineskihouse\desktop\winatp-intro-backdoor.exe" /st 11:58 /f`, showing that process PID 1348 invoked schtasks.exe to register the task ‘yrei’ that will execute the dropped backdoor.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

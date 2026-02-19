@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_legacy_train_set_task_15
+    title: incident_34_legacy_train_set_task_15
+    description: 'In relation to this incident, a suspicious LDAP query was executed for reconnaissance. Can you identify the Azure Active Directory (AAD) User ID associated with this LDAP query?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A suspicious PowerShell activity was observed on the machine, indicating potential malicious behavior where PowerShell was used during installation, exploration, or lateral movement activities. Attackers often use PowerShell to bypass security protection mechanisms by executing their payload in memory without leaving traces on the disk.'
+      question: 'In relation to this incident, a suspicious LDAP query was executed for reconnaissance. Can you identify the Azure Active Directory (AAD) User ID associated with this LDAP query?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '16320fec-8d90-403b-b7fe-78f715d4728d'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '16320fec-8d90-403b-b7fe-78f715d4728d'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious PowerShell activity was observed involving the process `winword.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A suspect LDAP query was executed by the user with AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

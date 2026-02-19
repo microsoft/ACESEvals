@@ -1,0 +1,98 @@
+tasks:
+  - task_id: incident_55_latest_train_set_task_87
+    title: incident_55_latest_train_set_task_87
+    description: 'According to the "Attempt to hide use of dual-purpose tool" alert from 2024-07-06, what was the unexpected executable file name that the attacker used to launch the tool?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During a recent investigation we saw the domain controller MB-DC1 access the AD FS DKM key, raising suspicion of credential-related activity. Tracing the event chain forward, analysts found that two days later an alert was raised for an "Attempt to hide use of dual-purpose tool" in which the attacker tried to disguise a well-known public utility by renaming its executable and running it with a long, encoded PowerShell command.'
+      question: 'According to the "Attempt to hide use of dual-purpose tool" alert from 2024-07-06, what was the unexpected executable file name that the attacker used to launch the tool?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'iy2orr1e.rrg.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'iy2orr1e.rrg.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The host with HostName `MB-DC1` read the AD FS DKM key, indicating a possible attempt to access sensitive federation service secrets.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'An account with AadUserId `2de70991-2799-4a95-b734-8e3df3a50118` initiated a suspected DCSync attack from MB-WINCLIENT to `MB-DC1`, requesting replication of directory services data.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The process with ExtractedFileName `powershell.exe` was injected with potentially malicious code, suggesting hidden execution of attacker-controlled commands.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'Hands-on-keyboard activity via Impacket was observed from the account with AadUserId `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`, showing lateral-movement behavior.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0
+      - subtask_id: checkpoint_5
+        title: Checkpoint 5
+        description: 'A dual-purpose tool was masked: ProcessId `5752`, CreatedTimeUtc `2024-07-06t00:00:01.7155092z`, CommandLine `"iy2orr1e.rrg.exe" -windowstyle hidden -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa=`, indicating an attempt to conceal malicious activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.2
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_322_latest_train_set_task_20
+    title: incident_322_latest_train_set_task_20
+    description: 'According to the alert titled "User accessed a link in an email subsequently quarantined by ZAP", what is the full URL that the user clicked?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'An email from sender raphaelt@vnevado.alpineskihouse.co to recipient alyssat@vnevado.alpineskihouse.co was delivered and later removed after it was found to contain a malicious link. Shortly after, a separate alert indicated that the user accessed the same link, which prompted Zero-hour Auto Purge (ZAP) to quarantine the message.'
+      question: 'According to the alert titled "User accessed a link in an email subsequently quarantined by ZAP", what is the full URL that the user clicked?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Email account with SID `S-1-5-21-1840151686-3534835288-156286563-1127` received a message that contained a malicious URL and was later removed.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The same user accessed the suspicious link `https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/`, which was subsequently quarantined by Zero-hour Auto Purge (ZAP).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

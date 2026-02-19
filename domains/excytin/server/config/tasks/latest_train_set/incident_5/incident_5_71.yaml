@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_71
+    title: incident_5_latest_train_set_task_71
+    description: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:01 UTC on 4 July 2024, what IP address was associated with the credential-theft tool execution?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Microsoft Defender flagged a "Suspicious remote activity" alert on host vnevado-win10s after several potentially malicious commands were run (for example: "vssblatemp.exe delete shadows /all" and "bcdedit /set recoveryenabled no"). A few minutes later the attacker appears to have moved laterally, triggering a "PSExec to Vnevado-jump" alert. Shortly before these events, Defender had already raised an alert titled "Malicious credential theft tool execution detected", indicating that a known credential-dumping program had run on the environment.'
+      question: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:01 UTC on 4 July 2024, what IP address was associated with the credential-theft tool execution?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.224.99.179'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious remote activity was initiated from ip.Address `99.83.111.100`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Lateral movement using PsExec was detected toward host.AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1` (server Vnevado-jump).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A malicious credential-theft tool was executed from ip.Address `107.224.99.179`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

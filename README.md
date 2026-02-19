@@ -125,14 +125,72 @@ uv run inspect eval domains/cybench --model openai/azure/gpt-4 \
 
 **Cybersecurity incident response with database forensics.**
 
+Excytin includes four task sets for different evaluation purposes:
+
+| Task Set | Description | Task Count | Recommended Use |
+|----------|-------------|------------|-----------------|
+| `latest_test_set` | New O3-generated test questions | 599 tasks | **Benchmarking & Evaluation** |
+| `latest_train_set` | New O3-generated training questions | 418 tasks | **Training & Fine-tuning** |
+| `legacy_test_set` | Legacy O1-preview generated test tasks | 589 tasks | Paper comparison only |
+| `legacy_train_set` | Legacy O1-preview generated training questions | 418 tasks | Paper comparison only |
+
+#### Task Set Details
+
+**`latest_test_set` / `latest_train_set` (Recommended)**
+- High-quality questions generated with GPT-o3 model.
+- **Use these for training, fine-tuning, and accurate benchmarking**
+
+**`legacy_test_set` / `legacy_train_set` (Paper Comparison Only)**
+- Original datasets generated using GPT-o1-preview (test) and GPT-o1-ga (train) used in the [arXiv paper](https://arxiv.org/abs/2507.14201)
+- If you want to reproduce or compare results with the paper, use these sets.
+- ⚠️ **Note:** These are noisier datasets with less consistent formatting
+- **Not recommended** for training, hill climbing, or new model development
+- Use `latest_test_set` and `latest_train_set` for most accurate evaluations
+
+#### Running Specific Task Sets
+
 ```bash
-# Quick evaluation
-uv run inspect eval domains/excytin --model openai/azure/gpt-4
+# Run ALL tasks (all task sets combined)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1
+
+# Run only the latest test set (recommended for evaluation)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T task_filter="incident_*_latest_test_set_*"
+
+# Run only the latest train set (for training/fine-tuning)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T task_filter="incident_*_latest_train_set_*"
+
+# Run only legacy test set (original tasks)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T task_filter="incident_*_legacy_test_set_*"
+
+# Run only legacy train set
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T task_filter="incident_*_legacy_train_set_*"
+
+# Run specific incident within a task set
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T task_filter="incident_5_latest_test_set_*"
+
+# Limit number of tasks for quick testing
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T task_filter="incident_*_latest_test_set_*" \
+  --limit 10
+```
+
+#### Quick Start Examples
+
+```bash
+# Quick evaluation with latest test set
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T task_filter="incident_*_latest_test_set_*"
 
 # With image build and cleanup
 uv run inspect eval domains/excytin \
-  --model openai/azure/gpt-4 \
+  --model openai/azure/gpt-4.1 \
   -T build=true \
+  -T task_filter="incident_*_latest_test_set_*" \
   -T stop_saber_after=true
 ```
 

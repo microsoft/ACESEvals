@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_34
+    title: incident_5_latest_train_set_task_34
+    description: 'Which domain was highlighted in the Manatee Tempest threat-actor alert as part of the group’s malicious infrastructure?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of devices on host vnevado-win11u that are showing ransomware-like behavior, several suspicious archives (such as syncretic.7z and kiters.7z) and scripts (e.g., get-userprttoken.ps1) were found, and activity was traced back to a potentially compromised asset communicating with the external IP 99.83.111.100. Microsoft Defender subsequently raised an additional alert linking this activity to the Russia-based threat actor known as Manatee Tempest, an adversary historically associated with Dridex, BLISTER, and Cobalt Strike deployments.'
+      question: 'Which domain was highlighted in the Manatee Tempest threat-actor alert as part of the group’s malicious infrastructure?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vectorsandarrows.com'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'vectorsandarrows.com'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Threat actor Manatee Tempest leveraged the malicious URL (Url: vectorsandarrows.com) to gain foothold in the environment.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Following this, several devices began exhibiting ransomware-like behaviors under the compromised user account (Name: dp5hn).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

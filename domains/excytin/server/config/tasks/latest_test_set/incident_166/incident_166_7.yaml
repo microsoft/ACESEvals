@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_7
+    title: incident_166_latest_test_set_task_7
+    description: 'During the anonymous sign-in connected to the password spray activity, which IP address was used?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A password spray attack was detected on 2024-07-23 involving the Azure AD user with ID 89e933b9-5b2e-4bd6-bcdf-033db707ef82. During the investigation we discovered that the same user account was later involved in a sign-in that Microsoft Entra ID flagged as coming from an anonymous IP address (for example via Tor or a VPN).'
+      question: 'During the anonymous sign-in connected to the password spray activity, which IP address was used?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '95.202.65.202'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '95.202.65.202'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Password spray attack detected at 2024-07-23 14:23:51.925093 UTC against account AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Anonymous sign-in attempt observed at 2024-07-22 08:45:32.664841 UTC originating from IP address `95.202.65.202`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

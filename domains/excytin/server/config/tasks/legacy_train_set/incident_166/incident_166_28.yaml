@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_166_legacy_train_set_task_28
+    title: incident_166_legacy_train_set_task_28
+    description: 'What is the anonymous IP address that was used to sign-in, which might be related to this suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident was detected involving a suspicious inbox manipulation rule set on the mailbox of user Jordan P (laylaw@vnevado.alpineskihouse.co). The rule named ''ITCleanup'' was configured to move messages to a folder named ''RSS Feeds''. This raises the possibility of the user''s account being compromised and potentially used for spreading phishing emails and gaining access to other accounts and devices.'
+      question: 'What is the anonymous IP address that was used to sign-in, which might be related to this suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '95.202.65.202'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '95.202.65.202'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious inbox manipulation rule was set on the inbox of the user `Jordan P (laylaw@vnevado.alpineskihouse.co)` at `2024-07-22 09:49:55.558204+00:00`, which may indicate a potential compromise of the account.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The IP address `95.202.65.202` was used to sign in anonymously on `2024-07-22 08:45:32.664841+00:00`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The IP address `95.202.65.202` is associated with the suspicious inbox manipulation alert.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'The user `Jordan P (laylaw@vnevado.alpineskihouse.co)` created a MoveToFolder rule named `ITCleanup` to move messages to a folder named `RSS Feeds`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

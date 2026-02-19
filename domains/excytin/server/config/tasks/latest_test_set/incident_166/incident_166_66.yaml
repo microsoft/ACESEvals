@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_66
+    title: incident_166_latest_test_set_task_66
+    description: 'According to the “Password Spray” alert that reused the anonymous IP, what is the Azure AD User ID (AadUserId) of the account that the attacker tried to compromise?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 22 2024, our monitoring recorded a sign-in attempt from the suspicious IP address 95.202.65.202, flagged by the “Anonymous IP address” alert. Investigation shows that the same network indicator later surfaced in a “Password Spray” alert issued on July 23 2024, suggesting the attacker reused that infrastructure to brute-force user credentials.'
+      question: 'According to the “Password Spray” alert that reused the anonymous IP, what is the Azure AD User ID (AadUserId) of the account that the attacker tried to compromise?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '89e933b9-5b2e-4bd6-bcdf-033db707ef82'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '89e933b9-5b2e-4bd6-bcdf-033db707ef82'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An anonymous sign-in attempt was made from IP address (Address) `95.202.65.202` on 2024-07-22 08:45:32 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A password-spray attack was detected targeting the account (AadUserId) `89e933b9-5b2e-4bd6-bcdf-033db707ef82` on 2024-07-23 14:23:51 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

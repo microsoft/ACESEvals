@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_30
+    title: incident_39_legacy_train_set_task_30
+    description: 'What command was executed by the PsExec tool on the remote device during this incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'In a recent security incident, multiple known public tools that could also be used for malicious reasons were dropped on a device. These tools could be leveraged for various attack stages including, credential theft, privilege escalation, and lateral movement. During this incident, several files such as `psexesvc.exe`, `mimikatz.exe`, `domaindominance27.ps1`, and `rubeus.exe` were observed.'
+      question: 'What command was executed by the PsExec tool on the remote device during this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '"psexec.exe" \vnevado-win10b -accepteula cmd /c "c:\temp\rubeus.exe dump /service:xfbzkp /user:lucasb > c:\temp\adminticket.txt"'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '"psexec.exe" \vnevado-win10b -accepteula cmd /c "c:\temp\rubeus.exe dump /service:xfbzkp /user:lucasb > c:\temp\adminticket.txt"'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The tool `psexec.exe` was dropped on the device.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'PsExec was used to launch a command on a remote device with Process ID `5924` at `2024-06-27t14:33:14.4981439z`, with the command line `psexec.exe \vnevado-win10b -accepteula cmd /c "c:\temp\rubeus.exe dump /service:xfbzkp /user:lucasb > c:\temp\adminticket.txt"`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_78
+    title: incident_5_latest_train_set_task_78
+    description: 'According to the "Unknown malware was detected and was active" alert, what is the name of the DLL file that was flagged by Microsoft Defender?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During investigation of an intrusion attributed to the Russia-based Manatee Tempest group, telemetry showed a host contacting the malicious domain "vectorsandarrows.com" (IP 198.43.121.209). Within seconds of this activity, Microsoft Defender generated an alert stating that "Unknown malware was detected and was active" on the same machine, indicating a suspicious DLL had been loaded. Identifying this file is important to scope the compromise and plan remediation.'
+      question: 'According to the "Unknown malware was detected and was active" alert, what is the name of the DLL file that was flagged by Microsoft Defender?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimilib.dll'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'mimilib.dll'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The host with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e` is linked to activity by the Manatee Tempest threat group.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'On this same timeframe, the file `mimilib.dll` (Field: Name, Value: `mimilib.dll`) was detected as unknown malware running on a device, suggesting initial payload execution.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Shortly after, ransomware-like behavior was observed communicating with the external IP address `99.83.111.100` (Field: Address, Value: `99.83.111.100`), indicating possible command-and-control or data exfiltration.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'Days later, the attacker leveraged PSExec to laterally move to the jump server with AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1` (Field: AadDeviceId, Value: `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

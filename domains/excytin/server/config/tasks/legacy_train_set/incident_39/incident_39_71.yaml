@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_71
+    title: incident_39_legacy_train_set_task_71
+    description: 'Can you identify the security identifier (SID) of the deceptive user account involved in the sign-in attempt?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A known credential theft tool `mimikatz.exe` was executed from the device with URL `vnevado-dc.vnevado.alpineskihouse.co` and IP address `65.233.23.156` to dump users'' credentials. This incident triggered a malicious credential theft tool execution alert on 2024-07-04. Shortly after, there was a sign-in attempt with a deceptive user account detected, indicating that a potential attacker might be using a fake or decoy account to perform various attack activities including lateral movement and accessing sensitive data.'
+      question: 'Can you identify the security identifier (SID) of the deceptive user account involved in the sign-in attempt?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-0-6-5'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-0-6-5'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A known credential theft tool was executed using the account `tgs2z`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'There was a sign-in attempt using a deceptive user account with the name `kyleg`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Another sign-in attempt was detected using a deceptive user account with the SID `S-0-6-5`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

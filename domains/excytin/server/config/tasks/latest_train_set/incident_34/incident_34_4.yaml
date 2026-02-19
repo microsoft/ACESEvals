@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_train_set_task_4
+    title: incident_34_latest_train_set_task_4
+    description: 'During the closely-related alert that flagged a suspicious PowerShell command execution seconds earlier, what was the name of the executable identified as the process responsible for launching that command?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-04 at 22:35 UTC, a suspicious LDAP query was observed coming from the process "winword.exe" after opening the document "rs4_winatp-intro-invoice.docm". This activity indicates potential reconnaissance aimed at discovering privileged accounts and sensitive assets within the domain.'
+      question: 'During the closely-related alert that flagged a suspicious PowerShell command execution seconds earlier, what was the name of the executable identified as the process responsible for launching that command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winatp-intro-backdoor.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winatp-intro-backdoor.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious LDAP query was executed by the account (Field: Name, Value: `samuelf`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A suspicious PowerShell command was run by the process (Field: ExtractedFileName, Value: `winatp-intro-backdoor.exe`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

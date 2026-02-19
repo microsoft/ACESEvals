@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_train_set_task_17
+    title: incident_134_latest_train_set_task_17
+    description: 'In the related alert stating that "Email messages containing a malicious URL were removed after delivery", which mailbox received those malicious messages?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into a Business Email Compromise (BEC) attempt, an alert titled "BEC financial fraud" was raised on 2024-07-17 11:34:48 UTC. The alert indicated that a suspicious inbox rule was created from the external IP address 237.7.81.122 during a risky Azure AD session, suggesting an attacker tried to hide incoming messages to facilitate financial fraud.'
+      question: 'In the related alert stating that "Email messages containing a malicious URL were removed after delivery", which mailbox received those malicious messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'raphaelt@vnevado.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'raphaelt@vnevado.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-17 11:34:48.803827Z, a suspicious inbox rule was created during a risky sign-in on the account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`, indicating a Business Email Compromise (BEC) financial-fraud attempt.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A short time earlier, at 2024-07-17 11:04:19.964546Z, email messages sent to the recipient `raphaelt@vnevado.alpineskihouse.co` contained a malicious URL that was later removed, showing the attacker’s attempt to deliver malicious content to that mailbox.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

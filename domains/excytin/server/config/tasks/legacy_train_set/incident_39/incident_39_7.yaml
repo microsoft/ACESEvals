@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_7
+    title: incident_39_legacy_train_set_task_7
+    description: 'Can you find the account name associated with the dropped dual-purpose tools during the incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A multi-stage incident involving the Kekeo malware was identified on the endpoint. During this incident, a malicious file ''rubeus.exe'' was executed by account fk8mq on host vnevado-win10b, possibly indicating credential theft attempts. Additionally, dual-purpose tools were dropped to the same device.'
+      question: 'Can you find the account name associated with the dropped dual-purpose tools during the incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tgs2z'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'tgs2z'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The ''Kekeo'' malware named `rubeus.exe` was detected and active on a machine.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Multiple dual-purpose tools were dropped on the device by the account `tgs2z`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

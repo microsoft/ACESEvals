@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_25
+    title: incident_5_legacy_train_set_task_25
+    description: 'On which device (AadDeviceId) was the ''CommandAndControl'' malware detected during the lateral movement?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A possible lateral movement incident was observed on 2024-07-04, starting with a suspicious network event on IP address `83.162.58.168`. This indicated that an attacker could be attempting to move laterally across devices to gather data or elevate privileges. Later, suspicious remote activity was detected which might involve initiating interactive sessions, modifying files, or creating scheduled tasks from a remote machine.'
+      question: 'On which device (AadDeviceId) was the ''CommandAndControl'' malware detected during the lateral movement?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Lateral movement was observed on device with AadDeviceId `e5799261-6720-4297-961e-bd9ca4275033`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious remote activity was initiated by the user with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: '‘CommandAndControl’ malware was detected during lateral movement on device with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

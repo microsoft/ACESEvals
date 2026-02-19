@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_3
+    title: incident_5_legacy_train_set_task_3
+    description: 'What was the IP address involved in the suspicious remote activity observed on host `vnevado-win10r` during this incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During a security incident on 2024-07-04, all file snapshots and shadow copies were deleted on host `vnevado-win10r` using the process `vssblatemp.exe`, which is common during a ransomware infection. The incident involved remote activities that were identified as suspicious, including potential attempts to initiate interactive sessions, modify files, or pass WMI commands.'
+      question: 'What was the IP address involved in the suspicious remote activity observed on host `vnevado-win10r` during this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '99.83.111.100'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '99.83.111.100'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'All file snapshots and shadow copies have been deleted via the process `vssblatemp.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious remote activity was initiated from IP address `99.83.111.100`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

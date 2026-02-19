@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_legacy_train_set_task_51
+    title: incident_55_legacy_train_set_task_51
+    description: 'In a related alert, there was a suspicious sequence of exploration activities. Can you identify the user account that performed these exploration activities?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'Recently, there was a suspicious access to the LSASS service on host `mb-winclient`, which may have been an attempt to obtain clear-text passwords from the LSASS service''s memory. Multiple public tools as well as custom ones could be used to perform this operation. Once obtained, these credentials are often used in lateral movement activities to infiltrate other machines and servers in the network.'
+      question: 'In a related alert, there was a suspicious sequence of exploration activities. Can you identify the user account that performed these exploration activities?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'gsmith'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious access to the LSASS service was attempted using the process `powershell.exe` on 2024-07-04 at 22:35:02.783154+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A user account with the name `gsmith` conducted a suspicious sequence of exploration activities involving a set of windows commands on 2024-07-04 at 22:35:03.106654+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

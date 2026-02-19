@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_322_latest_test_set_task_45
+    title: incident_322_latest_test_set_task_45
+    description: 'According to the alert titled "A potentially malicious URL click was detected", which mail recipient in the vnevado.alpineskihouse.co domain clicked the malicious link?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation, an Azure virtual machine named "vnevado-dc" (resource ID ending with "/virtualmachines/vnevado-dc") in subscription 7e838342-601f-4552-9baf-0dfb300cf555 generated an alert titled "Azure Resource Manager operation from suspicious proxy IP address" after activity was observed coming from the external IP 253.1.244.215. Shortly before this, security telemetry also recorded that email messages containing a malicious URL were removed post-delivery, and a separate alert indicated that one of the organization’s users actually clicked the same malicious link.'
+      question: 'According to the alert titled "A potentially malicious URL click was detected", which mail recipient in the vnevado.alpineskihouse.co domain clicked the malicious link?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'alyssat@vnevado.alpineskihouse.co'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'alyssat@vnevado.alpineskihouse.co'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A resource management operation was performed from a suspicious proxy IP by the Azure AD account with AadUserId `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'An email containing a malicious URL was delivered and later removed for the mailmessage.Recipient `alyssat@vnevado.alpineskihouse.co`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A potentially malicious URL click was detected from the same mailmessage.Recipient `alyssat@vnevado.alpineskihouse.co`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_98
+    title: incident_5_latest_train_set_task_98
+    description: 'From the "Suspicious remote activity" alert, provide the full command line that was executed and its process ID.'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into ransomware-like behavior on host "vnevado-win11t" (device ID e5799261-6720-4297-961e-bd9ca4275033), several suspicious files were detected, including "get-userprttoken.ps1" and an encrypted archive "characterical.zip.lockbit". Only seconds later, Defender raised a second alert on the same machine for "Suspicious remote activity", indicating that an attacker may have remotely executed a system-level command intended to hamper recovery efforts.'
+      question: 'From the "Suspicious remote activity" alert, provide the full command line that was executed and its process ID.'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process ID 8136 executed the command line: bcdedit /set recoveryenabled no'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Process ID 8136 executed the command line: bcdedit /set recoveryenabled no'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96` is exhibiting ransomware-like behavior on multiple devices.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious remote activity was detected: process with ProcessId `8136` created at `2024-06-20t09:10:48.0438707z` executed the command line `bcdedit /set recoveryenabled no`, likely attempting to disable Windows recovery features.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

@@ -1,0 +1,55 @@
+tasks:
+  - task_id: incident_34_latest_test_set_task_79
+    title: incident_34_latest_test_set_task_79
+    description: 'Which security identifier (SID) is associated with the account that ran the suspicious PowerShell command detected immediately after the Task Scheduler activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into a suspicious persistence mechanism, security telemetry showed that the process "schtasks.exe" was used on an endpoint to create and immediately run a scheduled task named "yrei". The task was configured to launch the binary located at:
+   c:\users\samuelf\onedrive - (new) alpineskihouse\desktop\winatp-intro-backdoor.exe
+This activity triggered the alert "Suspicious Task Scheduler activity" on 2024-07-04 at 22:35 UTC, indicating a potential attempt to ensure the malware is executed automatically. Shortly after this scheduler event, a second alert titled "Suspicious PowerShell download or encoded command execution" was raised on the same machine, implying the attacker might have leveraged PowerShell to fetch or run additional payloads.'
+      question: 'Which security identifier (SID) is associated with the account that ran the suspicious PowerShell command detected immediately after the Task Scheduler activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1870156660-7534030218-135086563-1193'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1870156660-7534030218-135086563-1193'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious Task Scheduler activity was detected on host `vnevado-win10e` (HostName = vnevado-win10e).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A process subsequently executed PowerShell to download a file or run an encoded command under the user account with SID `S-1-5-21-1870156660-7534030218-135086563-1193` (Sid = S-1-5-21-1870156660-7534030218-135086563-1193).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

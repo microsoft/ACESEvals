@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_73
+    title: incident_55_latest_test_set_task_73
+    description: 'According to the follow-up alert raised on 2024-07-10, what is the full URL (including its protocol) that the user clicked and was flagged as potentially malicious?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'The investigation began when an email from the sender santiago@vnevado.alpineskihouse.co (originating from IP 119.36.50.193) was delivered to an internal mailbox and later removed because it contained a suspicious link hosted under an Azure Container Apps domain. Roughly a day later, security telemetry reported that a user actually clicked on a URL from that same campaign, triggering the alert titled “A potentially malicious URL click was detected.”'
+      question: 'According to the follow-up alert raised on 2024-07-10, what is the full URL (including its protocol) that the user clicked and was flagged as potentially malicious?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'First, an email containing a malicious URL was delivered to and later removed from the mailbox with MailboxPrimaryAddress `bjenkins@niseko.alpineskihouse.co`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, a potentially malicious URL click was detected on the Url `http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

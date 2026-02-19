@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_2
+    title: incident_134_latest_test_set_task_2
+    description: 'According to the follow-up alert on 18 July 2024, what is the IP address that was identified as malicious during the sign-in attempt?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 17 2024, the security team observed a Business Email Compromise (BEC)–related alert. The alert indicated that user “Nina Park” (email: Nina Park@vnevado.alpineskihouse.co, SID: S-1-5-21-1874151667-3554330288-105586563-1715) created a suspicious inbox-hiding rule during a risky Azure AD session. The sign-in that triggered this alert originated from IP address 237.7.81.122. Investigators later noted a related alert the following day that reported a sign-in from a known malicious IP address, potentially linked to the same threat activity.'
+      question: 'According to the follow-up alert on 18 July 2024, what is the IP address that was identified as malicious during the sign-in attempt?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '170.54.121.63'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '170.54.121.63'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious inbox rule was created in a risky Azure Active Directory session for the account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1`, indicating a possible BEC-related financial-fraud attempt.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A sign-in attempt was observed from the malicious IP address `170.54.121.63`, suggesting that the attacker may have accessed the environment from this known-bad source.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

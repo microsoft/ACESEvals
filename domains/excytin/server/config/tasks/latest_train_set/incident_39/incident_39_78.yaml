@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_78
+    title: incident_39_latest_train_set_task_78
+    description: 'According to the SID history injection alert that followed these events, what is the name of the file involved in this privileged-escalation attempt?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation into potential human-operated malicious activity on host "vnevado-win10b", we observed several suspicious processes, including a PowerShell command that disabled real-time monitoring and the execution of the credential-theft tool Rubeus. Shortly afterward, multiple dual-purpose tools were dropped to the device, and a subsequent alert reported a SID history injection—an attack technique often used to grant elevated privileges by manipulating Security Identifiers (SIDs).'
+      question: 'According to the SID history injection alert that followed these events, what is the name of the file involved in this privileged-escalation attempt?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'dkwj.mze'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'dkwj.mze'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A SID history injection was detected on the device via the file Name: `dkwj.mze`, indicating the attacker attempted to elevate privileges.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Immediately after, the process ExtractedFileName: `powershell.exe` was used to drop multiple dual-purpose tools on the device, enabling further malicious actions.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Finally, the file Name: `rubeus.exe` was observed in the alert for potential human-operated malicious activity, showing the attacker moving toward credential theft or ransomware deployment.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

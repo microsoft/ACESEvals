@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_28
+    title: incident_5_legacy_train_set_task_28
+    description: 'Following this alert, another suspicious activity was detected involving WMI process creation. Can you identify the AadDeviceId of the host where this suspicious WMI process was created?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident involving a possible attempt to access a Primary Refresh Token (PRT) was detected on the host `vnevado-win10s` with AadDeviceId `f5b847aa-8712-4bf6-b4f7-ed6cd89e1505`. The process involved was `browsercore.exe` with Process Id `2676` and the command line `browsercore.exe`. This indicates that attackers might be attempting to exploit the PRT feature of Azure AD authentication to move laterally within the organization or perform credential theft. For more information, you can refer to the Midnight Blizzard credential attacks Threat Analytics report provided by Microsoft.'
+      question: 'Following this alert, another suspicious activity was detected involving WMI process creation. Can you identify the AadDeviceId of the host where this suspicious WMI process was created?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was a possible attempt to access Primary Refresh Token by the account `dp5hn`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious WMI process creation was observed on the machine with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

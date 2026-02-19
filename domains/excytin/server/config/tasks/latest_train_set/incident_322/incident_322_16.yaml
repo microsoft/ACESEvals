@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_322_latest_train_set_task_16
+    title: incident_322_latest_train_set_task_16
+    description: 'In the "Suspicious credential dump from NTDS.dit" alert, what was the process ID of the PowerShell process that executed the encoded command?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A malicious email containing the URL dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io was sent from raphaelt@vnevado.alpineskihouse.co to alyssat@vnevado.alpineskihouse.co and later removed by the security system. Shortly afterwards, Microsoft Defender flagged an Azure Resource Manager operation coming from a suspicious proxy IP. A few minutes after these mail- and cloud-related activities, an additional alert was raised for a "Suspicious credential dump from NTDS.dit," indicating an attacker may have tried to harvest credentials on the domain controller.'
+      question: 'In the "Suspicious credential dump from NTDS.dit" alert, what was the process ID of the PowerShell process that executed the encoded command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '2556'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '2556'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The email account with Name `Hailey Johnson` received an email that contained a malicious URL which was later removed.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A suspicious Azure Resource Manager operation originating from a proxy IP was executed on the host with HostName `vnevado-dc`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A suspicious credential dump was attempted via a PowerShell process with ProcessId `2556`, CreatedTimeUtc `2024-08-01T12:37:29.6522416Z`, and the (base-64) encoded CommandLine beginning with `"powershell.exe" -encodedcommand ...`, indicating an attempt to extract `NTDS.dit`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

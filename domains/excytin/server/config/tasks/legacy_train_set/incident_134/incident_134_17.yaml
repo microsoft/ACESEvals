@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_legacy_train_set_task_17
+    title: incident_134_legacy_train_set_task_17
+    description: 'We have detected that suspicious emails were sent by a potentially compromised user related to a Business Email Compromise (BEC) attempt. Can you determine the sender IP address associated with these emails?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A user account was signed in from an unusual location with IP address `170.54.121.63` during a password spray attack, which might indicate that the account was compromised. The login time was 2024-07-18 at 14:54:18. As the investigation continues, it is important to understand the connections to other suspicious activities.'
+      question: 'We have detected that suspicious emails were sent by a potentially compromised user related to a Business Email Compromise (BEC) attempt. Can you determine the sender IP address associated with these emails?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '237.7.81.122'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '237.7.81.122'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The user account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` was compromised following a password-spray attack.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Suspicious emails related to a business email compromise (BEC) fraud attempt were sent from IP address `237.7.81.122`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

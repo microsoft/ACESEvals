@@ -1,0 +1,606 @@
+tasks:
+  - task_id: incident_166_legacy_test_set_task_21
+    title: incident_166_legacy_test_set_task_21
+    description: Can you identify the Application ID for the cloud application where
+      the SAP sign-in activity was observed?
+    inherit_shared: true
+    initial_context:
+      incident_context: A security incident reported a sign-in from an anonymous IP
+        address `192.238.237.190` on 2024-07-22 at 09:11:31. This alert suggests that
+        anonymizing methods might have been used to hide the user's identity, which
+        could indicate a potential malicious intent. Subsequently, a user involved
+        in a business email compromise (BEC) alert signed in to SAP applications in
+        a suspicious manner, indicating potential unauthorized access to sensitive
+        financial information.
+      question: Can you identify the Application ID for the cloud application where
+        the SAP sign-in activity was observed?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '100'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '100'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          signed in from an anonymous IP address (e.g. Tor browser, anonymizer VPNs)
+          on 2024-07-22 at 09:11:31.290020+00:00.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: The same user with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          signed in to SAP (AppId `100`) in a suspicious manner, which is related
+          to a business email compromise alert on 2024-07-22 at 14:09:41.075798+00:00.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_22
+    title: incident_166_legacy_test_set_task_22
+    description: Which cloud application (AppId) was involved in the incident where
+      the user Jordan P had a suspicious inbox manipulation rule?
+    inherit_shared: true
+    initial_context:
+      incident_context: An alert was generated indicating that an inbound rule was
+        created to hide incoming emails potentially as part of a business email compromise
+        (BEC) fraud attempt. The account involved was Jordan P associated with email
+        `Jordan P@vnevado.alpineskihouse.co` and originating from IP `255.246.85.58`.
+        The incident took place during a risky Azure Active Directory session.
+      question: Which cloud application (AppId) was involved in the incident where
+        the user Jordan P had a suspicious inbox manipulation rule?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '11161'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '11161'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A suspicious inbox manipulation rule was set on the inbox of
+          the user Jordan P (laylaw@vnevado.alpineskihouse.co), indicating a potential
+          compromise. A MoveToFolder rule named ITCleanup was created to move messages
+          to a folder named RSS Feeds.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A suspicious inbox rule that hides incoming email messages was
+          created in a risky Azure Active Directory session. It indicates a potential
+          attempt at business email compromise (BEC) targeting the email account Jordan
+          P@vnevado.alpineskihouse.co.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_23
+    title: incident_166_legacy_test_set_task_23
+    description: Can you identify the anonymous IP address used in the sign-in attempt
+      related to this password spray attack?
+    inherit_shared: true
+    initial_context:
+      incident_context: A password spray attack was detected, originating from the
+        IP address `95.202.65.202`. The attack might have targeted multiple user accounts
+        to gain unauthorized access by attempting many possible passwords.
+      question: Can you identify the anonymous IP address used in the sign-in attempt
+        related to this password spray attack?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '192.238.237.190'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '192.238.237.190'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: There was a password spray attack detected involving the user
+          with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: There was a sign-in from an anonymous IP address `192.238.237.190`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_24
+    title: incident_166_legacy_test_set_task_24
+    description: Following the suspicious SAP authentication incident, there was a
+      password spray attack on 2024-07-23. Can you provide the IP address from which
+      the password spray attack was detected?
+    inherit_shared: true
+    initial_context:
+      incident_context: This incident might be related to a broader attack campaign.
+        Keep an eye on the sequence of events and note how the suspicious SAP authentication
+        may tie into subsequent malicious activities.
+      question: Following the suspicious SAP authentication incident, there was a
+        password spray attack on 2024-07-23. Can you provide the IP address from which
+        the password spray attack was detected?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '95.202.65.202'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '95.202.65.202'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A user account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          signed in to SAP under a risky sign-in alert.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A password spray attack was detected from IP address `95.202.65.202`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_25
+    title: incident_166_legacy_test_set_task_25
+    description: In relation to this incident, it appears there was also a sign-in
+      attempt from an anonymous IP address. Can you identify the IP address?
+    inherit_shared: true
+    initial_context:
+      incident_context: As part of a security incident involving BEC (business email
+        compromise) fraud attempt, suspicious emails were sent by a user account named
+        Jordan P (Jordan P@vnevado.alpineskihouse.co). The suspicious emails were
+        detected as part of an ongoing investigation into potential BEC fraud activities.
+      question: In relation to this incident, it appears there was also a sign-in
+        attempt from an anonymous IP address. Can you identify the IP address?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '192.238.237.190'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '192.238.237.190'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: Suspicious emails were sent by a possibly compromised user account
+          with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`, potentially related
+          to a BEC fraud attempt.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: There was a sign-in attempt from an anonymous IP address `192.238.237.190`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_26
+    title: incident_166_legacy_test_set_task_26
+    description: Can you find the Azure Active Directory User ID associated with the
+      suspicious SAP authentication sign-in?
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A business email compromise-related alert indicated that
+        the user with account `Jordan P` (Email: Jordan P@vnevado.alpineskihouse.co,
+        Sid: S-1-5-21-1740051960-3534030288-108486866-1602) signed into SAP with IP
+        address 107.253.5.27. This action was flagged as suspicious due to potential
+        recording or modification of sensitive financial information in SAP. The goal
+        could be setting up further stages of the attack, such as phishing or social
+        engineering.'
+      question: Can you find the Azure Active Directory User ID associated with the
+        suspicious SAP authentication sign-in?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '89e933b9-5b2e-4bd6-bcdf-033db707ef82'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '89e933b9-5b2e-4bd6-bcdf-033db707ef82'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A user involved in a business email compromise-related alert
+          signed in to SAP with AppId `100`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A user account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          performed a suspicious SAP authentication.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_27
+    title: incident_166_legacy_test_set_task_27
+    description: Can you identify the IP address from which the suspicious SAP login
+      was made as part of this business email compromise-related alert?
+    inherit_shared: true
+    initial_context:
+      incident_context: A recent security incident involved a possible business email
+        compromise (BEC) aimed at financial fraud. The user named `Jordan P` with
+        the email `Jordan P@vnevado.alpineskihouse.co` and AAD User ID `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+        was flagged for suspicious activities. An unusual login from this account
+        points towards an attempted fraud against our organization.
+      question: Can you identify the IP address from which the suspicious SAP login
+        was made as part of this business email compromise-related alert?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.253.5.27'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.253.5.27'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: There was a suspicious event with BEC (Business Email Compromise)
+          characteristics observed for the email account `Jordan P@vnevado.alpineskihouse.co`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A user related to the business email compromise alert signed
+          in to SAP from the IP address `107.253.5.27` in a suspicious manner.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_28
+    title: incident_166_legacy_test_set_task_28
+    description: What is the name of the account involved in the possible BEC financial
+      fraud detected on 2024-07-23?
+    inherit_shared: true
+    initial_context:
+      incident_context: As part of the ongoing investigation from the suspicious SAP
+        authentication incident where a risky user account flagged by Microsoft Entra
+        ID accessed sensitive financials, a subsequent alert indicated possible BEC
+        (Business Email Compromise) financial fraud attempts.
+      question: What is the name of the account involved in the possible BEC financial
+        fraud detected on 2024-07-23?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Jordan P'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Jordan P'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A user account with the email `Jordan P@vnevado.alpineskihouse.co`
+          had a risky sign-in alert and signed in to SAP.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: Suspicious events with business email compromise (BEC) characteristics
+          were observed for the user account named `Jordan P`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_29
+    title: incident_166_legacy_test_set_task_29
+    description: Based on the investigation, what is the Security Identifier (Sid)
+      of the account involved in the BEC financial fraud incident?
+    inherit_shared: true
+    initial_context:
+      incident_context: A password spray attack was detected on 2024-07-23 from the
+        IP address `95.202.65.202`. This type of attack is a common technique where
+        attackers attempt to access multiple accounts by trying many passwords. The
+        investigation about this attack uncovered a potential business email compromise
+        (BEC) incident. Specifically, on 2024-07-22, a suspicious inbox rule that
+        hides incoming email messages was created during a risky Azure Active Directory
+        session.
+      question: Based on the investigation, what is the Security Identifier (Sid)
+        of the account involved in the BEC financial fraud incident?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1740051960-3534030288-108486866-1602'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1740051960-3534030288-108486866-1602'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A password spray attack was detected on an account with AadUserId
+          `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: A suspicious inbox rule was created in an account with SID `S-1-5-21-1740051960-3534030288-108486866-1602`,
+          indicating a potential business email compromise (BEC) attempt.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+  - task_id: incident_166_legacy_test_set_task_30
+    title: incident_166_legacy_test_set_task_30
+    description: What is the IP address from which the anonymous sign-in was detected
+      related to this alert?
+    inherit_shared: true
+    initial_context:
+      incident_context: 'In a recent incident, a suspicious SAP authentication alert
+        was triggered. A risky sign-in using the account `Jordan P` (email: `Jordan
+        P@vnevado.alpineskihouse.co`) was detected, indicating a potential compromise
+        to search or modify sensitive financial information in SAP software. The sign-in
+        originated from the IP address `107.253.5.27`.'
+      question: What is the IP address from which the anonymous sign-in was detected
+        related to this alert?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '95.202.65.202'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '95.202.65.202'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: A user account with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`
+          signed into SAP with a risky sign-in alert.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: The sign-in was made from an anonymous IP address `95.202.65.202`.
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

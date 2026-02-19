@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_79
+    title: incident_39_legacy_train_set_task_79
+    description: 'During the investigation, another alert indicated that a known credential theft tool was executed on the machine. Can you identify the script file name associated with this malicious credential theft tool?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'As part of investigating a suspicious sequence of exploration activities on a machine, we observed several Windows commands being executed, including PowerShell and net.exe commands to manage domain users and groups. These commands are often used by attackers to identify valuable assets and facilitate lateral movement. The commands were executed using the script `domaindominance27.ps1`.'
+      question: 'During the investigation, another alert indicated that a known credential theft tool was executed on the machine. Can you identify the script file name associated with this malicious credential theft tool?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'get-krbticket.ps1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'get-krbticket.ps1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A user with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1` executed a sequence of suspicious exploration activities.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A malicious credential theft tool named `get-krbticket.ps1` was executed, indicating an attempt to dump users'' credentials.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

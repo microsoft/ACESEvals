@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_34_latest_train_set_task_18
+    title: incident_34_latest_train_set_task_18
+    description: 'Which executable was identified in the follow-up alert as the process that interacted with Task Scheduler?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation, we observed an endpoint with IP address 72.5.72.208 where a command was run to add a value under HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce. The command line (PID 10208) attempted to set the value ‘yrei’ to launch winatp-intro-backdoor.exe from the user’s Desktop after reboot, which triggered the alert “Anomaly detected in ASEP registry”. Right after this persistence attempt, Microsoft Defender raised another alert indicating that a process previously involved in malicious activity leveraged Task Scheduler to create or manipulate a scheduled task, likely as a second persistence mechanism.'
+      question: 'Which executable was identified in the follow-up alert as the process that interacted with Task Scheduler?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'schtasks.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'schtasks.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious command or file was registered in the ASEP registry on the host (HostName: `vnevado-win10e`), suggesting the attacker is trying to persist after reboot.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Shortly after, the attacker leveraged the Task Scheduler utility (ExtractedFileName: `schtasks.exe`) to create or modify a task, reinforcing persistence on the system.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

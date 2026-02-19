@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_60
+    title: incident_39_latest_train_set_task_60
+    description: 'According to the "Suspicious service launched" alert raised on 2024-07-04 22:35:00 UTC, what is the username of the account tied to that service launch?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation we saw that user Ethan Brooks (Ethan Brooks@vnevado.alpineskihouse.co) performed SMB-based reconnaissance from host VNEVADO-Win10V against the domain controller VNEVADO-DC on 2024-07-10. This activity is linked—through several intermediate entities—to an earlier alert raised on 2024-07-04 for a suspicious service being launched on a device. That service start is associated with a separate user account.'
+      question: 'According to the "Suspicious service launched" alert raised on 2024-07-04 22:35:00 UTC, what is the username of the account tied to that service launch?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'lucasb'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'First, a suspicious service was launched using the account Name `lucasb` (entity field: Name, value: `lucasb`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'That service quickly spawned the process with ExtractedFileName `net.exe` (entity field: ExtractedFileName, value: `net.exe`) to perform anomalous user-account look-ups.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Several days later, the attacker escalated the activity by running SMB reconnaissance with the account Sid `S-5-7-21-1843151660-3234030288-105586167-1422` (entity field: Sid, value: `S-5-7-21-1843151660-3234030288-105586167-1422`) to enumerate recent IP addresses on the domain controller.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

@@ -1,0 +1,38 @@
+tasks:
+  - task_id: incident_322_legacy_train_set_task_1
+    title: incident_322_legacy_train_set_task_1
+    description: 'Can you provide the Process ID and the full command line used in the suspicious credential dump from NTDS.dit related to this incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'In a related incident, an alert on 2024-08-01 at 12:49:26 UTC indicated a suspicious credential dump from NTDS.dit, which occurred on host `vnevado-dc`. Attackers dump NTDS.dit in order to obtain user''s credentials which are stored in the domain controller.'
+      question: 'Can you provide the Process ID and the full command line used in the suspicious credential dump from NTDS.dit related to this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process ID: 6748, Command Line: "ntdsutil.exe" "ac i ntds" ifm "create full c:\temp" q q'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Process ID: 6748, Command Line: "ntdsutil.exe" "ac i ntds" ifm "create full c:\temp" q q'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An attacker used the process with Process ID `6748`, which was created at `2024-08-01t12:37:30.2769191z`, to dump NTDS.dit using the command line `ntdsutil.exe ac i ntds ifm create full c:\temp q q`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 1.0
+            weight: 1.0

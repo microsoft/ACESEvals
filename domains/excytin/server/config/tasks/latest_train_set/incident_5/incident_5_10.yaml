@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_10
+    title: incident_5_latest_train_set_task_10
+    description: 'What is the Security Identifier (SID) of the account that triggered the “Suspicious hands-on-keyboard user behavior” alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4 2024 at 22:35 UTC a “Malicious credential theft tool execution detected” alert was raised after the processes "mimikatz.exe", "notepad.exe" and "cmd.exe" were launched together on a host, indicating an attempt to dump credentials. A few seconds earlier, another alert titled “Suspicious hands-on-keyboard user behavior” was generated for the same device, pointing to anomalous activity by a particular user account.'
+      question: 'What is the Security Identifier (SID) of the account that triggered the “Suspicious hands-on-keyboard user behavior” alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1840191660-8534830288-125585561-1522'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1840191660-8534830288-125585561-1522'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-04 22:35:03.869406 UTC, a known credential-theft tool was executed by the account whose Name field is `tgs2z`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'At 2024-07-10 11:24:45.260113 UTC, PSExec was used for lateral movement from the IP Address `99.83.111.100` toward the jump server.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'At 2024-07-04 22:35:03.280964 UTC, a ransomware payload was remotely launched on the host whose AadDeviceId is `e5799261-6720-4297-961e-bd9ca4275033`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'At 2024-07-04 22:35:00.921503 UTC, suspicious hands-on-keyboard activity was observed from the user whose Sid is `S-1-5-21-1840191660-8534830288-125585561-1522`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

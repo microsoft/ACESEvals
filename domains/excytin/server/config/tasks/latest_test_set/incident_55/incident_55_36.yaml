@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_36
+    title: incident_55_latest_test_set_task_36
+    description: 'According to the "System executable renamed and launched" alert raised at 22:35:01 UTC on 2024-07-04, what is the security identifier (SID) of the account that ran the renamed executable?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On 2024-07-04 at 22:35 UTC, host "mb-winclient" (device ID 7661dfd4-218f-4016-8a87-66d68a7f098e) generated an alert titled "A malicious PowerShell Cmdlet was invoked on the machine." The script "contosoadfsblatempcreds.ps1" was launched via "powershell.exe" (PID 13968) under user "pwilson" (SID S-1-5-21-561436748-3867387497-1732241745-3701). Shortly after this event, the security platform raised another alert, "System executable renamed and launched," indicating that a Windows system binary had been copied to an unexpected location and executed—often a sign of evasion or privilege-escalation attempts.'
+      question: 'According to the "System executable renamed and launched" alert raised at 22:35:01 UTC on 2024-07-04, what is the security identifier (SID) of the account that ran the renamed executable?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-2-2-78'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-2-2-78'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An account (Sid: `S-2-2-78`) launched a Windows system executable that had been renamed, a common technique used by attackers to evade detections.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Moments later, a malicious PowerShell command was run via a process whose ExtractedFileName is `powershell.exe`, suggesting follow-up malicious activity.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

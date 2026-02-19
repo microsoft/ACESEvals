@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_55_latest_train_set_task_69
+    title: incident_55_latest_train_set_task_69
+    description: 'What is the OAuth application object ID (OAuthObjectId) of the "SimulandApp" instance to which Luciano Herrera added the suspicious credential?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an ongoing hands-on-keyboard attack, the Impacket toolkit was used to execute suspicious commands on the server "mb-adfs" under the account "gsmith". Shortly after, code-injection activity was detected, suggesting the attacker was attempting to hide malicious code inside a trusted process. Days later, investigators saw that user Luciano Herrera (pwilson@niseko.alpineskihouse.co) added a new password-type credential to an OAuth application named "SimulandApp"—a behavior that can signal preparation for later abuse of the cloud app.'
+      question: 'What is the OAuth application object ID (OAuthObjectId) of the "SimulandApp" instance to which Luciano Herrera added the suspicious credential?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'a66a4b44-d1f7-4563-95bf-a89d1b05b325'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'a66a4b44-d1f7-4563-95bf-a89d1b05b325'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Attackers used Impacket to launch a PowerShell command (process: ExtractedFileName = `powershell.exe`) on 2024-07-04 22:35:01 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A few seconds later, code was injected into another process while running under the Azure AD account (account: AadUserId = `2de70991-2799-4a95-b734-8e3df3a50118`).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Days afterward, that same compromised actor added a new password-type credential to an OAuth application (oauth-application: OAuthObjectId = `a66a4b44-d1f7-4563-95bf-a89d1b05b325`), completing the attack chain.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

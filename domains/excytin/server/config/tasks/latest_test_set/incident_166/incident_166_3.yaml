@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_test_set_task_3
+    title: incident_166_latest_test_set_task_3
+    description: 'Which user account was identified in the "Possible BEC financial fraud" alert raised on 2024-07-23 at 16:09 UTC?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation, we observed that inbox rules were manipulated via cloud application ID 20893 from the IP address 255.246.85.58. This raised the alert titled “Suspicious inbox manipulation rule”, indicating that an attacker may have gained access to a mailbox and altered message-handling rules. The next day a separate alert in the same incident flagged potential business email compromise (BEC) activity aiming at financial fraud.'
+      question: 'Which user account was identified in the "Possible BEC financial fraud" alert raised on 2024-07-23 at 16:09 UTC?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Jordan P'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Jordan P'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Account Name `Jordan P` had suspicious inbox manipulation rules created on 2024-07-22 10:00:07.502771+00:00, suggesting an attacker may have gained access.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The same Account Name `Jordan P` was later involved in possible BEC financial fraud activity on 2024-07-23 16:09:13.506099+00:00, indicating escalation of the compromise.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

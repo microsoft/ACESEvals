@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_legacy_train_set_task_8
+    title: incident_166_legacy_train_set_task_8
+    description: 'What is the IP address associated with the suspicious SAP authentication attempt on 2024-07-22?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A suspicious business email compromise (BEC) was reported on 2024-07-23, with an observed account belonging to `Jordan P` (email: Jordan P@vnevado.alpineskihouse.co, AadUserId: 89e933b9-5b2e-4bd6-bcdf-033db707ef82, Sid: S-1-5-21-1740051960-3534030288-108486866-1602). The attacker might be attempting financial fraud against the organization. Following this, there was also a suspicious SAP authentication attempt on 2024-07-22. A user account with a risky sign-in alert in Microsoft Entra ID signed in to SAP, suggesting an attacker might have taken control of a user account to search through SAP with the intention of recording or modifying sensitive financial information.'
+      question: 'What is the IP address associated with the suspicious SAP authentication attempt on 2024-07-22?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.253.5.27'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '107.253.5.27'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A potential Business Email Compromise (BEC) financial fraud attack was detected involving the user with SID `S-1-5-21-1740051960-3534030288-108486866-1602`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A suspicious SAP authentication was observed from IP address `107.253.5.27`, indicating that an attacker might have taken control of a user account, potentially to record or modify sensitive financial information.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

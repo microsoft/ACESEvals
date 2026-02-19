@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_134_latest_train_set_task_14
+    title: incident_134_latest_train_set_task_14
+    description: 'From which IP address did the risky Azure Active Directory session originate when the malicious inbox rule associated with the BEC attempt was created?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During a recent security incident, a password-spray attack was observed. A sign-in attempt coming from the external IP address 170.54.121.63 succeeded, suggesting that a user account may have been compromised. Shortly after, another alert indicated that an attacker created a mailbox rule designed to hide incoming emails, a common technique seen in Business Email Compromise (BEC) fraud cases.'
+      question: 'From which IP address did the risky Azure Active Directory session originate when the malicious inbox rule associated with the BEC attempt was created?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '237.7.81.122'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '237.7.81.122'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The user account compromised during the password-spray attack is Name `Nina Park`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A suspicious inbox rule related to BEC financial fraud was created from IP Address `237.7.81.122`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

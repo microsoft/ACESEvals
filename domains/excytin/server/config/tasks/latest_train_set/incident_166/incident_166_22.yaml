@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_166_latest_train_set_task_22
+    title: incident_166_latest_train_set_task_22
+    description: 'According to the “Suspicious SAP authentication” alert, what is the AppId of the cloud application that the risky user accessed?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a Business Email Compromise (BEC) incident, we observed a wave of suspicious emails originating from the mailbox of laylaw@vnevado.alpineskihouse.co and sent to tony@avoriaz.alpineskihouse.co from the external IP address 255.246.85.58. This activity generated the alert “Suspicious emails sent by BEC-related user.” A few hours later, a separate alert titled “Suspicious SAP authentication” was raised: a risky user account, previously flagged for unusual sign-in behavior, successfully authenticated to an enterprise cloud-hosted SAP service. Understanding which cloud application was involved is important for scoping the potential impact on financial data.'
+      question: 'According to the “Suspicious SAP authentication” alert, what is the AppId of the cloud application that the risky user accessed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '100'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '100'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An account with field Name = `Jordan P` was observed sending suspicious emails related to a BEC attempt.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, a risky sign-in was detected to a cloud-application with field AppId = `100` (SAP), suggesting the compromised account is now targeting that application.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

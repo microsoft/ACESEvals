@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_55_latest_train_set_task_88
+    title: incident_55_latest_train_set_task_88
+    description: 'A few days after these host-based findings, investigators saw an alert for an "Unusual addition of credentials to an OAuth app." What is the Object ID of the OAuth application to which the new password-type credential was added?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4th, an alert indicated that account "gsmith" on host "mb-adfs" launched an unexpectedly-named executable (iy2orr1e.rrg.exe) from a hidden PowerShell command, suggesting an attempt to disguise the use of a dual-purpose tool. This activity was quickly followed by additional alerts for suspicious remote actions and LDAP reconnaissance, pointing to a possible lateral-movement sequence within the environment.'
+      question: 'A few days after these host-based findings, investigators saw an alert for an "Unusual addition of credentials to an OAuth app." What is the Object ID of the OAuth application to which the new password-type credential was added?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'a66a4b44-d1f7-4563-95bf-a89d1b05b325'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'a66a4b44-d1f7-4563-95bf-a89d1b05b325'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Account Name `gsmith` attempted to hide the usage of a dual-purpose tool in the alert ''Attempt to hide use of dual-purpose tool'' at 2024-07-04 22:35:01.567512+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Process ExtractedFileName `powershell.exe` was observed in suspicious remote activity at 2024-07-04 22:35:02.377104+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Account AadUserId `2de70991-2799-4a95-b734-8e3df3a50118` executed a suspicious LDAP query at 2024-07-04 22:35:03.848291+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'OAuth application OAuthObjectId `a66a4b44-d1f7-4563-95bf-a89d1b05b325` had a password credential added in an unusual manner at 2024-07-07 09:54:21.810789+00:00.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

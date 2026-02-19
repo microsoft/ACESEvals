@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_322_legacy_train_set_task_20
+    title: incident_322_legacy_train_set_task_20
+    description: 'What was the URL the user accessed in the email that was subsequently quarantined by ZAP?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A recent security incident involved multiple stages and suspicious activities. Initially, there was a suspicious credential dump from NTDS.dit indicating attackers attempting to obtain user credentials stored in the domain controller. This was followed by a resource management operation detected from a proxy IP address by Microsoft Defender for Resource Manager. Finally, it was noted that a user accessed a link in an email which was subsequently quarantined by zero-hour auto purge (ZAP) feature based on a Microsoft Defender for Office 365 alert.'
+      question: 'What was the URL the user accessed in the email that was subsequently quarantined by ZAP?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There was a suspicious credential dump from NTDS.dit on host `vnevado-dc`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'There was an Azure Resource Manager operation from a suspicious proxy IP address and an account with Sid `S-1-5-21-1840151686-3534835288-156286563-1127` was involved.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A user accessed a link (`https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/`) in an email which was later quarantined by ZAP.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

@@ -1,0 +1,38 @@
+tasks:
+  - task_id: incident_134_latest_test_set_task_48
+    title: incident_134_latest_test_set_task_48
+    description: 'During triage you discovered that this Azure AD identity also maps to an on-premises Active Directory account. What is the Security Identifier (SID) of that on-premises account?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A recent alert titled "BEC financial fraud" was triggered after a suspicious inbox rule was created during a risky Azure AD session. Investigation shows that the activity was performed by user "Nina Park" (email: Nina Park@vnevado.alpineskihouse.co, AAD ID: e036dee7-fa23-42ef-a019-468c8d3401f1) from the IP address 237.7.81.122.'
+      question: 'During triage you discovered that this Azure AD identity also maps to an on-premises Active Directory account. What is the Security Identifier (SID) of that on-premises account?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1874151667-3554330288-105586563-1715'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1874151667-3554330288-105586563-1715'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'At 2024-07-17 11:34:48.803827+00:00, a suspicious inbox rule was created in a risky Azure Active Directory session, signaling a potential Business Email Compromise attempt against the account with Sid `S-1-5-21-1874151667-3554330288-105586563-1715`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 1.0
+            weight: 1.0

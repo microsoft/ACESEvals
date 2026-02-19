@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_30
+    title: incident_5_legacy_train_set_task_30
+    description: 'Which IP address is linked to the Manatee Tempest group as per the recent alert?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'An alert mentioned a cybercriminal group known as Manatee Tempest, which has been active since 2014 and uses sophisticated tactics such as drive-by downloads and FakeUpdates infections. This group collaborates with Mustard Tempest to gain initial access and is known for using BLISTER loaders to deploy Cobalt Strike beacons. Manatee Tempest was involved in a recent activity where certain IP addresses were utilized.'
+      question: 'Which IP address is linked to the Manatee Tempest group as per the recent alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '198.43.121.209'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '198.43.121.209'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The account `dp5hn` encountered possible ransomware activity as numerous file system changes were observed involving a malicious extension.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The IP address `198.43.121.209` is associated with Manatee Tempest, a Russia-based cybercriminal group known for its involvement in ransomware campaigns.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

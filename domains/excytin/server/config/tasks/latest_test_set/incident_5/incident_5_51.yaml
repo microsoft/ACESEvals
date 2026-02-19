@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_51
+    title: incident_5_latest_test_set_task_51
+    description: 'Just seconds later, at 22:35:01 UTC, a follow-up alert flagged additional ransomware-like activity coming from the same environment. Which specific file name was highlighted in that second alert as evidence of the ongoing attack?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation of a ransomware outbreak, we observed user account "dp5hn" (SID S-0-6-5, AAD user ID 731adb71-b11c-4bbf-850b-57989b350e96) operating from host "vnevado-win11u" (AAD device ID bc00e484-d0e5-4da4-9472-95568cccc07e, external IP 99.83.111.100). At 22:35:00 UTC on 4 July 2024, the alert "Possible compromised user account delivering ransomware-related files" was raised after several encrypted files such as "unstreaming.xlsx.lockbit", "earlap.doc.lockbit", and "syncretic.7z" were dropped on multiple devices, indicating lateral movement and preparation for encryption.'
+      question: 'Just seconds later, at 22:35:01 UTC, a follow-up alert flagged additional ransomware-like activity coming from the same environment. Which specific file name was highlighted in that second alert as evidence of the ongoing attack?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'kiters.7z.lockbit'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'kiters.7z.lockbit'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A compromised user account was observed dropping a ransomware-related file (File Name: syncretic.7z.lockbit).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Subsequently, potentially compromised assets began showing ransomware-like behavior involving another file (File Name: kiters.7z.lockbit).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

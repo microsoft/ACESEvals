@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_97
+    title: incident_39_legacy_train_set_task_97
+    description: 'What is the user account name associated with the malicious credential theft tool execution detected at this time of the incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident occurred on 2024-07-04 involving the Mimikatz credential theft tool on a device. Mimikatz is known for harvesting plaintext passwords, password hashes, smartcard PINs, and Kerberos tickets. An attacker might be trying to harvest credentials to log into this or other devices on the network by impersonating a valid user. The detected Mimikatz command lines indicate activities such as dumping logon passwords and Kerberos tickets. Multiple processes involving Mimikatz were identified during this time.'
+      question: 'What is the user account name associated with the malicious credential theft tool execution detected at this time of the incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tgs2z'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'tgs2z'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The Mimikatz credential theft tool was detected being used on a device, potentially by the user with SID `S-5-7-21-1843151660-3234030288-105586167-1422`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A malicious credential theft tool execution was detected, involving the account named `tgs2z`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

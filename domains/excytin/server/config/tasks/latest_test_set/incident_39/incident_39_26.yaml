@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_26
+    title: incident_39_latest_test_set_task_26
+    description: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:00 UTC, which executable filename was identified as the credential-theft tool?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'At 22:35:02 UTC on July 4 2024, the device triggered an alert titled "Multiple dual-purpose tools were dropped." During this event the host received several tools—such as psexec.exe, rubeus.exe, and a PowerShell script (domaindominance27.ps1) launched via powershell.exe—that attackers commonly use for credential theft or lateral movement. Just seconds earlier, another alert was raised indicating that a well-known credential-theft utility had actually been executed on the same device.'
+      question: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:00 UTC, which executable filename was identified as the credential-theft tool?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'mimikatz.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An account with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1` was observed dropping multiple dual-purpose tools onto the device.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Shortly after, a malicious credential-theft process was run with ExtractedFileName `mimikatz.exe`, indicating an attempt to dump credentials.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

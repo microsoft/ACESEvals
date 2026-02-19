@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_37
+    title: incident_5_latest_train_set_task_37
+    description: 'According to the alert that reported suspicious access to the LSASS service, which DLL file was involved in this activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation, an alert flagged a possible attempt to access a Primary Refresh Token (PRT) on host "vnevado-win11u". The activity was executed under the local account "dp5hn" (SID S-1-5-21-1840191660-8534830288-125585561-1522) via the process "browsercore.exe" (PID 1640, created 2024-06-20 09:32:12 UTC). A short time later, a second alert reported suspicious access to the LSASS service on the same endpoint, suggesting that an attacker might be trying to dump credentials from memory.'
+      question: 'According to the alert that reported suspicious access to the LSASS service, which DLL file was involved in this activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winscard.dll'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'winscard.dll'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Suspicious process detected: ExtractedFileName `browsercore.exe` was involved in a possible attempt to access a Primary Refresh Token (PRT).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The same PRT-access attempt involved the Azure AD user account with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A related alert reported suspicious access to LSASS via the file Name `winscard.dll`, indicating a possible attempt to dump credentials from memory.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_19
+    title: incident_39_latest_test_set_task_19
+    description: 'What is the AadUserId of the Azure AD account associated with the final "Malicious credential theft tool execution detected" alert in this incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation we observed a remote session that dropped and executed the file "psexesvc.exe" (process-id 7668) on a device at 2024-07-04 22:35:02 UTC, triggering the alert "File dropped and launched from remote location". Almost immediately afterward, a chain of related alerts followed, including "SID history injection", "Mimikatz credential theft tool", and finally "Malicious credential theft tool execution detected", indicating that the attacker was attempting to dump credentials using elevated privileges obtained during the session. The last alert in this chain attributes the credential-theft activity to a specific Azure AD account (identified by its AadUserId).'
+      question: 'What is the AadUserId of the Azure AD account associated with the final "Malicious credential theft tool execution detected" alert in this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A remote session dropped and launched a file under the account (AadUserId) `7fcf9695-68fc-4258-864d-e1e5b166c66f`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Immediately after, a SID history injection was carried out using the process (ExtractedFileName) `powershell.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The attacker then executed the credential-theft tool (ExtractedFileName) `mimikatz.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'This malicious credential-theft activity was associated with the account (AadUserId) `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

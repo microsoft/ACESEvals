@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_29
+    title: incident_55_latest_test_set_task_29
+    description: 'During the "Suspicious LDAP query" alert that occurred at 22:35:03 UTC, which Security Identifier (SID) was associated with the account that executed the LDAP query?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4 2024 at 22:35:02 UTC, Microsoft Defender raised a "Suspicious remote activity" alert on host "mb-adfs" after a remotely-initiated command shell (cmd.exe) spawned a PowerShell process running an encoded command. Investigators are now reviewing a follow-on alert that fired one second later, titled "Suspicious LDAP query," which suggests the same attack chain continued with potential directory reconnaissance.'
+      question: 'During the "Suspicious LDAP query" alert that occurred at 22:35:03 UTC, which Security Identifier (SID) was associated with the account that executed the LDAP query?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-551436448-9871687716-9837441745-1903'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-551436448-9871687716-9837441745-1903'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A remote attacker initiated a suspicious session that launched the process `powershell.exe` (ExtractedFileName = powershell.exe).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Shortly afterwards, a suspicious LDAP query was executed by the account with SID `S-1-5-21-551436448-9871687716-9837441745-1903` (Sid = S-1-5-21-551436448-9871687716-9837441745-1903).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

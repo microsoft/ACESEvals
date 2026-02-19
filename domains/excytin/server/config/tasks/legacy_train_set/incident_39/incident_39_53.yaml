@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_53
+    title: incident_39_legacy_train_set_task_53
+    description: 'In the detected SID history injection, which account name was used for the injection?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A suspected identity theft (pass-the-ticket) incident occurred where an actor took Julian Burke (IT director)''s Kerberos ticket from VNEVADO-Win10B and used it on VNEVADO-Win10V to access 4 resources. The source IP involved in this activity was `35.202.74.47`, and the compromised hosts included `VNEVADO-DC`, `VNEVADO-Win10V`, and `VNEVADO-Win10B`.'
+      question: 'In the detected SID history injection, which account name was used for the injection?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'lucasb'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An actor took the Kerberos ticket of user `Julian Burke (IT director)` with AadUserId `7fcf9695-68fc-4258-864d-e1e5b166c66f` from device `VNEVADO-Win10B` and used it on `VNEVADO-Win10V` to access 4 resources.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A Security Identification (SID) history injection was detected on the device for user `lucasb`, indicating potential elevation of privileges.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

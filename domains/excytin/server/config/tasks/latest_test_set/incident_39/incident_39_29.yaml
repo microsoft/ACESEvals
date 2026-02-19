@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_test_set_task_29
+    title: incident_39_latest_test_set_task_29
+    description: 'According to the final alert about the successful overpass-the-hash logon, what IP address was used by the attacker to access the resource?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'On July 4 2024 at 22:35 UTC, a host (device ID withheld) ran a credential-theft command: "mimikatz.exe lsadump::dcsync /domain:vnevado.alpineskihouse.co /user:xfbzkp" sourced from IP 65.233.23.156 while reaching out to vnevado-dc.vnevado.alpineskihouse.co. Seconds later, the same machine triggered a "Suspicious access to LSASS service" alert, suggesting that passwords were harvested from memory. Shortly after these events, a new alert indicated a successful logon using an overpass-the-hash technique with the stolen credentials.'
+      question: 'According to the final alert about the successful overpass-the-hash logon, what IP address was used by the attacker to access the resource?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '141.216.110.153'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '141.216.110.153'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'On the host with AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`, a malicious credential-theft tool was executed at 2024-07-04 22:35:04 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'That tool immediately targeted the LSASS process (`ExtractedFileName` = `lsass.exe`) to dump credentials at 2024-07-04 22:35:03 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The harvested credentials were then used in an overpass-the-hash logon coming from IP `Address` = `141.216.110.153` at 2024-07-04 22:35:01 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

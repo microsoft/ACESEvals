@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_19
+    title: incident_5_latest_test_set_task_19
+    description: 'According to the "Ransomware payload remotely launched" alert raised at 22:35:01 UTC on 2024-07-04, what is the Security Identifier (SID) of the account that initiated the remote ransomware execution?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation of a suspected ransomware incident, we observed a user account dropping multiple ransomware-related files such as "unstreaming.xlsx.lockbit", "kiters.7z.lockbit", and "earlap.doc.lockbit" across several devices at 22:35 UTC on 2024-07-04. This activity triggered the alert "Possible compromised user account delivering ransomware-related files." One second later, another alert titled "Ransomware payload remotely launched" fired on a separate device, indicating the same user account was used to execute the ransomware payload remotely.'
+      question: 'According to the "Ransomware payload remotely launched" alert raised at 22:35:01 UTC on 2024-07-04, what is the Security Identifier (SID) of the account that initiated the remote ransomware execution?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1840191660-8534830288-125585561-1522'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1840191660-8534830288-125585561-1522'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A ransomware-related file was dropped on the host with HostName `vnevado-win11u`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A ransomware payload was then remotely launched using the account with Sid `S-1-5-21-1840191660-8534830288-125585561-1522`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

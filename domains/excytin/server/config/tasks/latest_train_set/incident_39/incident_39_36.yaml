@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_36
+    title: incident_39_latest_train_set_task_36
+    description: 'What is the name of the executable file associated with the process (ID 684) that launched the suspicious service at 17:11:52 UTC?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During the investigation of a suspected overpass-the-hash attempt, user Emma Clark was observed trying to authenticate from workstation VNEVADO-Win10V to domain controller VNEVADO-DC. Shortly before, security telemetry flagged an active ‘Kekeo’ malware infection on another device, and moments later a separate alert reported that a suspicious service had been launched on that same machine. The service start is linked to a process created at 17:11:52 UTC with process ID 684.'
+      question: 'What is the name of the executable file associated with the process (ID 684) that launched the suspicious service at 17:11:52 UTC?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'services.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'services.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious service was launched on the device, recorded as ProcessId__CreatedTimeUtc__CommandLine `684__2024-06-26t17:11:52.8075185z__services.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A few days later, an active ‘Kekeo’ malware infection was detected on the same environment, specifically on the host with HostName `vnevado-win10b`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Finally, a suspected overpass-the-hash (Kerberos) authentication attempt was observed from the account whose Sid is `S-1-5-21-1540151660-3530000288-105586595-1517`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

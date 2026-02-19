@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_latest_train_set_task_23
+    title: incident_5_latest_train_set_task_23
+    description: 'In the alert about "Potentially compromised assets exhibiting ransomware-like behavior," which file was identified as part of the suspicious activity?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation, we observed that on host "vnevado-win11t" (device ID e5799261-6720-4297-961e-bd9ca4275033) a process named "vssblatemp.exe" executed the command "vssblatemp.exe delete shadows /all" on 2024-06-20. This activity generated the alert "File backups were deleted," a technique frequently associated with ransomware attacks that try to remove recovery options. In the same timeframe, a second alert titled "Potentially compromised assets exhibiting ransomware-like behavior" was raised, indicating that an attacker may be spreading ransomware across devices.'
+      question: 'In the alert about "Potentially compromised assets exhibiting ransomware-like behavior," which file was identified as part of the suspicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'kiters.7z'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'kiters.7z'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The user account with Sid `S-1-5-21-1840191660-8534830288-125585561-1522` deleted all file backups (snapshots and shadow copies) via WMI/VSSAdmin, an action typical in ransomware incidents.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Compromised assets were found with the suspicious file `kiters.7z`, reinforcing the indication of ransomware-like behavior across the network.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

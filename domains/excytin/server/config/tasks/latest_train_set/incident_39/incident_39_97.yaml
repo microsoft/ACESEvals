@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_97
+    title: incident_39_latest_train_set_task_97
+    description: 'The alert titled "Successful logon using overpass-the-hash with potentially stolen credentials" references a specific executable that was used in the attack. What is the name of that executable?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation, we observed that on 2024-07-04 at 22:35 UTC a PowerShell command invoked “net.exe” to stop the NTDS service on an endpoint, which the alerting system flagged as a suspicious service-stopping activity. Seconds later, additional alerts indicated that a file was remotely dropped and executed, followed almost immediately by a successful logon using an overpass-the-hash technique with potentially stolen credentials.'
+      question: 'The alert titled "Successful logon using overpass-the-hash with potentially stolen credentials" references a specific executable that was used in the attack. What is the name of that executable?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lsass.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'lsass.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'A suspicious process stopped services on the host with HostName `vnevado-dc`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A file was dropped and executed from the remote IP Address `141.216.110.153`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'A successful overpass-the-hash logon was detected involving the file Name `lsass.exe`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_latest_train_set_task_19
+    title: incident_39_latest_train_set_task_19
+    description: 'According to the “Suspected identity theft (pass-the-ticket)” alert, what is the Security Identifier (SID) of the compromised user account whose Kerberos ticket was misused?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During a recent investigation, we observed that an employee received a ZAP-quarantined email and still accessed the embedded link: https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/. Shortly after, the same workstation became involved in suspicious reconnaissance activity over SMB, where sessions were enumerated on the domain controller. A few seconds later, another alert indicated a suspected pass-the-ticket attack in which an attacker used the IT director’s Kerberos ticket from one workstation (VNEVADO-Win10B) on another (VNEVADO-Win10V) to reach multiple resources.'
+      question: 'According to the “Suspected identity theft (pass-the-ticket)” alert, what is the Security Identifier (SID) of the compromised user account whose Kerberos ticket was misused?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1440151660-4837038288-105596163-1120'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'S-1-5-21-1440151660-4837038288-105596163-1120'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The user with account Email `Ethan Brooks@vnevado.alpineskihouse.co` clicked a link inside a ZAP-quarantined email.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'The same user performed SMB reconnaissance against the host with HostName `VNEVADO-DC`, enumerating active sessions and IP addresses.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Shortly after, an attacker leveraged the stolen Kerberos ticket that belongs to account Sid `S-1-5-21-1440151660-4837038288-105596163-1120` to access multiple resources (pass-the-ticket).'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

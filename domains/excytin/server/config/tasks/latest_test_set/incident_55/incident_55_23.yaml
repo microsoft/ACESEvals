@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_55_latest_test_set_task_23
+    title: incident_55_latest_test_set_task_23
+    description: 'As part of the same incident, an alert on 9 July 2024 reported that email messages containing a malicious URL were removed after delivery. According to that alert, what is the name of the user whose mailbox contained those malicious messages?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation, we observed that on July 10 2024 the user "Luciano Herrera" added a password-based credential to an OAuth application named "SimulandApp" in Microsoft 365 – behavior the security system flagged as unusual and potentially indicative of compromise.'
+      question: 'As part of the same incident, an alert on 9 July 2024 reported that email messages containing a malicious URL were removed after delivery. According to that alert, what is the name of the user whose mailbox contained those malicious messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Lucas Grey'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'Lucas Grey'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'The user account with Sid `S-1-5-21-551436448-9871687716-9837441745-1903` (Luciano Herrera / pwilson@niseko.alpineskihouse.co) unusually added a Password credential to the OAuth application “SimulandApp” on 2024-07-10 11:24:45 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A malicious PowerShell Cmdlet was invoked on the machine by the user account with Sid `S-1-5-21-561436748-3867387497-1732241745-3701` on 2024-07-04 22:35:03 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Email messages containing a malicious URL were delivered to—and later removed from—the mailbox of the account with Name `Lucas Grey` on 2024-07-09 11:49:57 UTC.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0

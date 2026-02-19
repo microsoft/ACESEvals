@@ -1,0 +1,83 @@
+tasks:
+  - task_id: incident_5_latest_test_set_task_34
+    title: incident_5_latest_test_set_task_34
+    description: 'According to the alert titled "PsExec launched a command on a remote device", which executable did the attacker attempt to run remotely via PsExec?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'During an investigation on host ''vnevado-win10s'', several suspicious commands were executed in quick succession, such as disabling Windows recovery, deleting VSS shadow copies, running a PowerShell script, and making an outbound curl request. These actions were observed immediately before a ‘Suspicious WMI process creation’ alert, suggesting that malware was trying to spawn additional processes and possibly move laterally by abusing WMI. A follow-on series of alerts flagged ransomware-like behavior on multiple devices and the use of PsExec for remote command execution, indicating the attacker’s attempt to spread across the network.'
+      question: 'According to the alert titled "PsExec launched a command on a remote device", which executable did the attacker attempt to run remotely via PsExec?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'notepad.exe'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'notepad.exe'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'Alert indicates a suspicious WMI process creation using the account Name `dp5hn`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'Potential ransomware-like behavior is observed communicating with the IP Address `99.83.111.100`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'Lateral movement is detected where the account Name `tgs2z` uses PSExec to access the jump server.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0
+      - subtask_id: checkpoint_4
+        title: Checkpoint 4
+        description: 'PSExec then launches the process `notepad.exe  \\vnevado-jump cmd.ee` with the field ProcessId__CreatedTimeUtc__CommandLine `6428__2024-06-20t09:07:40.2264462z__notepad.exe  \\vnevado-jump cmd.ee`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.25
+            weight: 1.0

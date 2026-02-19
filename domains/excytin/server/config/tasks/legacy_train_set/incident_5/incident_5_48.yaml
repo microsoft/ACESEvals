@@ -1,0 +1,53 @@
+tasks:
+  - task_id: incident_5_legacy_train_set_task_48
+    title: incident_5_legacy_train_set_task_48
+    description: 'Can you provide the IP address observed in relation to the possible lateral movement that followed this suspicious network event?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident involving potentially compromised assets exhibiting ransomware-like behavior was detected, impacting several devices. The incident involved various files such as `get-userprttoken.ps1`, `characterical.zip`, and `characterical.zip.lockbit`, and utilized an IP address `99.83.111.100`. An attacker may be using the user account `dp5hn` with SID `S-1-5-21-1840191660-8534830288-125585561-1522` and might attempt lateral movements across the network to infect more devices with ransomware.'
+      question: 'Can you provide the IP address observed in relation to the possible lateral movement that followed this suspicious network event?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '83.162.58.168'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: '83.162.58.168'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'There is ransomware-like behavior detected on the host `vnevado-win11t`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'There is potential lateral movement from an attacker using IP address `83.162.58.168` to exhibit ransomware-like behavior.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.5
+            weight: 1.0

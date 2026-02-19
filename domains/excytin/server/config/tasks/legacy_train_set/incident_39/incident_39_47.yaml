@@ -1,0 +1,68 @@
+tasks:
+  - task_id: incident_39_legacy_train_set_task_47
+    title: incident_39_legacy_train_set_task_47
+    description: 'Who is the account associated with the file that was dropped and launched from a remote location in this incident?'
+    inherit_shared: true
+    initial_context:
+      incident_context: 'A security incident involving malware detection and lateral movement attempt was reported. An active ''Kekeo'' malware was detected running on the host `vnevado-win10b`, which was identified with the file `rubeus.exe` linked to the account `fk8mq` (SID: S-1-5-21-1540151660-3530000288-105586595-1517, AadUserId: 97e6a954-b6bd-48a5-808c-bd8464cce677). This was followed by an alert indicating that a file was dropped and launched from a remote location, potentially by an attacker or malware attempting to move laterally or propagate.'
+      question: 'Who is the account associated with the file that was dropped and launched from a remote location in this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+    submission_evaluation_config:
+      strategy: llm_judge
+      criteria:
+        model: openai/azure/gpt-4.1
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        golden_answer: 'lucasb'
+      scoring:
+        max_score: 1.0
+    subtasks:
+      - subtask_id: checkpoint_1
+        title: Checkpoint 1
+        description: 'An active ''Kekeo'' malware was detected on the host with AadDeviceId `fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_2
+        title: Checkpoint 2
+        description: 'A file named `psexesvc.exe` was dropped and launched during a remote session.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
+      - subtask_id: checkpoint_3
+        title: Checkpoint 3
+        description: 'The file was dropped and launched from an account with the name `lucasb`.'
+        objective: Identify key details related to the potential compromise that might
+          help in solving the main task.
+        step_evaluation_config:
+          strategy: llm_judge
+          criteria:
+            model: openai/azure/gpt-4.1
+            judge_system_template: judge/checkpoint_judge_system.md
+            judge_user_template: judge/checkpoint_judge_user.md
+            steps_per_message: 50
+          scoring:
+            max_score: 0.333
+            weight: 1.0
