@@ -9,35 +9,35 @@ global_defaults:
     submit: "submits/inspect_submit.md"
     continue: "continues/inspect_continue.md"
 
-execution_config:
-  executors:
-    bash:
-      timeout: 180
-      target_container: saber-excytin-sandbox
-    python:
-      timeout: 180
-      target_container: saber-excytin-sandbox
+  execution_config:
+    executors:
+      bash:
+        timeout: 180
+        target_container: saber-excytin-sandbox
+      python:
+        timeout: 180
+        target_container: saber-excytin-sandbox
 
-episode_config:
-  max_steps: 25 
+  episode_config:
+    max_steps: 25 
 
-  # Transcript coordination configuration
-  # Single-agent tasks use default settings (push enabled, pull disabled)
-  transcript_config:
-    websocket:
-      push:
-        enabled: true
-      pull:
-        enabled: false
+    # Transcript coordination configuration
+    # Single-agent tasks use default settings (push enabled, pull disabled)
+    transcript_config:
+      websocket:
+        push:
+          enabled: true
+        pull:
+          enabled: false
 
-benchmark_config:
-  episode_attempts: 1
+  benchmark_config:
+    episode_attempts: 1
 
-scoring_config:
-  aggregation: max
+  scoring_config:
+    aggregation: max
 
-# Dependency resolution configuration
-dependency_config:
-  wait_seconds: 10.0               # Maximum time to wait for episode dependencies
-  retry_interval: 0.5              # Initial retry interval in seconds
-  max_retry_interval: 2.0          # Maximum retry interval for exponential backoff
+  # Dependency resolution configuration
+  dependency_config:
+    wait_seconds: 10.0               # Maximum time to wait for episode dependencies
+    retry_interval: 0.5              # Initial retry interval in seconds
+    max_retry_interval: 2.0          # Maximum retry interval for exponential backoff
