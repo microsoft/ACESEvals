@@ -393,6 +393,30 @@ global_defaults:
 
 ---
 
+## Score Aggregation
+
+SABER supports configurable strategies for combining submission and subtask scores:
+
+| Strategy | Formula | Use Case |
+|----------|---------|----------|
+| `average` | `(norm_sub + norm_step) / 2` | Equal weight per dimension (default) |
+| `weighted_sum` | `(raw_sub + raw_step) / (max_sub + max_step)` | Weight by max possible score |
+| `max` | `max(norm_sub, norm_step)` | Credit best dimension |
+
+**Set in YAML** (`global.yaml` or per-task):
+```yaml
+global_defaults:
+  scoring_config:
+    aggregation: max
+```
+
+**Override via CLI:**
+```bash
+uv run inspect eval domains/excytin --model openai/gpt-4 -T score_aggregation=weighted_sum
+```
+
+---
+
 ## Advanced Topics
 
 ### Building Custom Domains
