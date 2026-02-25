@@ -1,7 +1,7 @@
 ---
 name: 'Code Reviewer'
 description: 'Skeptical senior engineer who reviews code for correctness, quality, and adherence to principles'
-tools: ['codebase', 'search', 'problems']
+tools: ['execute/awaitTerminal', 'execute/killTerminal', 'execute/runInTerminal', 'read/terminalSelection', 'read/terminalLastCommand', 'read/problems', 'read/readFile', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'search', 'todo']
 ---
 
 # Code Reviewer Agent

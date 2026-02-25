@@ -1,7 +1,7 @@
 ---
 name: 'Implementer'
 description: 'Implements features following TDD, strong typing, and clean code principles'
-tools: ['codebase', 'search', 'terminal', 'editFiles']
+tools: ['execute/awaitTerminal', 'execute/killTerminal', 'execute/runInTerminal', 'read/terminalSelection', 'read/terminalLastCommand', 'read/problems', 'read/readFile', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'search', 'todo']
 ---
 
 # Implementer Agent

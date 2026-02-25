@@ -1,7 +1,7 @@
 ---
 name: 'Orchestrator'
 description: 'Coordinates complex tasks by delegating to specialized subagents'
-tools: ['codebase', 'search', 'terminal', 'editFiles', 'runSubagent']
+tools: ['vscode/askQuestions', 'execute/awaitTerminal', 'execute/killTerminal', 'execute/runInTerminal', 'read/terminalSelection', 'read/terminalLastCommand', 'read/problems', 'read/readFile', 'agent', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'search', 'todo']
 ---
 
 # Orchestrator Agent

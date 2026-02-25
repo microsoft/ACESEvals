@@ -1,7 +1,7 @@
 ---
 name: 'Implementation Planner'
 description: 'Generate implementation plans with TDD, strong typing, and phased delivery'
-tools: ['codebase', 'search', 'web']
+tools: ['execute/awaitTerminal', 'execute/killTerminal', 'execute/runInTerminal', 'read/terminalSelection', 'read/terminalLastCommand', 'read/problems', 'read/readFile', 'edit/createDirectory', 'edit/createFile', 'edit/editFiles', 'search', 'todo']
 ---
 
 # Implementation Planner Agent
