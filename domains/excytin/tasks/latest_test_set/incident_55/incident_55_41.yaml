@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_41
+  title: incident_55_latest_test_set_task_41
+  description: 'According to the follow-up alert generated on July 10 2024, which user’s email address was identified as the
+    recipient who clicked the malicious URL?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 7 2024, Microsoft Defender for Office 365 raised an alert titled "Internal phishing campaign"
+      after the account belonging to Nina Sullivan (SID S-1-5-11-7842151660-4834030208-105586563-1139) was observed sending
+      suspicious emails to other employees. A few days later, another alert indicated that one of the message recipients clicked
+      a link that was later determined to be malicious.'
+    question: 'According to the follow-up alert generated on July 10 2024, which user’s email address was identified as the
+      recipient who clicked the malicious URL?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bjenkins@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'bjenkins@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Account (Sid: S-1-5-21-561436748-3867387497-1732241745-3701) was observed sending phishing emails to
+          internal recipients on 2024-07-07 10:09:33.920702+00:00, indicating the account may be compromised.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'A mail message (Recipient: bjenkins@niseko.alpineskihouse.co) containing a malicious URL was clicked
+          on 2024-07-10 11:24:45.507742+00:00, suggesting successful delivery of the phishing attempt to this user.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,25 @@
+domain: excytin
+
+global_defaults:
+  permanent_environment:
+    name: "excytin-databases"
+    compose: "compose/all_incidents.compose.yml"
+
+  prompts:
+    instruction: "instructions/excytin_demo.md"
+    assistant: "assistants/inspect_assistant.md"
+    submit: "submits/inspect_submit.md"
+    continue: "continues/inspect_continue.md"
+
+  max_steps: 25
+
+  aggregation: max
+
+  tools:
+    bash:
+      security:
+        allow_semicolons: true
+        extend_defaults: true
+    python:
+      security:
+        extend_defaults: true

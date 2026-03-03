@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_45
+  title: incident_39_latest_test_set_task_45
+  description: 'According to the alert that reported the active ‘Kekeo’ malware, what is the Security Identifier (SID) of
+    the account associated with this detection?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation, we observed that multiple dual-purpose tools such as psexec.exe, mimikatz.exe,
+      and a PowerShell script named domaindominance27.ps1 were dropped on a device at 22:35:02 UTC on 2024-07-04. Immediately
+      afterwards, PsExec was used to launch a command on a remote host, suggesting possible lateral-movement activity. A few
+      seconds later, Microsoft Defender flagged an active instance of the ‘Kekeo’ malware running on the same machine, indicating
+      that the threat may have achieved persistence.'
+    question: 'According to the alert that reported the active ‘Kekeo’ malware, what is the Security Identifier (SID) of the
+      account associated with this detection?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1540151660-3530000288-105586595-1517'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-1540151660-3530000288-105586595-1517'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'First, the attacker placed a dual-purpose tool on the host: process field ExtractedFileName with value
+          `powershell.exe` (2024-07-04 22:35:02 UTC).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Next, PsExec was used for lateral movement, launching another tool: process field ExtractedFileName
+          with value `rubeus.exe` (2024-07-04 22:35:03 UTC).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: As a consequence of these activities, active malware was found running under the compromised 
+          account identified by account field Sid with value `S-1-5-21-1540151660-3530000288-105586595-1517` (2024-07-04
+          22:35:03 UTC).
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

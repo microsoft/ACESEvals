@@ -1,0 +1,64 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_62
+  title: incident_55_latest_test_set_task_62
+  description: 'Further in the same incident, an alert titled "Internal phishing campaign" was raised on 2024-07-07. Which
+    user account (provide the full email address) was identified as the sender of the phishing messages?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'While reviewing a security incident, you see that on 2024-07-10 the domain controller MB-DC1 was flagged
+      for reading the AD FS DKM key—behaviour often linked to attempts at credential compromise ahead of lateral movement.'
+    question: 'Further in the same incident, an alert titled "Internal phishing campaign" was raised on 2024-07-07. Which
+      user account (provide the full email address) was identified as the sender of the phishing messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Lucas Grey@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Lucas Grey@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Step 1 – HostName `MB-DC1`: The domain controller MB-DC1 read the AD FS DKM key, indicating that this
+          host may have been used to access sensitive federation service secrets.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Step 2 – Sid `S-1-5-21-551436448-9871687716-9837441745-1903`: This account sent a DCSync replication
+          request from MB-WINCLIENT to MB-DC1, attempting to replicate directory services data and harvest credentials.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Step 3 – Sid `S-1-5-21-561436748-3867387497-1732241745-3701`: A malicious PowerShell cmdlet was invoked
+          under this account, showing continued post-exploitation activity aimed at credential theft or further compromise.'
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: 'Step 4 – Email `Lucas Grey@niseko.alpineskihouse.co`: The attacker then used the compromised mailbox
+          to send internal phishing emails, demonstrating lateral movement and an attempt to expand access within the organization.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

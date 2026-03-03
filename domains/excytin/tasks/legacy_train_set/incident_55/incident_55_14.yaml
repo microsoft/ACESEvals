@@ -1,0 +1,43 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_14
+  title: incident_55_legacy_train_set_task_14
+  description: 'Can you identify the actual executable file name used in the subsequent suspicious process activity following
+    this incident?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During a security investigation, it was found that a suspicious activity involving a renamed system
+      executable was detected. The executable file `iy2orr1e.rrg.exe` was launched with hidden window style and an encoded
+      command, initiated by account Sid `S-2-2-78` on the host `mb-adfs`. The executable was executed with Process ID 3116
+      on July 2, 2024.'
+    question: 'Can you identify the actual executable file name used in the subsequent suspicious process activity following
+      this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'powershell.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 1.0
+        weight: 1.0
+        title: Checkpoint 1
+        description: A Windows executable file named `powershell.exe` was renamed and launched. This action might be an 
+          attempt by attackers to avoid detection technologies by changing the path or file name of the system 
+          executable.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1

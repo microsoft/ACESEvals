@@ -1,0 +1,56 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_31
+  title: incident_55_latest_test_set_task_31
+  description: 'Which user account was recorded as executing the suspicious LDAP query on 2024-07-04 22:35:03 UTC?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'As part of the investigation of an identity-related incident, we observed that domain controller MB-DC1
+      accessed the AD FS DKM key, followed by a suspected DCSync attempt from workstation MB-WINCLIENT initiated by a high-privilege
+      user. Earlier in the timeline, an LDAP reconnaissance query was executed against the environment, suggesting the attacker
+      attempted to enumerate sensitive directory information before later stages of the attack.'
+    question: 'Which user account was recorded as executing the suspicious LDAP query on 2024-07-04 22:35:03 UTC?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'pwilson'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'pwilson'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: HostName `MB-DC1` was observed reading the AD FS DKM key, indicating possible credential-theft 
+          preparation.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Sid `S-1-5-21-551436448-9871687716-9837441745-1903` (user Luciano Herrera) initiated a DCSync 
+          replication request from MB-WINCLIENT to MB-DC1, attempting to copy password-hash data.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Name `pwilson` executed a suspicious LDAP query, suggesting reconnaissance activity against the 
+          directory.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

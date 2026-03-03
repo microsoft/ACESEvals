@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_44
+  title: incident_5_latest_test_set_task_44
+  description: 'During the Manatee Tempest activity identified at 22:35:02 UTC, what is the Azure AD device ID (AadDeviceId)
+    of the host on which the threat actor activity was observed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A recent incident flagged a possible lateral movement originating from the external IP address 38.142.109.10.
+      The alert indicated a suspicious network event followed almost immediately by a remotely-launched ransomware payload,
+      suggesting that an attacker may have pivoted to another machine inside the network. Shortly after those two alerts,
+      Microsoft Defender raised a third alert identifying activity attributed to the Manatee Tempest threat actor on a separate
+      host in the same timeline.'
+    question: 'During the Manatee Tempest activity identified at 22:35:02 UTC, what is the Azure AD device ID (AadDeviceId)
+      of the host on which the threat actor activity was observed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '9d4887ba-0b69-47d6-89bc-9b32787f379e'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '9d4887ba-0b69-47d6-89bc-9b32787f379e'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: Possible lateral movement detected on host with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: A ransomware payload was remotely launched by the account with Sid 
+          `S-1-5-21-1840191660-8534830288-125585561-1522`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Manatee Tempest activity was observed on host with AadDeviceId 
+          `9d4887ba-0b69-47d6-89bc-9b32787f379e`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

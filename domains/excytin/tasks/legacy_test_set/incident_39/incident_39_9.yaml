@@ -1,0 +1,509 @@
+tasks:
+- task_id: incident_39_legacy_test_set_task_81
+  title: incident_39_legacy_test_set_task_81
+  description: Following this malicious activity, multiple dual-purpose tools were detected. Can you identify the script
+    file name that was dropped during this follow-up alert?
+  inherit_shared: true
+  initial_context:
+    incident_context: During an investigation following the execution of a known credential theft tool detected on 
+      2024-07-04, a suspicious command line involving `powershell.exe` and `mimikatz.exe` was observed on the host 
+      `vnevado-win10v`. The account involved was `tgs2z` with SID `S-5-7-21-1843151660-3234030288-105586167-1422` and 
+      AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`. The specific command for `mimikatz.exe` included privilege 
+      escalation attempts and indicated potential lateral movement across the network.
+    question: Following this malicious activity, multiple dual-purpose tools were detected. Can you identify the script 
+      file name that was dropped during this follow-up alert?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'domaindominance27.ps1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'domaindominance27.ps1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A known credential theft tool execution command line was detected on the host with AadDeviceId 
+          `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Multiple dual-purpose tools, including file `domaindominance27.ps1`, were dropped on the same 
+          device.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_39_legacy_test_set_task_82
+  title: incident_39_legacy_test_set_task_82
+  description: During this incident, malware was detected shortly after the file `psexesvc.exe` was executed. Can you 
+    identify the name of the malware file that was detected and active?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident involving the dropping and execution of a remote file was reported. In this 
+      incident, the file `psexesvc.exe` was executed remotely. The associated entities include an IP address 
+      `141.216.110.153` and an account with SID `S-0-6-5`. This activity could indicate lateral movement or propagation 
+      by an attacker or malware.
+    question: During this incident, malware was detected shortly after the file `psexesvc.exe` was executed. Can you 
+      identify the name of the malware file that was detected and active?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'rubeus.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'rubeus.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: An account with SID `S-1-5-21-1540151660-3530000288-105586595-1517` dropped and launched a file 
+          during a remote session.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The file dropped and launched is identified as `rubeus.exe` and has been detected as 'Kekeo' 
+          malware.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_39_legacy_test_set_task_83
+  title: incident_39_legacy_test_set_task_83
+  description: What is the name of the file associated with the suspicious account creation process?
+  inherit_shared: true
+  initial_context:
+    incident_context: During the investigation of a potential human-operated malicious activity, it was observed that a 
+      sequence of alerts indicated suspicious behavior on the device `vnevado-win10b`. The incident involved multiple 
+      suspicious activities such as a sign-in attempt with a deceptive user account and the creation of a new user 
+      account. These activities suggest that an attacker might be preparing to install ransomware or perform other 
+      malicious tasks.
+    question: What is the name of the file associated with the suspicious account creation process?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'powershell.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account `kyleg` was involved in potential human-operated malicious activity.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: A sign-in attempt was detected using a deceptive user account on the host `vnevado-win10v`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: A suspicious account was created using the process `powershell.exe`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+- task_id: incident_39_legacy_test_set_task_84
+  title: incident_39_legacy_test_set_task_84
+  description: Related to this incident, the 'Kekeo' malware was detected and was active. Can you identify the AadUserId
+    associated with the malware activity?
+  inherit_shared: true
+  initial_context:
+    incident_context: During the investigation of a security incident involving account lookups and potential credential
+      harvesting, an alert was triggered on 2024-07-04 indicating anomalous account lookups. It was observed that the 
+      process `net.exe` was executed multiple times to gather information about domain users and groups. An attacker 
+      might be gathering information about potential targets.
+    question: Related to this incident, the 'Kekeo' malware was detected and was active. Can you identify the AadUserId 
+      associated with the malware activity?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '97e6a954-b6bd-48a5-808c-bd8464cce677'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '97e6a954-b6bd-48a5-808c-bd8464cce677'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: There is an anomalous chain of attempts to look up user account information on host 
+          `vnevado-win10v`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: The Rubeus tool was detected on the endpoint, with the file `rubeus.exe` indicating possible 
+          kerberoasting or pass-the-ticket attacks.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: The `Kekeo` malware was detected and was active, associated with the account having AadUserId 
+          `97e6a954-b6bd-48a5-808c-bd8464cce677`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+- task_id: incident_39_legacy_test_set_task_85
+  title: incident_39_legacy_test_set_task_85
+  description: Following the SID history injection, a credential theft tool was detected. Can you identify the name of 
+    the tool used?
+  inherit_shared: true
+  initial_context:
+    incident_context: As part of investigating a recent multi-stage security incident, we observed a Security 
+      IDentification (SID) history injection on the device `vnevado-dc`. A PowerShell command run by account `lucasb` 
+      was detected performing suspicious actions indicative of an attacker attempting to gain elevated privileges 
+      through SID history injection. This incident is likely to precede further malicious activities.
+    question: Following the SID history injection, a credential theft tool was detected. Can you identify the name of 
+      the tool used?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'mimikatz.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A SID history injection was detected involving the process `powershell.exe`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The Mimikatz credential theft tool (`mimikatz.exe`) was detected, indicating an attempt to harvest 
+          credentials.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_39_legacy_test_set_task_86
+  title: incident_39_legacy_test_set_task_86
+  description: Related to this incident, there was also a sign-in attempt using a deceptive user account. Can you 
+    identify the name of the deceptive user account used in that sign-in attempt?
+  inherit_shared: true
+  initial_context:
+    incident_context: As part of a security incident, a user named Ethan Brooks accessed a malicious link 
+      (`https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/`) in an email that was quarantined by 
+      zero-hour auto purge (ZAP). This alert was triggered based on a Microsoft Defender for Office 365 alert.
+    question: Related to this incident, there was also a sign-in attempt using a deceptive user account. Can you 
+      identify the name of the deceptive user account used in that sign-in attempt?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tgs2z'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'tgs2z'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A user with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1` accessed a link in an email that was 
+          quarantined by zero-hour auto purge (ZAP).
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A sign-in attempt with a deceptive user account named `tgs2z` was detected.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_39_legacy_test_set_task_87
+  title: incident_39_legacy_test_set_task_87
+  description: Can you identify the account name associated with the incident involving the suspicious process stopping 
+    services?
+  inherit_shared: true
+  initial_context:
+    incident_context: During a security incident involving a suspected DCSync attack, user Julian Burke, with the email 
+      `Julian Burke@vnevado.alpineskihouse.co`, sent a replication request from host `VNEVADO-Win10V` to `VNEVADO-DC`. 
+      This incident was flagged due to its potential malicious intent, typically used to replicate directory services 
+      for unauthorized access.
+    question: Can you identify the account name associated with the incident involving the suspicious process stopping 
+      services?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'lucasb'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The IT director, Julian Burke, associated with AadUserId `7fcf9695-68fc-4258-864d-e1e5b166c66f`, 
+          sent 1 replication request to VNEVADO-DC, indicating a suspected DCSync attack.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The account `lucasb` was involved in suspicious activity where a process stopped services on a 
+          device, which might be part of a larger malicious operation.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_39_legacy_test_set_task_88
+  title: incident_39_legacy_test_set_task_88
+  description: Following this, the execution of a known credential theft tool was detected. Can you identify the name of
+    the file used for the credential theft tool?
+  inherit_shared: true
+  initial_context:
+    incident_context: In the recent suspicious activity, it was observed that a new user account was created which can 
+      indicate an attempt to establish backup access to the services within the organization. Furthermore, it was found 
+      that execution commands such as `powershell.exe` and `net.exe` were used. For instance, `powershell.exe` was 
+      executed with the script `domaindominance27.ps1` and `net.exe` was used to create the user `bdadmin` with the 
+      password `password1!` for the domain.
+    question: Following this, the execution of a known credential theft tool was detected. Can you identify the name of 
+      the file used for the credential theft tool?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'mimikatz.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious new user account `tgs2z` was created.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious credential theft tool `mimikatz.exe` was executed.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_39_legacy_test_set_task_89
+  title: incident_39_legacy_test_set_task_89
+  description: Considering another similar alert, can you provide the full command line associated with the process id 
+    5196 that was detected for mimikatz.exe?
+  inherit_shared: true
+  initial_context:
+    incident_context: In a recent security incident, an active 'Kekeo' malware was detected on the host 
+      `vnevado-win10b`. This type of malware can perform annoying, disruptive, or harmful actions on affected machines 
+      and is considered active if it is found running on the machine or has persistence mechanisms in place. During the 
+      investigation, activity indicating the use of the Rubeus tool was also observed on this endpoint. The tool was 
+      used to execute kerberoasting, pass-the-ticket, and other attack techniques that take advantage of Kerberos 
+      authentication.
+    question: Considering another similar alert, can you provide the full command line associated with the process id 
+      5196 that was detected for mimikatz.exe?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '"mimikatz.exe" privilege::debug sekurlsa::logonpasswords exit'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '"mimikatz.exe" privilege::debug sekurlsa::logonpasswords exit'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A known credential theft tool `mimikatz.exe` was executed with the command line `mimikatz.exe 
+          privilege::debug sekurlsa::logonpasswords exit` at `2024-06-27t14:32:35.4061023z`, with Process ID `5196`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The malicious credential theft tool was executed by the user with AadUserId 
+          `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_39_legacy_test_set_task_90
+  title: incident_39_legacy_test_set_task_90
+  description: What is the Azure AD Device ID of the host where possible lateral movement was detected?
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A security incident involving the execution of a credential theft tool was detected. The malicious
+      tool identified as `mimikatz.exe` was executed using this command line: `mimikatz.exe privilege::debug sekurlsa::pth
+      /user:fk8mq /ntlm:96def1a633fc6790124d5f8fe21cc72b /domain:vnevado.alpineskihouse.co /run:"powershell.exe dir \\vnevado-win10b\$"
+      exit`. This tool was executed on the host `vnevado-win10v` and might have been used to dump users'' credentials, keys,
+      plain-text passwords, and more. Additionally, it was noted that multiple dual-purpose tools were dropped on a device,
+      which could also be leveraged for malicious activities such as credential theft, privilege escalation, and lateral movement.'
+    question: What is the Azure AD Device ID of the host where possible lateral movement was detected?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: Julian Burke (IT director) on host `VNEVADO-Win10V` sent a replication request to `VNEVADO-DC`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: An actor took Julian Burke's Kerberos ticket and used it on host `VNEVADO-Win10V` to access 4 
+          resources from IP address `35.202.74.47`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: There is a possible lateral movement involving device with AadDeviceId 
+          `fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

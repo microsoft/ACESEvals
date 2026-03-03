@@ -1,0 +1,11 @@
+# Custom MySQL image for excytin domain
+# Shared by all incident database services (data injected via volume mounts)
+
+FROM mysql:8.0.36
+
+# Copy health check script
+COPY docker/db/healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod +x /usr/local/bin/healthcheck.sh
+
+# Use the same default configuration as base image
+EXPOSE 3306

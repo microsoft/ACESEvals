@@ -1,0 +1,47 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_11
+  title: incident_5_latest_train_set_task_11
+  description: 'From which IP address was the suspicious remote activity on host "vnevado-win11t" initiated?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, a Windows 11 device named "vnevado-win11t" (AAD device ID e5799261-6720-4297-961e-bd9ca4275033)
+      generated an alert titled "Possible attempt to access Primary Refresh Token (PRT)" at 2024-07-04 22:35 UTC. The event
+      involved the process "browsercore.exe" (Process ID 7036) started at 2024-06-20 09:29:49 UTC. Soon after, another alert
+      indicated that suspicious activity was initiated remotely against the same machine.'
+    question: 'From which IP address was the suspicious remote activity on host "vnevado-win11t" initiated?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '99.83.111.100'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '99.83.111.100'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A possible attempt to access a Primary Refresh Token (PRT) was detected by the user account with 
+          Name `dp5hn`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious remote activity originated from the IP address with Address `99.83.111.100`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

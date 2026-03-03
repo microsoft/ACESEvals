@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_34_latest_train_set_task_32
+  title: incident_34_latest_train_set_task_32
+  description: 'According to the "Anomaly detected in ASEP registry" alert that occurred shortly before the LDAP reconnaissance,
+    what IP address is associated with this persistence activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, you observed that the process "winword.exe" (PID 9780, launched from "c:\scripts\rs4_winatp-intro-invoice.docm")
+      executed a suspicious LDAP query on 2024-07-04 at 22:35:02 UTC, a typical sign of reconnaissance activity against the
+      domain controller. Just seconds earlier, another alert titled "Anomaly detected in ASEP registry" was raised, indicating
+      that a process had registered a potentially malicious command to persist after reboot. You need to correlate these two
+      alerts to understand the attacker’s foothold and subsequent actions.'
+    question: 'According to the "Anomaly detected in ASEP registry" alert that occurred shortly before the LDAP reconnaissance,
+      what IP address is associated with this persistence activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '72.5.72.208'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '72.5.72.208'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious LDAP query was executed by account Name `samuelf` at 2024-07-04 22:35:02.608830+00:00.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'One second earlier, from IP Address `72.5.72.208`, a process registered a suspicious command in the
+          ASEP registry (alert: Anomaly detected in ASEP registry) at 2024-07-04 22:35:01.084834+00:00.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

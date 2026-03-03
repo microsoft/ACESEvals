@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_322_legacy_train_set_task_16
+  title: incident_322_legacy_train_set_task_16
+  description: 'What is the SenderIP of the emails containing the malicious URL that were removed after delivery related to
+    this incident?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During a recent security incident involving suspicious Azure Resource Management (ARM) activities by
+      a risky user, an alert was triggered based on a Microsoft Defender for Cloud alert related to ARM and Microsoft Entra
+      ID Protection risk scores. The incident involved an IP address `253.1.244.215` associated with the user''s risky session.'
+    question: 'What is the SenderIP of the emails containing the malicious URL that were removed after delivery related to
+      this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '202.205.215.225'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '202.205.215.225'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: There are suspicious Azure Resource Management activities by a user with SID 
+          `S-1-5-21-1840151686-3534835288-156286563-1127`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: An email with a malicious URL was sent from IP address `202.205.215.225` and later removed after 
+          delivery.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

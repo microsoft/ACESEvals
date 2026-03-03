@@ -1,0 +1,52 @@
+tasks:
+- task_id: incident_134_latest_test_set_task_52
+  title: incident_134_latest_test_set_task_52
+  description: 'What is the IP address reported in the "Anonymous IP address" sign-in alert connected to the suspicious emails
+    sent by the potentially compromised user?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During investigation of a potential Business Email Compromise (BEC) campaign, we observed that user
+      account "Nina Park" (email: Nina Park@vnevado.alpineskihouse.co) sent multiple suspicious messages. These messages originated
+      from the sender IP 237.7.81.122 and were addressed to nathan@avoriaz.alpineskihouse.co. The alert, raised at 2024-07-17
+      11:55:04 UTC, flags this user as possibly compromised. A related sign-in alert was later generated, indicating that
+      the same user (linked through their Microsoft Entra ID) accessed the environment from an anonymous network location
+      (for example, a Tor exit node or VPN).'
+    question: 'What is the IP address reported in the "Anonymous IP address" sign-in alert connected to the suspicious emails
+      sent by the potentially compromised user?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '170.54.121.63'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '170.54.121.63'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious emails related to a BEC fraud attempt were sent by the user account with field AadUserId
+          `e036dee7-fa23-42ef-a019-468c8d3401f1` (alert time 2024-07-17 11:55:04 UTC).
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Prior to that, there was a sign-in from an anonymous IP address with field Address `170.54.121.63` 
+          (alert time 2024-07-17 11:01:27 UTC), indicating the possible source of the compromise.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

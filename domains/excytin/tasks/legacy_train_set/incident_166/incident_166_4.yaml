@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_166_legacy_train_set_task_4
+  title: incident_166_legacy_train_set_task_4
+  description: 'Can you identify the IP address that was involved in the suspicious inbox manipulation rule set on Jordan
+    P''s mailbox?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'As part of a security incident involving Business Email Compromise (BEC), it was detected that suspicious
+      emails were sent by a possibly compromised user account (laylaw@vnevado.alpineskihouse.co). The emails were sent from
+      the IP address 255.246.85.58 to tony@avoriaz.alpineskihouse.co. This activity was related to a possibly compromised
+      user account that is part of an ongoing BEC fraud attempt.'
+    question: 'Can you identify the IP address that was involved in the suspicious inbox manipulation rule set on Jordan P''s
+      mailbox?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '192.238.237.190'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '192.238.237.190'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A possibly compromised user account with SID `S-1-5-21-1740051960-3534030288-108486866-1602` sent 
+          suspicious emails related to a BEC fraud attempt.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A user named Jordan P (laylaw@vnevado.alpineskihouse.co) had a suspicious inbox rule set by an IP 
+          address `192.238.237.190` to move messages to a folder named RSS Feeds.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

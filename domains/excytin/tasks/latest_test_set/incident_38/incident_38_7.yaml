@@ -1,0 +1,42 @@
+tasks:
+- task_id: incident_38_latest_test_set_task_7
+  title: incident_38_latest_test_set_task_7
+  description: 'Which external IPv4 address was contacted in the later stage of this activity chain?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-04 at 22:35 UTC, Microsoft Defender flagged host "vnevado-win11a" (device ID 39d8c57f-2d08-4888-b0cd-12cd0679337a)
+      because the process "notepad.exe" (PID 8932, launched without any command-line arguments) exhibited suspicious behaviour
+      that is unusual for this legitimate program. The process was started by the user account "nathans" (SID S-1-5-21-1240151660-3534038288-105586567-4122,
+      AAD user ID 12185914-91dd-4fb9-94f9-3252203b0426) while the machine was using the IP address 202.183.149.174. During
+      the follow-up investigation, analysts observed that the same activity chain involved an outbound network connection
+      to a separate external IP address.'
+    question: 'Which external IPv4 address was contacted in the later stage of this activity chain?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '72.5.72.208'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '72.5.72.208'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 1.0
+        weight: 1.0
+        title: Checkpoint 1
+        description: An unexpected process activity was observed that communicated with the IP address (ip.Address) 
+          `72.5.72.208`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1

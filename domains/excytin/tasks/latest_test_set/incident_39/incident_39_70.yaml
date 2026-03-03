@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_70
+  title: incident_39_latest_test_set_task_70
+  description: 'Which user account was associated with the "''Kekeo'' malware was detected and was active" alert triggered
+    on host vnevado-win10v at 22:35:03 UTC on 2024-07-04?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation on host ''vnevado-win10v'' (device ID 4d8d23e9-a77d-4e33-9435-b8c457e57ca1),
+      Microsoft Defender recorded a malware alert at 22:35:03 UTC on 2024-07-04. The alert, titled "''Kekeo'' malware was
+      detected," indicated that suspicious activity had been identified on the endpoint and referenced an unknown file still
+      under review. A follow-up alert seconds later reported that the same malware was not only detected but also actively
+      running on the system.'
+    question: 'Which user account was associated with the "''Kekeo'' malware was detected and was active" alert triggered
+      on host vnevado-win10v at 22:35:03 UTC on 2024-07-04?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'fk8mq'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'fk8mq'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Kekeo malware was detected on a file with Name 'rubeus.exe'.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Kekeo malware was reported as active under an account with Name 'fk8mq'.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

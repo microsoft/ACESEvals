@@ -1,0 +1,59 @@
+tasks:
+- task_id: incident_322_legacy_train_set_task_21
+  title: incident_322_legacy_train_set_task_21
+  description: 'For the Azure Resource Management activities, what is the potential risk associated with the user''s email?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A security incident was flagged involving suspicious Azure Resource Management (ARM) activities by
+      the user `Hailey Johnson` with the email `Hailey Johnson@vnevado.alpineskihouse.co`, during a potentially risky session.
+      Shortly before this, there was also an alert about a resource management operation from a proxy IP address associated
+      with malicious activities. Another linked alert indicates a suspicious credential dump from NTDS.dit, which suggests
+      attackers attempted to obtain user''s credentials stored in the domain controller.'
+    question: 'For the Azure Resource Management activities, what is the potential risk associated with the user''s email?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'The potential risk is that the user''s email was involved in a session flagged by Microsoft Defender for Cloud alert related to ARM and Microsoft Entra ID Protection risk scores.'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'The potential risk is that the user''s email was involved in a session flagged by Microsoft Defender
+          for Cloud alert related to ARM and Microsoft Entra ID Protection risk scores.'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: There are suspicious Azure Resource Management activities by a risky user with the account name 
+          `Hailey Johnson`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: A resource management operation from the host `vnevado-dc` was detected from an IP address 
+          associated with proxy services such as TOR.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: A suspicious credential dump from NTDS.dit occurred by launching ntdsutil.exe with the command line
+          `ntdsutil.exe ac i ntds ifm create full c:\temp q q` at `2024-08-01t12:37:30.2769191z`, with Process ID 
+          `6748`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

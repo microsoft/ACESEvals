@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_36
+  title: incident_5_latest_test_set_task_36
+  description: 'On which host did the subsequent alert report that a ransomware payload was remotely launched?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation into suspicious remote activity, analysts observed a sequence of potentially
+      malicious commands executed on host "vnevado-win11u" (AadDeviceId bc00e484-d0e5-4da4-9472-95568cccc07e). These commands
+      included disabling system recovery ("bcdedit /set recoveryenabled no"), suppressing boot-time failure prompts, deleting
+      shadow copies with "vssblatemp.exe", and running a PowerShell script ("get-userprttoken.ps1"). The activity originated
+      from an unknown SID and triggered an alert titled "Suspicious remote activity" at 22:35:01 UTC on 2024-07-04. Shortly
+      after, another alert in the same incident reported that a ransomware payload was remotely launched on a different device.'
+    question: 'On which host did the subsequent alert report that a ransomware payload was remotely launched?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win11t'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vnevado-win11t'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious remote activity was initiated by the account with Sid 
+          `S-1-5-21-1840191660-8534830288-125585561-1522`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A ransomware payload was then remotely launched on the host with HostName `vnevado-win11t`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

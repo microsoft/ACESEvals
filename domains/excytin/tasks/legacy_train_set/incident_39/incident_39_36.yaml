@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_36
+  title: incident_39_legacy_train_set_task_36
+  description: 'Related to this alert, there was a possible lateral movement event. Can you identify the IP address associated
+    with this possible lateral movement?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A recent security incident raised a File dropped and launched from remote location alert for an IP
+      address 141.216.110.153 indicating a remote session dropped a file ''psexesvc.exe'' and executed it. This incident might
+      be indicative of an attempt to move laterally or propagate malware.'
+    question: 'Related to this alert, there was a possible lateral movement event. Can you identify the IP address associated
+      with this possible lateral movement?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '35.202.74.47'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '35.202.74.47'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A file was dropped and launched from a remote location on host `vnevado-win10b`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Possible lateral movement was observed with a suspicious network event from the IP address 
+          `35.202.74.47`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

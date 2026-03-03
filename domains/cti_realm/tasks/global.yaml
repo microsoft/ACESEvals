@@ -1,0 +1,36 @@
+global_defaults:
+  permanent_environment:
+    name: "saber-cti-realm-permanent"
+    compose: "compose/databases.compose.yml"
+
+  prompts:
+    instruction: "instructions/cti_realm.j2"
+    assistant: "assistants/inspect_assistant.j2"
+    submit: "submits/inspect_submit.j2"
+    continue: "continues/inspect_continue.j2"
+
+  max_steps: 30
+
+  tools:
+    bash:
+      timeout: 180
+    python:
+      timeout: 180
+    search_sigma_rules:
+      timeout: 120
+    search_mitre_techniques:
+      timeout: 120
+    list_kusto_tables:
+      timeout: 120
+    get_table_schema:
+      timeout: 120
+    sample_table_data:
+      timeout: 120
+    execute_kql_query:
+      timeout: 120
+    list_cti_report_tags:
+      timeout: 120
+    get_cti_reports_by_tag:
+      timeout: 120
+    validate_output_json:
+      timeout: 120

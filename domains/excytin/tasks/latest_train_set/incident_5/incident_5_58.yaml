@@ -1,0 +1,52 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_58
+  title: incident_5_latest_train_set_task_58
+  description: 'According to the "Manatee Tempest activity group" alert linked to this incident, which external IP address
+    was associated with the threat actor’s activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation of a recent incident, we observed that host "vnevado-win11t" (device ID e5799261-6720-4297-961e-bd9ca4275033)
+      executed the tools "vssblatemp.exe" and "bcdedit" to disable or remove Windows recovery features—behavior that triggered
+      the "System recovery setting tampering" alert on 2024-07-04. While following the trail of related activity, we found
+      a second alert titled "Manatee Tempest activity group," which highlights malicious operations attributed to a Russia-based
+      actor known for Dridex and Cobalt Strike campaigns. That alert identified a specific external IP address used by the
+      threat actor during the intrusion.'
+    question: 'According to the "Manatee Tempest activity group" alert linked to this incident, which external IP address
+      was associated with the threat actor’s activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '198.43.121.209'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '198.43.121.209'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: System recovery settings were tampered with by the account `dp5hn`, likely attempting to disable 
+          backups and recovery features on the host.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: The IP address `198.43.121.209` is tied to the Manatee Tempest threat actor, suggesting that the 
+          device may be communicating with this Russia-based cybercriminal group.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

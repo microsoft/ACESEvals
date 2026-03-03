@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_322_latest_train_set_task_11
+  title: incident_322_latest_train_set_task_11
+  description: 'According to the alert "A potentially malicious URL click was detected", which email address was listed as
+    the recipient of the malicious message?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an ongoing investigation, we observed that a user clicked on the URL "https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/"
+      contained in an email that was later quarantined by Zero-hour Auto Purge (ZAP). Shortly before that, Microsoft Defender
+      for Office 365 removed several emails carrying this same malicious link. A follow-up alert titled "A potentially malicious
+      URL click was detected" was raised to indicate that one of the recipients actually clicked the link.'
+    question: 'According to the alert "A potentially malicious URL click was detected", which email address was listed as
+      the recipient of the malicious message?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'alyssat@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'alyssat@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: Account.Name = 'Hailey Johnson' accessed a link in an email that was later quarantined by Zero-hour
+          Auto Purge (ZAP).
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: MailMessage.Recipient = 'alyssat@vnevado.alpineskihouse.co' received an email containing a 
+          malicious URL that was removed after delivery.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: MailMessage.Recipient = 'alyssat@vnevado.alpineskihouse.co' was also involved in a detected click 
+          on a potentially malicious URL.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

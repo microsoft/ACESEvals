@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_71
+  title: incident_39_latest_train_set_task_71
+  description: 'Which executable was invoked to carry out the suspicious account-creation command detected immediately after
+    the Mimikatz activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'At 22:35 UTC on 4 July 2024, Microsoft Defender raised an alert after the well-known credential-theft
+      utility "mimikatz.exe" ran with a DCSync command against the vnevado.alpineskihouse.co domain. Just one second later,
+      a second alert flagged that a new user account had been created on the same device—likely an attacker attempt to establish
+      persistence. Details of the exact command used in that second event are not shown here, but they point to a built-in
+      system tool being invoked to add the account.'
+    question: 'Which executable was invoked to carry out the suspicious account-creation command detected immediately after
+      the Mimikatz activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'net.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'net.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: On the host identified by AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`, a malicious 
+          credential-theft tool execution was detected.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A process with ProcessId `3624` started at `2024-06-27t14:33:43.4299474z` using CommandLine 
+          `"net.exe" user /add bdadmin password1! /domain`, indicating a suspicious account creation.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

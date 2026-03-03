@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_40
+  title: incident_39_latest_test_set_task_40
+  description: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:01 UTC on July
+    4 2024, what is the Security Identifier (SID) of the account associated with this credential-theft activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'At 22:35 UTC on July 4 2024, a remote session from IP address 141.216.110.153 dropped and executed
+      the file "psexesvc.exe" (process ID 7668) on a host, triggering the alert "File dropped and launched from remote location."
+      Seconds later, a related "Suspicious service launched" alert was raised, followed almost immediately by a "Malicious
+      credential theft tool execution detected" alert, indicating that an attacker may have attempted to dump credentials
+      on the system.'
+    question: 'According to the "Malicious credential theft tool execution detected" alert raised at 22:35:01 UTC on July
+      4 2024, what is the Security Identifier (SID) of the account associated with this credential-theft activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-5-7-21-1843151660-3234030288-105586167-1422'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-5-7-21-1843151660-3234030288-105586167-1422'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'A remote session using the account (Field: Name, Value: `lucasb`) dropped a file onto the machine and
+          executed it at 2024-07-04 22:35:02Z.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Just seconds earlier, a suspicious service started the process (Field: ExtractedFileName, Value: `powershell.exe`)
+          at 2024-07-04 22:35:00Z, likely used to run malicious commands.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Within the same time-frame, that PowerShell instance executed a credential-theft tool under the user
+          (Field: Sid, Value: `S-5-7-21-1843151660-3234030288-105586167-1422`) at 2024-07-04 22:35:01Z, indicating an attempt
+          to dump credentials.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

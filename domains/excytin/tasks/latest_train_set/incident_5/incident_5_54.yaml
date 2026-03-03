@@ -1,0 +1,59 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_54
+  title: incident_5_latest_train_set_task_54
+  description: 'According to the final "Ransomware behavior detected in the file system" alert, what is the Azure AD device
+    ID of the host where this suspicious encryption activity was observed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an ongoing investigation, we identified that on 2024-07-04 a process "vssblatemp.exe" was executed
+      on host "vnevado-win10r" (device ID 9d4887ba-0b69-47d6-89bc-9b32787f379e) to delete all Volume Shadow Copies, an action
+      frequently observed in ransomware incidents. Immediately afterward, the system generated a "Suspicious remote activity"
+      alert, followed seconds later by a "Ransomware behavior detected in the file system" alert on a different endpoint.'
+    question: 'According to the final "Ransomware behavior detected in the file system" alert, what is the Azure AD device
+      ID of the host where this suspicious encryption activity was observed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: Account Name `dp5hn` triggered an alert titled 'File backups were deleted', indicating all file 
+          snapshots and shadow copies were removed—an activity often seen during ransomware attacks.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Host AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e` then raised the 'Suspicious remote 
+          activity' alert, showing potentially malicious remote commands or sessions were initiated on the same machine.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: The same host AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e` subsequently generated a 
+          'Ransomware behavior detected in the file system' alert, confirming ransomware-style mass-encryption activity 
+          on that device.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

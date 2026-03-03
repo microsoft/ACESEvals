@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_16
+  title: incident_55_latest_train_set_task_16
+  description: 'Which user account (provide the full email address) was identified as having created the suspicious service
+    "DDLOXJDSQSNGMUKKFUXQ" on host MB-ADFS?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation of a suspected ADFS private-key extraction attempt, analysts observed the executable
+      "iy2orr1e.rrg.exe" running with a hidden PowerShell command on host "mb-adfs" (first seen 2024-07-04). This activity
+      suggests possible preparation for privilege escalation or lateral movement. A few days later, another alert reported
+      the creation of a suspicious service named "DDLOXJDSQSNGMUKKFUXQ" on the same host, and the security team needs to determine
+      which user was responsible for creating that service.'
+    question: 'Which user account (provide the full email address) was identified as having created the suspicious service
+      "DDLOXJDSQSNGMUKKFUXQ" on host MB-ADFS?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'gsmith@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious LDAP query suggesting an ADFS private-key extraction attempt was made by the account 
+          whose AadUserId is `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Later, the account with Email `gsmith@niseko.alpineskihouse.co` created the suspicious service 
+          `DDLOXJDSQSNGMUKKFUXQ` on host MB-ADFS, likely to execute malicious commands.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

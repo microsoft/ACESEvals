@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_86
+  title: incident_39_latest_test_set_task_86
+  description: 'Which user account was identified as starting the suspicious service on host "vnevado-win10v" at 2024-07-04
+    22:35:00 UTC?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-04 a credential-theft activity was detected on host "vnevado-win10v" when the file "mimikatz.exe"
+      was executed via a PowerShell command that also referenced the script "get-krbticket.ps1". This execution occurred under
+      the account "tgs2z" and is suspected to be part of a broader attack aiming to harvest credentials. Just seconds earlier,
+      the same endpoint generated another alert titled "Suspicious service launched", indicating that an unknown service was
+      started—often a sign attackers are attempting persistence or privilege escalation.'
+    question: 'Which user account was identified as starting the suspicious service on host "vnevado-win10v" at 2024-07-04
+      22:35:00 UTC?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'lucasb'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Account Name: `lucasb` – a suspicious service was launched on the device at 2024-07-04 22:35:00.511266
+          +00:00.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Process ExtractedFileName: `powershell.exe` – a malicious credential-theft PowerShell command was executed
+          at 2024-07-04 22:35:01.182306 +00:00, likely leveraging the previously started service.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,61 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_71
+  title: incident_55_legacy_train_set_task_71
+  description: 'Can you provide the mailbox primary address of the user who clicked on the detected malicious URL?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A security incident involving unusual addition of credentials to an OAuth app was reported. The user
+      Luciano Herrera (pwilson@niseko.alpineskihouse.co) performed the unusual addition of credentials to the application
+      SimulandApp. This action may indicate a compromised app being used for malicious purposes such as spreading phishing,
+      exfiltrating data, or gaining unauthorized access. Following this, there was a detection of a malicious PowerShell Cmdlet
+      invoked on the machine. As part of these events, it was also detected that a user clicked on a potentially malicious
+      URL.'
+    question: 'Can you provide the mailbox primary address of the user who clicked on the detected malicious URL?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bjenkins@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'bjenkins@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The user with SID `S-1-5-21-551436448-9871687716-9837441745-1903` (Luciano Herrera) performed an 
+          unusual addition of credentials to the application SimulandApp. The credential type added was Password. This 
+          may indicate potential compromise of the app or Luciano Herrera's account.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious PowerShell Cmdlet was invoked by the user with AadUserId 
+          `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0` on a machine. This could be associated with various malicious 
+          activities such as credential theft or exploitation.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: A potentially malicious URL was clicked by the user with mailbox address 
+          `bjenkins@niseko.alpineskihouse.co`. This indicates that the user might have been targeted by a phishing 
+          attack.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

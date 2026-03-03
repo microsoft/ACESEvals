@@ -1,0 +1,31 @@
+# CyBench default per-sample sandbox — managed by inspect_ai DockerSandboxEnvironment
+# Used when no challenge-specific compose is specified
+
+services:
+  default:
+    image: saber/cybench/sandbox:latest
+    x-local: true
+    working_dir: /workspace
+    command: "tail -f /dev/null"
+    init: true
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+    networks:
+      - sandbox-net
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+          pids: 256
+
+networks:
+  sandbox-net:
+    driver: bridge
+    internal: true

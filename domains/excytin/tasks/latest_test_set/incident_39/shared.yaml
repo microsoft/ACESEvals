@@ -1,0 +1,9 @@
+initial_context:
+  database_connection:
+    hostname: incident-39-db
+    port: 3309
+    username: admin
+    password: admin
+    database: env_monitor_db
+    ssl_mode: disabled
+    connection_example: mysql -h incident-39-db --skip-ssl -u admin -padmin env_monitor_db

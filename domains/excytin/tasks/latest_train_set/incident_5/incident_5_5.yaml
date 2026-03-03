@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_5
+  title: incident_5_latest_train_set_task_5
+  description: 'What is the host name of the device on which Defender detected ransomware-related file system activity at
+    22:35:04 on 2024-07-04?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation we observed that user Grace Chen attempted suspicious SMB file operations
+      from host vnevado-win11t on 2024-07-10, an action that was automatically blocked by attack disruption. Pivoting from
+      this event, we traced related activity to an earlier alert on 2024-07-04, where a ransomware payload was remotely launched
+      on another endpoint. A few seconds later Defender flagged ransomware-style file system changes on that second machine.'
+    question: 'What is the host name of the device on which Defender detected ransomware-related file system activity at 22:35:04
+      on 2024-07-04?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win11u'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vnevado-win11u'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'An attempt to perform lateral movement using SMB was automatically blocked, originating from IP Address
+          `99.83.111.100` (entity field: Address).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Shortly before, a ransomware payload was remotely launched on the device whose AadDeviceId is `bc00e484-d0e5-4da4-9472-95568cccc07e`
+          (entity field: AadDeviceId).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Subsequently, ransomware-like file-system activity was detected on the host named `vnevado-win11u` (entity
+          field: HostName).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

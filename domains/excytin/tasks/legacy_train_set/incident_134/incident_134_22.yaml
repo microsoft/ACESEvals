@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_134_legacy_train_set_task_22
+  title: incident_134_legacy_train_set_task_22
+  description: 'As part of the investigation, an alert was raised about email messages containing malicious URLs that were
+    removed after delivery. Can you identify the primary email address associated with the compromised mailbox?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A user account was signed in from an unusual location and browser following a password-spray attack,
+      with the IP address `170.54.121.63`, indicating a potential compromise. We recommend prompt investigation to mitigate
+      potential security risks.'
+    question: 'As part of the investigation, an alert was raised about email messages containing malicious URLs that were
+      removed after delivery. Can you identify the primary email address associated with the compromised mailbox?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'raphaelt@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'raphaelt@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: The user account with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` was compromised following a 
+          password-spray attack.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: The mailbox with primary address `raphaelt@vnevado.alpineskihouse.co` received an email containing 
+          a malicious URL that was later removed.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

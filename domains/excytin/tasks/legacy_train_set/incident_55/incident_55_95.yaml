@@ -1,0 +1,67 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_95
+  title: incident_55_legacy_train_set_task_95
+  description: 'Can you identify the command line used for the dual-purpose tool attempt to hide its usage?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'Can you identify the command line used for the dual-purpose tool attempt to hide its usage?'
+    question: 'Can you identify the command line used for the dual-purpose tool attempt to hide its usage?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '5752__2024-07-06t00:00:01.7155092z__"iy2orr1e.rrg.exe" -windowstyle hidden -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa='
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '5752__2024-07-06t00:00:01.7155092z__"iy2orr1e.rrg.exe" -windowstyle hidden -encodedcommand qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa='
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 1
+        description: A process named `powershell.exe` was used to read the memory of the Local Security Authority 
+          Subsystem Service (lsass.exe), which could potentially be used to extract authentication secrets.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious remote activity was conducted by the user account `gsmith`, involving actions like 
+          initiating interactive sessions, modifying files, or other malicious activities.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 3
+        description: The process with ID `5752` and command line `
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 4
+        description: iy2orr1e.rrg.exe -windowstyle hidden -encodedcommand 
+          qwa6afwauwbjahiaaqbwahqacwbcaeuaeabwag8acgb0aeearabgafmavabvagsazqbuafmaaqbnag4aaqbuaemazqbyahqalgbwahmamqa=
+      checkpoint_5:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 5
+        description: '` was observed trying to hide its usage of a dual-purpose tool by using an unexpected filename at `2024-07-06t00:00:01.7155092z`.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4
+        - checkpoint_5

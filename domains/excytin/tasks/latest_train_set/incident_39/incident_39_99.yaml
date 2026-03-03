@@ -1,0 +1,61 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_99
+  title: incident_39_latest_train_set_task_99
+  description: 'What is the username of the deceptive account that was used in the sign-in attempt highlighted by the final
+    alert in this incident chain?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a suspected DCSync attack, we observed that the user Julian Burke (IT Director)
+      initiated a single directory-replication request from workstation VNEVADO-Win10V to domain controller VNEVADO-DC on
+      2024-07-10. A short time later, reconnaissance activity was recorded from Ethan Brooks’ account on the same workstation,
+      enumerating SMB sessions on the domain controller. While following the entity chain that links these activities, the
+      trail ultimately leads to an earlier alert (dated 2024-07-04) flagging a sign-in attempt that leveraged a deceptive
+      user account on the environment.'
+    question: 'What is the username of the deceptive account that was used in the sign-in attempt highlighted by the final
+      alert in this incident chain?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tgs2z'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'tgs2z'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'HostName: VNEVADO-Win10V – On 2024-07-10 11:24:45.337245, the workstation VNEVADO-Win10V issued a replication
+          request to the domain controller, triggering the “Suspected DCSync attack” alert.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'AadUserId: 1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1 – Just moments earlier (2024-07-10 11:24:45.282821),
+          the user with this Azure AD ID enumerated SMB sessions on the domain controller from the same host, indicating reconnaissance
+          activity.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Name: tgs2z – A few days prior (2024-07-04 22:35:01.132314), a sign-in attempt using the deceptive account
+          “tgs2z” was detected, showing the attacker’s use of a fake identity to gain access.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

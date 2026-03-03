@@ -1,0 +1,53 @@
+tasks:
+- task_id: incident_134_latest_test_set_task_53
+  title: incident_134_latest_test_set_task_53
+  description: 'According to the "BEC financial fraud" alert that followed, from which IP address did the risky session originate
+    when the attacker created the suspicious inbox rule?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-17 at 11:04 UTC, an email titled "Email messages containing malicious URL removed after
+      delivery" was generated. The investigation shows that a message from sender alyssat@vnevado.alpineskihouse.co (sender
+      IP 254.241.243.229) was delivered to the mailbox raphaelt@vnevado.alpineskihouse.co and later removed because it contained
+      the malicious URL https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/. This activity is linked to
+      a risky Azure AD user session that subsequently triggered a separate alert for suspected Business Email Compromise (BEC)
+      involving the creation of a hidden-inbox rule aimed at facilitating financial fraud.'
+    question: 'According to the "BEC financial fraud" alert that followed, from which IP address did the risky session originate
+      when the attacker created the suspicious inbox rule?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '237.7.81.122'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '237.7.81.122'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'An email containing a malicious URL was delivered to and subsequently removed from the user account
+          with AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` (alert time: 2024-07-17 11:04:19.964546+00:00).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Later, a Business Email Compromise (BEC) financial-fraud alert flagged that a suspicious inbox rule
+          was created from the IP address `237.7.81.122`, indicating potential attacker activity originating from that IP
+          (alert time: 2024-07-17 11:34:48.803827+00:00).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

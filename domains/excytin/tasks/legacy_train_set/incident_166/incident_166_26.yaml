@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_166_legacy_train_set_task_26
+  title: incident_166_legacy_train_set_task_26
+  description: 'Related to this alert, there were suspicious emails sent by a potentially compromised user account. Can you
+    identify the sender of these suspicious emails?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'This security incident occurred in the context of multiple suspicious activities across different endpoints
+      and cloud applications suggesting a wide range of unchecked access, likely through Business Email Compromise (BEC) patterns.'
+    question: 'Related to this alert, there were suspicious emails sent by a potentially compromised user account. Can you
+      identify the sender of these suspicious emails?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'laylaw@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'laylaw@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious inbox rule named ITCleanup was set on the inbox of the user with SID 
+          `S-1-5-21-1740051960-3534030288-108486866-1602` (Jordan P, laylaw@vnevado.alpineskihouse.co) to move messages 
+          to a folder named RSS Feeds.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious emails were sent by the possibly compromised user account 
+          `laylaw@vnevado.alpineskihouse.co` which might be related to a BEC (business email compromise) fraud attempt.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

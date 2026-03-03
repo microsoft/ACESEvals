@@ -1,0 +1,53 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_98
+  title: incident_39_latest_train_set_task_98
+  description: 'According to the alert that flagged the suspected Rubeus kerberoasting activity, what is the full path of
+    the PowerShell script that was executed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the "Suspicious sequence of exploration activities" alert, several discovery-type commands were
+      observed on the endpoint, including executions of whoami.exe and multiple invocations of net.exe (e.g., enumerating
+      domain and enterprise admin groups, listing users, and creating accounts). These commands suggest the attacker was mapping
+      out privileged groups and accounts after gaining access. Immediately afterward, another alert was raised indicating
+      a possible use of the Rubeus kerberoasting tool, which typically relies on a PowerShell command to request or manipulate
+      Kerberos tickets.'
+    question: 'According to the alert that flagged the suspected Rubeus kerberoasting activity, what is the full path of the
+      PowerShell script that was executed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'c:\m365dattack\get-krbticket.ps1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'c:\m365dattack\get-krbticket.ps1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Alert 'Suspicious sequence of exploration activities' involves an account with field Name = 
+          `tgs2z`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Alert 'Possible use of the Rubeus kerberoasting tool' shows a process with field 
+          ProcessId__CreatedTimeUtc__CommandLine = `6636__2024-06-27t14:32:46.5860644z__powershell.exe 
+          c:\m365dattack\get-krbticket.ps1`, indicating execution of a PowerShell script likely linked to kerberoasting.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

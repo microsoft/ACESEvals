@@ -1,0 +1,21 @@
+# CyBench domain metadata — inspect_evals convention
+slug: cybench
+name: "CyBench Security Challenges"
+description: >
+  Cybersecurity challenges from the CyBench benchmark suite for
+  penetration testing and web security evaluation.
+version: "1.0.0"
+tags:
+  - penetration-testing
+  - web-security
+  - ctf
+  - cybench
+
+images:
+  sandbox:
+    tag: "saber/cybench/sandbox:latest"
+    dockerfile: "docker/Dockerfile.sandbox"
+  labyrinth_linguist_victim:
+    tag: "saber/cybench/labyrinth_linguist-victim:latest"
+    dockerfile: "docker/challenges/labyrinth_linguist/Dockerfile.victim"
+    context: "docker/challenges/labyrinth_linguist"

@@ -1,0 +1,74 @@
+services:
+  kusto-emulator:
+    image: mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
+    container_name: saber-cti-kusto-emulator
+    ports:
+      - "8080:8080"
+    environment:
+      - ACCEPT_EULA=Y
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/rest/mgmt", "-d", '{"db":"NetDefaultDB","csl":".show version"}', "-H", "Content-Type: application/json"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: "no"
+    networks:
+      - cti-realm-database
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2'
+
+  kusto-init:
+    image: saber/cti_realm/kusto-init:latest
+    x-local: true
+    depends_on:
+      kusto-emulator:
+        condition: service_healthy
+    volumes:
+      - ./docker/kusto_init:/app
+    working_dir: /app
+    command: bash -c "python init_kusto.py && python load_data.py"
+    networks:
+      - cti-realm-database
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.5'
+
+  mitre-service:
+    image: saber/cti_realm/mitre-service:latest
+    x-local: true
+    container_name: saber-cti-mitre-service
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./docker/mitre_service:/app
+    working_dir: /app
+    command: ["python", "mitre_api.py"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: "no"
+    networks:
+      - cti-realm-database
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+
+networks:
+  cti-realm-database:
+    driver: bridge
+    internal: true
+    labels:
+      - "saber.domain=cti_realm"
+      - "saber.network.type=shared"

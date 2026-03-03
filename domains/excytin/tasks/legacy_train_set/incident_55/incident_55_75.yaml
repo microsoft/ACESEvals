@@ -1,0 +1,47 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_75
+  title: incident_55_legacy_train_set_task_75
+  description: 'As part of this incident, there was an alert for a malicious PowerShell Cmdlet invocation. Can you identify
+    the name of the file associated with this malicious PowerShell Cmdlet?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation into a suspicious system hardware discovery alert where the process `svchost.exe`
+      with Process ID 2880 was used, which raised suspicion regarding potential attacker activities to gather information
+      about the target device or network for later attacks.'
+    question: 'As part of this incident, there was an alert for a malicious PowerShell Cmdlet invocation. Can you identify
+      the name of the file associated with this malicious PowerShell Cmdlet?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'contosoadfsblatempcreds.ps1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'contosoadfsblatempcreds.ps1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account `bjenkins` used a known tool or technique to gather information on a device.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious PowerShell Cmdlet `contosoadfsblatempcreds.ps1` was invoked on the machine.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

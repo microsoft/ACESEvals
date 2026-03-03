@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_45
+  title: incident_5_latest_train_set_task_45
+  description: 'A separate alert in the same incident highlights additional ransomware activity on the device, identifying
+    another file that was renamed with the same ".lockbit" extension. What is the full name of this newly detected file?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'Security monitoring has flagged the device "vnevado-win11t" (AadDeviceId e5799261-6720-4297-961e-bd9ca4275033)
+      for ransomware-like behavior. The initial alert shows that ordinary files such as "characterical.zip" are suddenly being
+      renamed to include the ".lockbit" extension (e.g., "characterical.zip.lockbit"), an indicator of possible encryption
+      activity.'
+    question: 'A separate alert in the same incident highlights additional ransomware activity on the device, identifying
+      another file that was renamed with the same ".lockbit" extension. What is the full name of this newly detected file?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ponceau.7z.lockbit'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'ponceau.7z.lockbit'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Account.Name=dp5hn is associated with potentially compromised assets that are exhibiting 
+          ransomware-like behavior across multiple devices.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: File.Name=ponceau.7z.lockbit was detected on a device, showing mass file changes characteristic of 
+          ransomware encryption.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

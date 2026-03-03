@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_56
+  title: incident_39_latest_test_set_task_56
+  description: 'What is the email address of the user account whose Kerberos ticket was abused in the suspected pass-the-ticket
+    activity detected on July 10?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 4, 2024, our monitoring system flagged the execution of the credential-theft tool "mimikatz.exe"
+      (PID 4112) on an endpoint, suggesting an attempt to steal credentials. Almost immediately afterward, a sign-in attempt
+      using a deceptive account was recorded from the same activity chain. Several days later, on July 10, the investigation
+      revealed a pass-the-ticket operation in which an attacker leveraged a stolen Kerberos ticket from host VNEVADO-Win10B
+      to access four resources from VNEVADO-Win10V. Your task is to identify details about the compromised identity involved
+      in that final pass-the-ticket alert.'
+    question: 'What is the email address of the user account whose Kerberos ticket was abused in the suspected pass-the-ticket
+      activity detected on July 10?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Julian Burke@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Julian Burke@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The host identified by AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1` executed a known 
+          credential-theft tool.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Soon after, a deceptive sign-in originated from IP Address `35.202.74.47`, likely using credentials
+          harvested from that host.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: The attacker then performed a pass-the-ticket attack while impersonating the account with Email 
+          `Julian Burke@vnevado.alpineskihouse.co`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

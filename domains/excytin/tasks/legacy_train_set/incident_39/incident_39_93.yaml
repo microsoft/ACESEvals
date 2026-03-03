@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_93
+  title: incident_39_legacy_train_set_task_93
+  description: 'What is the command line and process ID associated with the execution of the tool used to detect the malicious
+    credential theft?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A recent security incident revealed that multiple dual-purpose tools, such as powershell.exe, psexec.exe,
+      rubeus.exe, and domaindominance27.ps1, were dropped on the device. This indicates that attackers might have downloaded
+      or copied these tools to the target device to perform various attack stages, including credential theft, privilege escalation,
+      and lateral movement.'
+    question: 'What is the command line and process ID associated with the execution of the tool used to detect the malicious
+      credential theft?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ProcessId: 5196, CommandLine: "mimikatz.exe" privilege::debug sekurlsa::logonpasswords exit'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'ProcessId: 5196, CommandLine: "mimikatz.exe" privilege::debug sekurlsa::logonpasswords exit'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Multiple dual-purpose tools were dropped on the device with AadDeviceId 
+          `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious credential theft tool was executed with the command line `mimikatz.exe privilege::debug
+          sekurlsa::logonpasswords exit` at `2024-06-27t14:32:35.4061023z`, with Process ID `5196`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

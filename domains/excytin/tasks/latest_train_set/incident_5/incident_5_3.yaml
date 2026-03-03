@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_3
+  title: incident_5_latest_train_set_task_3
+  description: 'Subsequent to that outbound curl request, Microsoft Defender detected mass file-system changes characteristic
+    of ransomware. According to the alert, what is the name of one file that had the malicious extension appended?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the Manatee Tempest investigation, telemetry showed a process with command line `curl http://vectorsandarrows.com`
+      (process ID 5572) originating from IP 198.43.121.209. This outbound call to a suspicious domain suggests the device
+      may have been compromised for further ransomware-related activity.'
+    question: 'Subsequent to that outbound curl request, Microsoft Defender detected mass file-system changes characteristic
+      of ransomware. According to the alert, what is the name of one file that had the malicious extension appended?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'unstreaming.xlsx.lockbit'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'unstreaming.xlsx.lockbit'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'HostName: `vnevado-win11u` – This device was flagged for activity linked to the Manatee Tempest cyber-criminal
+          group, which is known to deliver Cobalt Strike beacons and ransomware payloads.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'File Name: `unstreaming.xlsx.lockbit` – On the same device, files are being renamed with the “.lockbit”
+          extension, a strong indicator that LockBit ransomware is actively encrypting data.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

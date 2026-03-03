@@ -1,0 +1,64 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_49
+  title: incident_55_legacy_train_set_task_49
+  description: 'What is the AadUserId of the account involved in the attempt to hide the use of a dual-purpose tool?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'In a recent security incident, an unusual addition of credentials to an OAuth application was performed
+      by the user Luciano Herrera, which indicated a potential compromise. The user, associated with the email Luciano Herrera@niseko.alpineskihouse.co,
+      might be involved in spreading phishing, exfiltrating data, or gaining access to other accounts. Subsequent alerts indicated
+      suspicious LDAP queries and exploration activities, eventually leading to an observed attempt to hide the use of a dual-purpose
+      tool under an unexpected filename.'
+    question: 'What is the AadUserId of the account involved in the attempt to hide the use of a dual-purpose tool?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: User with AadUserId `2de70991-2799-4a95-b734-8e3df3a50118` (Luciano Herrera) performed an unusual 
+          addition of credentials to the application SimulandApp.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A suspicious LDAP query was executed using `powershell.exe`, indicating potential reconnaissance 
+          activity.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: A process named `iy2orr1e.rrg.exe` executed a suspicious sequence of exploration activities.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: An attempt was made to hide the use of a dual-purpose tool by a user with AadUserId 
+          `ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

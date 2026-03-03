@@ -1,0 +1,54 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_7
+  title: incident_55_latest_test_set_task_7
+  description: 'What is the full URL that was clicked on the device during the "Malicious URL was clicked on that device"
+    alert triggered on 2024-07-10 at 11:24:45 UTC?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a security incident, we observed on July 4 2024 that the process "powershell.exe"
+      was launched with the script "contosoadfsblatempcreds.ps1" under account "pwilson" (SID S-1-5-21-551436448-9871687716-9837441745-1903).
+      This PowerShell session was associated with the external IP address 72.5.72.208 and ran on an internal workstation (hostname
+      omitted). The alert was raised because the process was injected with potentially malicious code, a common technique
+      to hide unauthorized activity in a trusted process.
+
+      A few days later, on July 10 2024 at 11:24 UTC, the same device generated another alert indicating that a user clicked
+      a malicious URL. You have pivoted to the web-activity logs for that alert and now need to identify the exact resource
+      that was accessed.'
+    question: 'What is the full URL that was clicked on the device during the "Malicious URL was clicked on that device" alert
+      triggered on 2024-07-10 at 11:24:45 UTC?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A potentially malicious code injection was detected on host with HostName `mb-winclient`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, a malicious link was clicked on the same device, accessing the Url 
+          `https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

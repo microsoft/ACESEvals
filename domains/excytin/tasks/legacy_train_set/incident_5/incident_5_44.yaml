@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_5_legacy_train_set_task_44
+  title: incident_5_legacy_train_set_task_44
+  description: 'During the remote ransomware payload launch, a suspicious remote activity was observed. Can you provide the
+    SID of the account associated with this suspicious remote activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A high-severity security incident occurred on 2024-07-04, involving ransomware payload being remotely
+      launched on the device `vnevado-win11t`. This ransomware could potentially encrypt the content on the device, making
+      it inaccessible to users. The attack was linked with an account named `dp5hn` with SID `S-1-5-21-1840191660-8534830288-125585561-1522`
+      and associated IP `99.83.111.100`.'
+    question: 'During the remote ransomware payload launch, a suspicious remote activity was observed. Can you provide the
+      SID of the account associated with this suspicious remote activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-0-6-5'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-0-6-5'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A ransomware payload was remotely launched on this device using the account `dp5hn`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious remote activities, such as initiating interactive sessions, modifying files, passing WMI
+          commands, or creating scheduled tasks were observed on this machine using the account with SID `S-0-6-5`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

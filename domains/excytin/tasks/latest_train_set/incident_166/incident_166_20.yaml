@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_166_latest_train_set_task_20
+  title: incident_166_latest_train_set_task_20
+  description: 'According to the related “Anonymous IP address” alert, what is the Azure AD user ID (AadUserId) of the account
+    that performed the anonymous sign-in?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During investigation of a suspicious inbox manipulation rule on user Jordan P’s mailbox (laylaw@vnevado.alpineskihouse.co),
+      we noted that the rule ‘ITCleanup’ was created to move email to the RSS Feeds folder – an action often observed when
+      adversaries attempt to hide malicious or phishing messages. Pivoting from this alert we discovered a related sign-in
+      event that originated from an anonymous IP address (for example, Tor or a VPN).'
+    question: 'According to the related “Anonymous IP address” alert, what is the Azure AD user ID (AadUserId) of the account
+      that performed the anonymous sign-in?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '89e933b9-5b2e-4bd6-bcdf-033db707ef82'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '89e933b9-5b2e-4bd6-bcdf-033db707ef82'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Alert at 2024-07-22 09:49:55.558204 UTC shows a suspicious inbox rule created from the IP address (Field:
+          Address, Value: `192.238.237.190`).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Earlier, at 2024-07-22 09:11:31.290020 UTC, a sign-in from an anonymous IP was tied to the user account
+          (Field: AadUserId, Value: `89e933b9-5b2e-4bd6-bcdf-033db707ef82`), indicating the account may be compromised.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

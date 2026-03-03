@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_6
+  title: incident_55_latest_train_set_task_6
+  description: 'According to the alert for suspicious system hardware discovery raised at 22:35:00 UTC, what is the name of
+    the executable that carried out this activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'While analyzing a security incident, you observe that a PowerShell script named "contosoadfsblatempcreds.ps1"
+      was used to inject code into another running process at 2024-07-04 22:35:02 UTC. Just seconds earlier, a separate alert
+      was raised for suspicious system hardware discovery on the same host—an activity often associated with attackers enumerating
+      device details before moving further.'
+    question: 'According to the alert for suspicious system hardware discovery raised at 22:35:00 UTC, what is the name of
+      the executable that carried out this activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'svchost.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'svchost.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A process injection occurred targeting the process with ExtractedFileName `powershell.exe`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious system‐hardware discovery activity was performed by the process with ExtractedFileName 
+          `svchost.exe`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

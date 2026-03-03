@@ -1,0 +1,66 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_10
+  title: incident_55_latest_train_set_task_10
+  description: 'According to the later alert titled "Email messages containing malicious URL removed after delivery" raised
+    on 2024-07-07 08:54 UTC, what is the primary email address of the mailbox that had those malicious messages removed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On the host named "mb-adfs", a suspicious persistence mechanism was observed: a PowerShell script (executed
+      via "powershell.exe" with an encoded command) spawned "schtasks.exe" to create and immediately run a scheduled task
+      named "run-exportadfstokensignincert.2024-07-02_09_48_23". This activity triggered the "Suspicious Task Scheduler activity"
+      alert on 2024-07-04 at 22:35 UTC, suggesting an attempt to launch malicious code automatically.'
+    question: 'According to the later alert titled "Email messages containing malicious URL removed after delivery" raised
+      on 2024-07-07 08:54 UTC, what is the primary email address of the mailbox that had those malicious messages removed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'santiago@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'santiago@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: Process ExtractedFileName `powershell.exe` was leveraged through Task Scheduler to create, modify, 
+          or delete a scheduled task (2024-07-04 22:35:02 UTC).
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Account AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0` invoked a malicious PowerShell Cmdlet on 
+          the machine (2024-07-04 22:35:03 UTC).
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: Account Sid `S-1-5-11-7842151660-4834030208-105586563-1139` subsequently sent phishing emails 
+          internally, indicating possible compromise (2024-07-07 10:09:33 UTC).
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: Mailbox MailboxPrimaryAddress `santiago@vnevado.alpineskihouse.co` contained emails with malicious 
+          URLs that were later removed after delivery (2024-07-07 08:54:40 UTC).
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

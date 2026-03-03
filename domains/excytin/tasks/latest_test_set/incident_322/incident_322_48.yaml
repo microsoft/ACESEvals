@@ -1,0 +1,65 @@
+tasks:
+- task_id: incident_322_latest_test_set_task_48
+  title: incident_322_latest_test_set_task_48
+  description: 'According to the alert that reported the suspicious NTDS.dit credential dump, which executable was identified
+    as performing this activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed that user alyssat@vnevado.alpineskihouse.co clicked a URL that
+      was later confirmed to be malicious. The email containing the link was subsequently removed, and shortly after, an Azure
+      Resource Manager operation was initiated from a proxy-associated IP address. A few minutes later, a credential dump
+      from the domain controller’s NTDS.dit database was detected, indicating possible lateral movement and privilege escalation
+      activity.'
+    question: 'According to the alert that reported the suspicious NTDS.dit credential dump, which executable was identified
+      as performing this activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'powershell.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Alert 1 – A potentially malicious URL click was detected: Recipient `alyssat@vnevado.alpineskihouse.co`
+          (Field = Recipient).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Alert 2 – Email with the malicious URL was removed after delivery: Account SID `S-1-5-21-1840151686-3534835288-156286563-1127`
+          (Field = Sid).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Alert 3 – Azure Resource Manager operation from a suspicious proxy IP: Host `vnevado-dc` (Field = HostName).'
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: 'Alert 4 – Suspicious credential dump from NTDS.dit: Process `powershell.exe` (Field = ExtractedFileName).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

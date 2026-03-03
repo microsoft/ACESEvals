@@ -1,0 +1,61 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_80
+  title: incident_39_latest_test_set_task_80
+  description: 'According to the PsExec alert, what is the name of the executable (other than PsExec itself) that was run
+    from the C:\temp directory on the remote host "vnevado-win10b"?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation we observed that the built-in LocalSystem account on one of the servers initiated
+      suspicious remote activity. Shortly after, a remote session dropped a file onto the same machine and executed it. A
+      few seconds later, PsExec was used from that host to run an additional command on a remote computer named "vnevado-win10b".
+      The PsExec command invoked cmd.exe with parameters that referenced a tool residing in the C:\temp directory, instructing
+      it to dump service tickets and write the output to a file called adminticket.txt.'
+    question: 'According to the PsExec alert, what is the name of the executable (other than PsExec itself) that was run from
+      the C:\temp directory on the remote host "vnevado-win10b"?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'rubeus.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'rubeus.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious remote activity was detected on host with AadDeviceId 
+          `fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb`, indicating possible lateral-movement attempts.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: During the same timeframe a file named `rubeus.exe` (ExtractedFileName = `rubeus.exe`) was dropped 
+          and executed from a remote location, suggesting the attacker deployed a credential-theft tool.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Evidence shows that PsExec (ProcessId__CreatedTimeUtc__CommandLine = 
+          `5924__2024-06-27t14:33:14.4981439z__"psexec.exe" \\vnevado-win10b -accepteula cmd /c "c:\temp\rubeus.exe dump
+          /service:xfbzkp /user:lucasb > c:\temp\adminticket.txt"`) was used to remotely launch `rubeus.exe`, confirming
+          the adversary leveraged PsExec to execute credential dumping commands on the target machine.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

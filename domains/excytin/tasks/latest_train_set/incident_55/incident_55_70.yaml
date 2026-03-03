@@ -1,0 +1,42 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_70
+  title: incident_55_latest_train_set_task_70
+  description: 'According to the investigation data, what is the IP address that originally sent the malicious email message
+    to santiago@vnevado.alpineskihouse.co?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'Security Center has flagged and removed several email messages that contained a malicious URL (http://kn017721628.wittytree-b6f239d6.northeurope.azurecontainerapps.io/).
+      One of the affected messages was sent from the internal address 4qs6v9m@vnevado.alpineskihouse.co to the mailbox santiago@vnevado.alpineskihouse.co.
+      The email appears linked to the user account ‘Nina Sullivan’ (AadUserId 28058d92-fc24-4869-9231-6546a34b00f2). Analysts
+      need to understand more about the original source of this malicious email in order to build effective blocking rules.'
+    question: 'According to the investigation data, what is the IP address that originally sent the malicious email message
+      to santiago@vnevado.alpineskihouse.co?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '106.214.87.198'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '106.214.87.198'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 1.0
+        weight: 1.0
+        title: Checkpoint 1
+        description: An email containing a malicious URL was delivered and later removed; the message originated from 
+          SenderIP `106.214.87.198`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1

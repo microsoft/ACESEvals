@@ -1,0 +1,53 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_77
+  title: incident_55_latest_test_set_task_77
+  description: 'A few days after the LSASS access, an "Internal phishing" alert indicated that the same device was used to
+    send phishing emails to colleagues. What is the full email address of the account that was observed sending those phishing
+    messages?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-04, the endpoint "mb-winclient" (AAD device ID 7661dfd4-218f-4016-8a87-66d68a7f098e) raised
+      an alert for "Suspicious access to LSASS service." During the event, the process "lsass.exe" (PID 760) was accessed
+      and a PowerShell session (PID 12412) was launched from the Downloads folder of user "bjenkins." The activity originated
+      from IP address 72.5.72.208 and involved several DLL files (e.g., cryptdll.dll and winscard.dll). Such LSASS access
+      often precedes further credential abuse or lateral-movement attempts inside the organization.'
+    question: 'A few days after the LSASS access, an "Internal phishing" alert indicated that the same device was used to
+      send phishing emails to colleagues. What is the full email address of the account that was observed sending those phishing
+      messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Lucas Grey@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Lucas Grey@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: On 2024-07-04, an attacker attempted to dump credentials by accessing LSASS, using the account with
+          AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, on 2024-07-07, the compromised account with Email `Lucas 
+          Grey@niseko.alpineskihouse.co` was observed conducting an internal phishing campaign.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

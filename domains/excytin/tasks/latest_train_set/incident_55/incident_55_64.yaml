@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_64
+  title: incident_55_latest_train_set_task_64
+  description: 'According to the suspected DCSync alert, what is the email address of the user who initiated the replication
+    request from MB-WINCLIENT?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a "Suspicious System Hardware Discovery" alert, analysts observed several
+      commands executed from host "MB-WINCLIENT" using processes such as "svchost.exe" and "powershell.exe". This activity
+      appeared to be reconnaissance performed from the same workstation. A few days later, another alert in the same incident
+      flagged a suspected DCSync attack in which a single replication request was sent from MB-WINCLIENT to domain controller
+      MB-DC1.'
+    question: 'According to the suspected DCSync alert, what is the email address of the user who initiated the replication
+      request from MB-WINCLIENT?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Luciano Herrera@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Luciano Herrera@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Step 1 – Suspicious System Hardware Discovery: The activity was performed by the account with AadUserId
+          `2de70991-2799-4a95-b734-8e3df3a50118` (2024-07-04 22:35 UTC).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Step 2 – Suspected DCSync attack: The replication request was made by the account with Email `Luciano
+          Herrera@niseko.alpineskihouse.co` (2024-07-10 11:24 UTC).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

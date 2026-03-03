@@ -1,0 +1,66 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_71
+  title: incident_55_latest_test_set_task_71
+  description: 'During the same investigation a different alert reported that a suspicious service was created on host MB-ADFS.
+    What is the email address of the account that created this service?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 10, 2024 a security alert was raised after user Lucas Grey clicked a URL that was later confirmed
+      to be malicious (http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/). The click was logged for
+      the mailbox bjenkins@niseko.alpineskihouse.co, indicating potential phishing activity targeting the Niseko environment.
+      This URL-click alert is the starting point of a broader investigation.'
+    question: 'During the same investigation a different alert reported that a suspicious service was created on host MB-ADFS.
+      What is the email address of the account that created this service?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'gsmith@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: Account with field AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0` was detected clicking a 
+          malicious URL on 2024-07-10 11:24:45.507742+00:00.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Process with field ExtractedFileName `powershell.exe` was injected with potentially malicious code 
+          on 2024-07-04 22:35:02.726557+00:00.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: Account with field Sid `S-2-5-21-571436798-3864380397-1837441745-3206` executed a suspicious 
+          sequence of exploration commands on 2024-07-04 22:35:03.106654+00:00.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: Account with field Email `gsmith@niseko.alpineskihouse.co` created a suspicious service on 
+          2024-07-10 11:24:45.488649+00:00.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

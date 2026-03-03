@@ -1,0 +1,67 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_74
+  title: incident_5_latest_test_set_task_74
+  description: 'According to the "Malicious credential theft tool execution detected" alert in this incident, what is the
+    name of the credential-theft executable that was run?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During our investigation of a suspicious WMI-based process creation on host "vnevado-win10r", we observed
+      several commands executed by account "dp5hn" (SID S-1-5-21-1840191660-8534830288-125585561-1522). These commands included
+      shadow copy deletion, boot status policy changes, PowerShell script execution, and outbound cURL traffic — all of which
+      can be associated with ransomware preparation and defense-evasion techniques. Shortly after, multiple related alerts
+      were raised, including one flagging the execution of a well-known credential-theft utility whose command line indicated
+      an attempt to perform Pass-the-Hash against the domain "vnevado.alpineskihouse.co".'
+    question: 'According to the "Malicious credential theft tool execution detected" alert in this incident, what is the name
+      of the credential-theft executable that was run?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'mimikatz.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious WMI process creation was observed coming from the account Name `dp5hn`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The compromised user activity originated from the IP Address `99.83.111.100`, where 
+          ransomware-related files were dropped.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: PsExec was then used to move laterally to the jump-server with HostName `vnevado-win10v`.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: 'Finally, the credential-theft tool was launched: ProcessId `2020` at `2024-06-20t09:03:47.538167z` with
+          CommandLine `"mimikatz.exe" privilege::debug "sekurlsa::pth /user:fk8mq /ntlm:96def1a633fc6790124d5f8fe21cc72b /domain:vnevado.alpineskihouse.co
+          /run:..\notepad.exe //vnevado-jump cmd.exe"`.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

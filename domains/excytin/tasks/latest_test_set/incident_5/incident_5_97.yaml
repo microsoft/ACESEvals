@@ -1,0 +1,68 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_97
+  title: incident_5_latest_test_set_task_97
+  description: 'In the "Possible lateral movement" alert that followed the Mimikatz detection, what IP address was identified
+    as being involved in the suspicious network activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 4 2024, Microsoft Defender for Endpoint detected the presence of the credential-theft tool
+      Mimikatz on an endpoint (device identifier withheld). The tool was executed multiple times using commands such as "mimikatz.exe
+      privilege::debug sekurlsa::logonpasswords" and other pass-the-hash-style invocations, indicating that an attacker may
+      have harvested credentials. Shortly afterward, additional alerts signaled potential lateral movement, including a specific
+      "Possible lateral movement" alert that referenced a network connection from the compromised environment to an external
+      IP address.'
+    question: 'In the "Possible lateral movement" alert that followed the Mimikatz detection, what IP address was identified
+      as being involved in the suspicious network activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '38.142.109.10'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '38.142.109.10'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'An attacker used the credential-theft tool Mimikatz on the host with AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`
+          (Time: 2024-07-04 22:35:03 UTC).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Soon after, a suspicious network event indicating possible lateral movement originated from IP address
+          `38.142.109.10` (Time: 2024-07-04 22:35:01 UTC).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Ransomware-style file-system changes were then detected on a second host with AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`,
+          suggesting the attacker successfully reached and encrypted data on that device (Time: 2024-07-04 22:35:03 UTC).'
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: 'Finally, six days later the attacker leveraged PSExec from IP address `99.83.111.100` to access the
+          jump server `Vnevado-jump`, completing the lateral-movement chain (Time: 2024-07-10 11:24:45 UTC).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

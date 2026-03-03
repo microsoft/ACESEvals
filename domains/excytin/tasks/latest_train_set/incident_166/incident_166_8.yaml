@@ -1,0 +1,44 @@
+tasks:
+- task_id: incident_166_latest_train_set_task_8
+  title: incident_166_latest_train_set_task_8
+  description: 'What is the AppId of the additional cloud application (other than AppId 20893) that is associated with this
+    incident?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a suspicious inbox manipulation rule set by the user "Jordan P" (AadUserId
+      89e933b9-5b2e-4bd6-bcdf-033db707ef82) on the mailbox laylaw@vnevado.alpineskihouse.co, multiple indicators were collected.
+      The rule, named "ITCleanup," moved incoming mail to the "RSS Feeds" folder and was created from several external IP
+      addresses such as 255.246.85.58 and 95.202.65.202. The activity has already been tied to the Microsoft 365 service (cloud-application
+      AppId 20893) as well as Microsoft Exchange Online. However, telemetry shows that one more cloud application—distinct
+      from the two already mentioned—was also involved in this incident.'
+    question: 'What is the AppId of the additional cloud application (other than AppId 20893) that is associated with this
+      incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '11161'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '11161'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 1.0
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'A suspicious inbox manipulation rule (MoveToFolder rule named ITCleanup) was created in the cloud application
+          (Field: AppId, Value: `11161`), suggesting that the user’s mailbox may be compromised.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1

@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_134_latest_train_set_task_1
+  title: incident_134_latest_train_set_task_1
+  description: 'From which IP address did the BEC-related user send the suspicious emails that triggered the follow-up alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'An email message containing a malicious URL (https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/)
+      was delivered to raphaelt@vnevado.alpineskihouse.co from alyssat@vnevado.alpineskihouse.co and later removed by the
+      security system. The original sender’s IP address was 254.241.243.229. This activity generated the alert “Email messages
+      containing malicious URL removed after delivery​​.” Shortly afterwards, the investigation noted that a potentially compromised
+      user began distributing additional suspicious emails, triggering the alert “Suspicious emails sent by BEC-related user.”'
+    question: 'From which IP address did the BEC-related user send the suspicious emails that triggered the follow-up alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '237.7.81.122'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '237.7.81.122'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: "Email account with field Email: 'Nina Park@vnevado.alpineskihouse.co' had messages containing a malicious
+          URL that were removed after delivery."
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: "Suspicious emails associated with BEC activity were sent from IP with field Address: '237.7.81.122'."
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

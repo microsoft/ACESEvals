@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_95
+  title: incident_55_latest_test_set_task_95
+  description: 'According to the alert about the suspicious LDAP query, what is the name of the script file (ExtractedFileName)
+    that was executed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'User account ''bjenkins'' ran several PowerShell commands, including launching the script ''contosoadfsblatempcreds.ps1''.
+      This activity triggered an alert titled “A malicious PowerShell Cmdlet was invoked on the machine.” Shortly afterwards,
+      a second alert reported that a suspicious LDAP query had been executed on the host, suggesting reconnaissance behaviour.'
+    question: 'According to the alert about the suspicious LDAP query, what is the name of the script file (ExtractedFileName)
+      that was executed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ldaprequest.ps1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'ldaprequest.ps1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A malicious PowerShell cmdlet was executed through the process ExtractedFileName=`powershell.exe`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, a suspicious LDAP query was performed via the process 
+          ExtractedFileName=`ldaprequest.ps1`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

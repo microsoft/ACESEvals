@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_166_latest_test_set_task_14
+  title: incident_166_latest_test_set_task_14
+  description: 'A follow-up alert reported that suspicious emails were later sent by a user related to this BEC attempt. What
+    email address was shown as the sender of those suspicious messages?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 22 2024 at 10:00 UTC, an alert titled “BEC financial fraud” was raised after user Jordan P
+      (SID S-1-5-21-1740051960-3534030288-108486866-1602) created a hidden-inbox rule during a risky Azure AD session from
+      IP 255.246.85.58. This activity suggests a potential business email compromise attempt.'
+    question: 'A follow-up alert reported that suspicious emails were later sent by a user related to this BEC attempt. What
+      email address was shown as the sender of those suspicious messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'laylaw@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'laylaw@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious inbox rule was created in a risky Azure AD session for the account with Sid 
+          `S-1-5-21-1740051960-3534030288-108486866-1602`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious emails were then sent by the sender `laylaw@vnevado.alpineskihouse.co`, indicating an 
+          ongoing BEC fraud attempt.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

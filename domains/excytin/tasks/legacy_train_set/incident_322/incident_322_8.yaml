@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_322_legacy_train_set_task_8
+  title: incident_322_legacy_train_set_task_8
+  description: 'A related alert indicates suspicious Azure Resource Management (ARM) activities by a user. Can you identify
+    the IP address involved in the suspicious ARM activities?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During a multi-stage security investigation, it was found that a malicious URL (`https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/`)
+      was clicked on a device named `vnevado-win11h`. The browser process used to access this URL was `msedge.exe` with ProcessId__CreatedTimeUtc__CommandLine
+      `4256__2024-08-01t13:42:52.04__"msedge.exe" --type=utility --utility-sub-type=network.mojom.networkservice --lang=en-us
+      --service-sandbox-type=none --field-trial-handle=1912,i,9358546549091360037,1317674413260171076,262144 --variations-seed-version
+      --mojo-platform-channel-handle=3124 /prefetch:11`. The device has an AadDeviceId `76707c40-3343-490e-9205-88fdb51aefe0`
+      and an IP address `172.33.118.200`.'
+    question: 'A related alert indicates suspicious Azure Resource Management (ARM) activities by a user. Can you identify
+      the IP address involved in the suspicious ARM activities?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '253.1.244.215'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '253.1.244.215'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A user with SID `S-1-5-21-1840151686-3534835288-156286563-1127` clicked on a malicious URL.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: There are suspicious Azure Resource Management activities by a user from IP address 
+          `253.1.244.215`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_63
+  title: incident_39_latest_test_set_task_63
+  description: 'According to the related “File dropped and launched from remote location” alert, what is the IP address of
+    the remote host that delivered and executed the file?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed a PowerShell command (`set-mppreference -disablerealtimemonitoring
+      1`) executed under process ID 6968 on 27 Jun 2024, which triggered the “Microsoft Defender Antivirus tampering” alert
+      at 22:35 UTC on 4 Jul 2024. This alert indicates an attempt to disable Microsoft Defender Antivirus—often a precursor
+      to further malicious activity. Pivoting from this event, a related alert titled “File dropped and launched from remote
+      location” fired seconds earlier, suggesting a remote session delivered and executed an additional payload in the environment.'
+    question: 'According to the related “File dropped and launched from remote location” alert, what is the IP address of
+      the remote host that delivered and executed the file?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '141.216.110.153'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '141.216.110.153'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'A remote session from IP address (Address: 141.216.110.153) dropped and executed a file on the machine.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Shortly after, the account (AadUserId: 97e6a954-b6bd-48a5-808c-bd8464cce677) attempted to disable Microsoft
+          Defender Antivirus, indicating tampering.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

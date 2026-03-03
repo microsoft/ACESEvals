@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_38_latest_test_set_task_9
+  title: incident_38_latest_test_set_task_9
+  description: 'A follow-up alert reported that a process—running with no visible command-line arguments—exhibited unexpected
+    behaviour and initiated network communication. What IP address did this process contact, according to the alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 4th, 2024, Microsoft Defender raised an alert titled "Suspicious process injection observed."
+      The alert showed that a file named "powershell.exe" (PID 4656) ran with an extremely long, base-64-encoded command line
+      to bypass execution policy and fetch a remote script. This behaviour is often a precursor to code-injection into other
+      running processes. Investigators also noted the script pulled content from an external blob-storage URL, suggesting
+      the host might subsequently reach out to attacker-controlled infrastructure.'
+    question: 'A follow-up alert reported that a process—running with no visible command-line arguments—exhibited unexpected
+      behaviour and initiated network communication. What IP address did this process contact, according to the alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '202.183.149.174'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '202.183.149.174'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious process injection was detected involving account with field 
+          AadUserId=`12185914-91dd-4fb9-94f9-3252203b0426`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, an unexpected process (run with no command-line arguments) showed abnormal behavior 
+          and communicated with IP address field Address=`202.183.149.174`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

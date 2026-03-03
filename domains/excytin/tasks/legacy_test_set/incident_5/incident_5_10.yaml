@@ -1,0 +1,406 @@
+tasks:
+- task_id: incident_5_legacy_test_set_task_91
+  title: incident_5_legacy_test_set_task_91
+  description: During the ransomware attack incident on `vnevado-win11u`, a process was used to delete all file 
+    snapshots and shadow copies via WMI or VSSAdmin. Can you identify the name of this process?
+  inherit_shared: true
+  initial_context:
+    incident_context: A ransomware payload was remotely launched on the device with hostname `vnevado-win11u` and IP 
+      address `99.83.111.100`. The attackers might be attempting to encrypt content on this device, rendering it 
+      unusable to users. It is crucial to note that this is indicative of a potential ransomware attack, and further 
+      information can be found in the Threat Analytics report provided.
+    question: During the ransomware attack incident on `vnevado-win11u`, a process was used to delete all file snapshots
+      and shadow copies via WMI or VSSAdmin. Can you identify the name of this process?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vssblatemp.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vssblatemp.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The ransomware payload was remotely launched for the account `dp5hn`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: File backups were deleted by the process `vssblatemp.exe` which is common during a ransomware 
+          infection.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_92
+  title: incident_5_legacy_test_set_task_92
+  description: Can you identify the name of the possibly compromised user account that was dropping ransomware-related 
+    files on several devices?
+  inherit_shared: true
+  initial_context:
+    incident_context: In continuation, a suspicious activity indicated that a user account might have been compromised 
+      to deliver ransomware-related files across multiple devices. Remedial action might be necessary to disable the 
+      compromised user account.
+    question: Can you identify the name of the possibly compromised user account that was dropping ransomware-related 
+      files on several devices?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'dp5hn'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'dp5hn'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: A known credential theft tool execution was detected with the user account SID 
+          `S-5-7-21-1843151660-3234030288-105586167-1422`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: Lateral movement using PSExec was detected to the IP address `99.83.111.100` associated with the 
+          host `vnevado-jump`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: A possible compromised user account `dp5hn` was observed delivering ransomware-related files on 
+          several devices.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+- task_id: incident_5_legacy_test_set_task_93
+  title: incident_5_legacy_test_set_task_93
+  description: What is the name of the file that is associated with the ransomware-like behavior?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident involving ransomware-like behavior impacting several devices has been 
+      observed. Initial detection included the use of PsExec to launch a command on a remote device, suggesting lateral 
+      movement using this tool. This was followed by suspicious activities leading to compromised assets exhibiting 
+      ransomware-like behavior. The attacker might be using the specified user account, IP, or device to infect multiple
+      devices with ransomware. Automated remediation actions were considered to address the threat.
+    question: What is the name of the file that is associated with the ransomware-like behavior?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ponceau.7z'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'ponceau.7z'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: An attacker used the account `tgs2z` to launch a command on a remote device via PsExec.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: There was a lateral movement to the jump server with IP address `99.83.111.100` using PsExec.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: A file named `ponceau.7z` is associated with ransomware-like behavior, indicating potentially 
+          compromised assets.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+- task_id: incident_5_legacy_test_set_task_94
+  title: incident_5_legacy_test_set_task_94
+  description: During this investigation, it was also noted that a user account was dropping a ransomware-related file 
+    on several devices. Can you identify the name of the ransomware-related file?
+  inherit_shared: true
+  initial_context:
+    incident_context: As part of a security incident involving the Manatee Tempest activity group, a URL 
+      `vectorsandarrows.com` was accessed from the host `vnevado-win11u` using the command `curl 
+      http://vectorsandarrows.com`, initiated by process ID 5572 associated with IP address `198.43.121.209`. The actor 
+      Manatee Tempest is known for utilizing various methods like drive-by downloads and domain fronting to establish 
+      command-and-control channels, and is linked with ransomware deployments facilitated by Mustard Tempest.
+    question: During this investigation, it was also noted that a user account was dropping a ransomware-related file on
+      several devices. Can you identify the name of the ransomware-related file?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'characterical.zip.lockbit'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'characterical.zip.lockbit'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The user account with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96` is associated with activity 
+          from the Manatee Tempest group, known for its cybercriminal activities and partnerships.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A possible compromised user account is observed dropping a ransomware-related file named 
+          `characterical.zip.lockbit` on several devices, indicating potential lateral movement and infection attempts 
+          across the network.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_95
+  title: incident_5_legacy_test_set_task_95
+  description: Can you determine the destination IP address where potential lateral movement was observed following the 
+    suspicious network event?
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-10, at 11:24:45.260113+00:00, a security incident was detected involving lateral movement
+      to the jump server `vnevado-jump` from host `vnevado-win10v` with associated account `tgs2z` (email: `tgs2z@vnevado.alpineskihouse.co`).
+      The source IP address involved in this activity was `141.216.110.153`. During this incident, there have been numerous
+      file system changes indicating possible ransomware activity.'
+    question: Can you determine the destination IP address where potential lateral movement was observed following the 
+      suspicious network event?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '83.162.58.168'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '83.162.58.168'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: Lateral movement to the jump server `Vnevado-jump` was observed from IP address `99.83.111.100`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: A possible ransomware activity involving a known malicious extension was detected on host 
+          `vnevado-win11t`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: Possible lateral movement from IP address `83.162.58.168` was detected in close time proximity to a
+          suspicious network event on the device.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+- task_id: incident_5_legacy_test_set_task_96
+  title: incident_5_legacy_test_set_task_96
+  description: What is the process ID and command line of the process that was used in the possible attempt to access 
+    the Primary Refresh Token (PRT)?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident involving potentially compromised assets exhibiting ransomware-like behavior 
+      was detected, with the malicious presence identified through specific files `get-userprttoken.ps1`, 
+      `characterical.zip`, and `characterical.zip.lockbit` from IP address `99.83.111.100` and user account `S-0-6-5`. 
+      This activity may allow attackers to move laterally across the network and infect multiple devices with 
+      ransomware. Automated remediation action might be taken to disable the account or device the attacker used related
+      to this incident. There is also an indication of a possible attempt to access a Primary Refresh Token (PRT) 
+      reported.
+    question: What is the process ID and command line of the process that was used in the possible attempt to access the
+      Primary Refresh Token (PRT)?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process Id: 7036, Command Line: "browsercore.exe"'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process Id: 7036, Command Line: "browsercore.exe"'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: There is ransomware-like behavior detected on the host `vnevado-win11t`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: There was a possible attempt to access a Primary Refresh Token using the process `browsercore.exe` 
+          with the command line `browsercore.exe` at `2024-06-20t09:29:49.304018z`, with Process ID `7036`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_97
+  title: incident_5_legacy_test_set_task_97
+  description: What is the URL involved in the Command and Control behavior that was blocked?
+  inherit_shared: true
+  initial_context:
+    incident_context: 'Start Alert: File backups were deleted, performed by `vssblatemp.exe` with Process ID 1900 and command
+      line `vssblatemp.exe delete shadows /all`. The incident also involves a blocked Command and Control behavior alert.
+      The blocked action is related to active malware, which can receive remote commands to conduct cyber attacks.'
+    question: What is the URL involved in the Command and Control behavior that was blocked?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'http://vectorsandarrows.com/'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'http://vectorsandarrows.com/'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: All file snapshots and shadow copies have been deleted via WMI or VSSAdmin by the user with 
+          AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Command and Control (C2) behavior was blocked from the URL `http://vectorsandarrows.com/`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_98
+  title: incident_5_legacy_test_set_task_98
+  description: What file name indicates the active malware that was found during this incident?
+  inherit_shared: true
+  initial_context:
+    incident_context: A malicious credential theft tool was detected on a host with potential involvement of an account 
+      bearing the Sid `S-5-7-21-1843151660-3234030288-105586167-1422` and originating from an IP address. The alert 
+      indicates the execution of a known tool intended to compromise users' credentials and other sensitive information.
+    question: What file name indicates the active malware that was found during this incident?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'mimikatz.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A malicious credential theft tool execution was detected from the IP address `107.224.99.179`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Active malware named `mimikatz.exe` was detected running on the machine.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

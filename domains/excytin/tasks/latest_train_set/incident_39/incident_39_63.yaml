@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_63
+  title: incident_39_latest_train_set_task_63
+  description: 'What is the Security Identifier (SID) of the deceptive user account involved in the 22:35:01 UTC sign-in attempt
+    on 2024-07-04?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, you observe a suspicious sign-in attempt on host "vnevado-win10b" (AadDeviceId:
+      fafdcd65-46c6-45a6-aa85-ec9b77ca0bcb) originating from IP address 141.216.110.153 at 22:35:02 UTC on 2024-07-04. The
+      attempt involved an account whose SID is S-0-6-5. Telemetry shows that only one second earlier—at 22:35:01 UTC—another
+      alert of the same type ("Sign-in attempt with deceptive user account") was raised for a different account on the same
+      device. You need to identify that second account for further correlation.'
+    question: 'What is the Security Identifier (SID) of the deceptive user account involved in the 22:35:01 UTC sign-in attempt
+      on 2024-07-04?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-5-7-21-1843151660-3234030288-105586167-1422'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-5-7-21-1843151660-3234030288-105586167-1422'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'A deceptive sign-in attempt was detected using the account Name `kyleg` (entity field: Name, value:
+          kyleg) at 2024-07-04 22:35:02.300904+00:00.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'A deceptive sign-in attempt was detected using the account Sid `S-5-7-21-1843151660-3234030288-105586167-1422`
+          (entity field: Sid, value: S-5-7-21-1843151660-3234030288-105586167-1422) at 2024-07-04 22:35:01.132314+00:00.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

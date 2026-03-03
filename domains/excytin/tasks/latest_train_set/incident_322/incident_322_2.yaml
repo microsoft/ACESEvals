@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_322_latest_train_set_task_2
+  title: incident_322_latest_train_set_task_2
+  description: 'Identify the security identifier (SID) of the user account associated with the alert ''User accessed a link
+    in an email subsequently quarantined by ZAP''.'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation we observed that on device ''vnevado-win11h'' (AadDeviceId: 76707c40-3343-490e-9205-88fdb51aefe0,
+      IP 172.33.118.200) the process "msedge.exe" (PID 4256) accessed a malicious URL on 2024-08-01 at 13:49 UTC. This action
+      is linked to another alert indicating that a user later clicked a link in an email which was subsequently quarantined
+      by Zero-hour Auto Purge (ZAP).'
+    question: 'Identify the security identifier (SID) of the user account associated with the alert ''User accessed a link
+      in an email subsequently quarantined by ZAP''.'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1840151686-3534835288-156286563-1127'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-1840151686-3534835288-156286563-1127'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Account Name: `Hailey Johnson` clicked on a malicious URL on the device at 2024-08-01 13:49:58.880422+00:00.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'User with Account SID: `S-1-5-21-1840151686-3534835288-156286563-1127` accessed a link in an email that
+          was later quarantined by ZAP at 2024-08-01 12:54:55.663380+00:00.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

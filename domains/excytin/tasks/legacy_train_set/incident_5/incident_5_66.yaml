@@ -1,0 +1,45 @@
+tasks:
+- task_id: incident_5_legacy_train_set_task_66
+  title: incident_5_legacy_train_set_task_66
+  description: 'Can you identify the URL that was involved in the command and control behavior which was blocked?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'As part of a security incident related to the Manatee Tempest activity group, an IP `198.43.121.209`
+      and a host `vnevado-win11u` were flagged for suspicious activity. The `curl` command was used to access the URL `http://vectorsandarrows.com`.'
+    question: 'Can you identify the URL that was involved in the command and control behavior which was blocked?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'http://vectorsandarrows.com/'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'http://vectorsandarrows.com/'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account with SID `S-1-5-21-1840191660-8534830288-125585561-1522` is observed to be targeted or 
+          used by Manatee Tempest activity group.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A command and control behavior from the URL `http://vectorsandarrows.com/` was blocked.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

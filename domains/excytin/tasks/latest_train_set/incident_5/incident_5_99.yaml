@@ -1,0 +1,53 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_99
+  title: incident_5_latest_train_set_task_99
+  description: 'What is the external IP address highlighted in the Manatee Tempest activity group alert that is linked to
+    this incident?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation, we observed that on host "vnevado-win11t" (device ID e5799261-6720-4297-961e-bd9ca4275033),
+      the executable "vssblatemp.exe" (PID 1900, launched at 2024-06-20 09:29:40 UTC with the command line "vssblatemp.exe
+      delete shadows /all") was used to delete all Volume Shadow Copies—behavior frequently linked to ransomware activity.
+      This action triggered the alert titled "File backups were deleted." In the same timeframe, a separate alert identifying
+      activity linked to the Russia-based threat group known as Manatee Tempest was raised, suggesting possible lateral or
+      external threat infrastructure involved in the incident.'
+    question: 'What is the external IP address highlighted in the Manatee Tempest activity group alert that is linked to this
+      incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '198.43.121.209'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '198.43.121.209'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: An account identified by field AadUserId with value `731adb71-b11c-4bbf-850b-57989b350e96` deleted 
+          all file snapshots and shadow copies, a common precursor to ransomware deployment.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, threat intelligence linked to Manatee Tempest shows activity from the IP Address 
+          field with value `198.43.121.209`, indicating possible coordination with this Russia-based cybercriminal 
+          group.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

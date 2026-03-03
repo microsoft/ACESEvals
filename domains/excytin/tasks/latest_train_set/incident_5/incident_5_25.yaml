@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_25
+  title: incident_5_latest_train_set_task_25
+  description: 'According to the alert titled "PsExec launched a command on a remote device" generated at 2024-07-04 22:35:01
+    UTC, what is the IP address of the remote device that PsExec attempted to reach?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation of suspicious remote activity initiated on host "vnevado-win10s", several command-line
+      executions were observed, including the use of "vssblatemp.exe" to delete shadow copies and a PowerShell script invocation.
+      Shortly after these events, PsExec was used to launch a command on a remote device. Analysts need to determine exactly
+      which external system was targeted by this PsExec action in order to assess potential lateral-movement paths.'
+    question: 'According to the alert titled "PsExec launched a command on a remote device" generated at 2024-07-04 22:35:01
+      UTC, what is the IP address of the remote device that PsExec attempted to reach?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '107.224.99.179'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Suspicious remote activity was detected coming from the IP address `99.83.111.100` (Field: Address,
+          Type: ip).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'An account identified by SID `S-5-7-21-1843151660-3234030288-105586167-1422` (Field: Sid, Type: account)
+          used PsExec to reach the jump-server `Vnevado-jump`.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'PsExec was then used to run a command from another external IP address `107.224.99.179` (Field: Address,
+          Type: ip) against a remote device.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

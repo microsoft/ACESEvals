@@ -1,0 +1,56 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_18
+  title: incident_55_legacy_train_set_task_18
+  description: 'What is the name of the file associated with the process that was injected with potentially malicious code?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A suspicious service creation activity was detected where the account gsmith (gsmith@niseko.alpineskihouse.co)
+      created a service named DDLOXJDSQSNGMUKKFUXQ on the host MB-ADFS in order to execute potentially malicious commands.
+      This is part of a larger incident involving a suspicious sequence of exploration activities followed by a process injecting
+      potentially malicious code into another process, indicating possible code execution within the target process.'
+    question: 'What is the name of the file associated with the process that was injected with potentially malicious code?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'contosoadfsblatempcreds.ps1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'contosoadfsblatempcreds.ps1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account `gsmith` created a suspicious service named `DDLOXJDSQSNGMUKKFUXQ` on `MB-ADFS` to 
+          execute potentially malicious commands.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: A process named `powershell.exe` executed a series of windows commands likely in exploration 
+          activities to identify assets and coordinate lateral movement after potentially compromising a machine.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: A process `contosoadfsblatempcreds.ps1` was injected with potentially malicious code, which may 
+          involve suspicious activities such as opening a listening port or connecting to a command and control server.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

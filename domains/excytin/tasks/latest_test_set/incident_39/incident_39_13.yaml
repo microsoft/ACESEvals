@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_13
+  title: incident_39_latest_test_set_task_13
+  description: 'Which user account was identified as attempting to authenticate against VNEVADO-DC during the suspected overpass-the-hash
+    (Kerberos) attack that occurred moments after the malicious URL click?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-10 at 11:24 UTC, the security platform raised an alert titled "A potentially malicious URL
+      click was detected" after the mailbox tgs2z@vnevado.alpineskihouse.co was observed accessing the link https://ac27145722.livelygrass-8d4c4013.eastus2.azurecontainerapps.io/.
+      This event suggested possible initial access activity. Shortly afterwards, additional suspicious behaviour was recorded,
+      including reconnaissance of SMB sessions from a workstation against the domain controller, followed by a suspected overpass-the-hash
+      (Kerberos) authentication attempt targeting host VNEVADO-DC.'
+    question: 'Which user account was identified as attempting to authenticate against VNEVADO-DC during the suspected overpass-the-hash
+      (Kerberos) attack that occurred moments after the malicious URL click?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Emma Clark'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Emma Clark'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account Name `Ethan Brooks` clicked on a malicious URL, indicating initial compromise.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Afterwards, the compromised user machine enumerated SMB sessions against the host HostName 
+          `VNEVADO-DC`, gathering reconnaissance data.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Finally, the attacker leveraged the information to perform an overpass-the-hash attack, using the 
+          account Name `Emma Clark` to attempt Kerberos authentication against the domain controller.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

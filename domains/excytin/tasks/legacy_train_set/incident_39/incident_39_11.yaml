@@ -1,0 +1,57 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_11
+  title: incident_39_legacy_train_set_task_11
+  description: 'During the security incident, a suspicious service was launched on the device. Can you get the SID of the
+    account associated with this suspicious service launch?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A ''Kekeo'' malware was detected on host `vnevado-win10v` with AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`,
+      and file `rubeus.exe` is associated with this alert. Since the detection might indicate that the malware was stopped
+      from delivering its payload, it is prudent to check the machine for signs of infection. Further investigation revealed
+      that multiple known public tools, which could also be used for malicious reasons, were dropped on this device to perform
+      various attack stages.'
+    question: 'During the security incident, a suspicious service was launched on the device. Can you get the SID of the account
+      associated with this suspicious service launch?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1440151660-4837038288-105596163-1120'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-1440151660-4837038288-105596163-1120'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The host `vnevado-win10v` was detected with 'Kekeo' malware.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: A process named `powershell.exe`, which is a dual-purpose tool, was dropped on the device.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: A suspicious service was launched associated with the account having SID 
+          `S-1-5-21-1440151660-4837038288-105596163-1120`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

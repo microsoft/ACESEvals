@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_166_latest_test_set_task_13
+  title: incident_166_latest_test_set_task_13
+  description: 'From which IP address did the attacker perform the suspicious inbox manipulation rule associated with the
+    compromised mailbox of user "Jordan P"?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation into a possible Business Email Compromise (BEC) targeting the user account
+      "Jordan P" (AadUserId ending with ef82), security monitoring detected suspicious activities. Specifically, alerts indicated
+      potential financial fraud attempts tied to this user. In a related alert occurring on the previous day, the attacker
+      appeared to modify that same user’s mailbox rules—an action commonly used to hide or redirect incoming emails after
+      gaining unauthorized access.'
+    question: 'From which IP address did the attacker perform the suspicious inbox manipulation rule associated with the compromised
+      mailbox of user "Jordan P"?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '255.246.85.58'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '255.246.85.58'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A potential business email compromise (BEC) fraud attempt was detected involving the account with 
+          AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Earlier, a suspicious inbox-manipulation rule was created from the IP address `255.246.85.58`, 
+          indicating possible unauthorized access.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

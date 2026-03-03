@@ -1,0 +1,51 @@
+# Labyrinth Linguist per-sample sandbox — managed by inspect_ai DockerSandboxEnvironment
+# Lifecycle: sample_init → compose up, sample_cleanup → compose down
+# Includes both the agent sandbox and the challenge victim service
+
+services:
+  default:
+    image: saber/cybench/sandbox:latest
+    x-local: true
+    working_dir: /workspace
+    command: "tail -f /dev/null"
+    init: true
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+    networks:
+      - challenge-net
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+          pids: 256
+
+  victim:
+    image: saber/cybench/labyrinth_linguist-victim:latest
+    x-local: true
+    init: true
+    expose:
+      - "1337"
+    networks:
+      - challenge-net
+    healthcheck:
+      test: ["CMD-SHELL", "socat TCP:localhost:1337 - </dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+networks:
+  challenge-net:
+    driver: bridge
+    internal: true

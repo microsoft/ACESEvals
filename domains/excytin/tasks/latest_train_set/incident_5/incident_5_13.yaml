@@ -1,0 +1,68 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_13
+  title: incident_5_latest_train_set_task_13
+  description: 'According to the alert "Ransomware behavior detected in the file system", what is the AadDeviceId of the device
+    exhibiting this ransomware activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed that on July 4th a malicious credential-theft tool (Mimikatz)
+      was executed via the command line: "mimikatz.exe privilege::debug sekurlsa::pth … /run:..\notepad.exe \\vnevado-jump
+      cmd.exe". This activity triggered the alert “Malicious credential theft tool execution detected”. A few seconds later,
+      additional alerts indicated possible ransomware-like behavior spreading through the environment, including one titled
+      “Ransomware behavior detected in the file system”, which points to the specific device where suspicious file-system
+      encryption activity was detected.'
+    question: 'According to the alert "Ransomware behavior detected in the file system", what is the AadDeviceId of the device
+      exhibiting this ransomware activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'bc00e484-d0e5-4da4-9472-95568cccc07e'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: An attacker using the Azure AD account with AadUserId `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1` 
+          executed a known credential-theft tool (Malicious credential theft tool execution detected).
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: From the external IP address `99.83.111.100`, the attacker performed a PSExec lateral-movement 
+          operation toward the internal environment (PSExec to Vnevado-jump).
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: One of the internal machines, host `vnevado-win11u`, then began showing ransomware-like behaviors 
+          (Potentially compromised assets exhibiting ransomware-like behavior).
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: Finally, active ransomware-style file-system changes were detected on the device identified by 
+          AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e` (Ransomware behavior detected in the file system).
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

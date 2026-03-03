@@ -1,0 +1,501 @@
+tasks:
+- task_id: incident_322_legacy_test_set_task_21
+  title: incident_322_legacy_test_set_task_21
+  description: During this investigation, what is the name of the Azure resource group involved in the suspicious Azure 
+    Resource Manager operation?
+  inherit_shared: true
+  initial_context:
+    incident_context: A suspicious credential dump from NTDS.dit has been detected. Attackers might be trying to obtain 
+      user's credentials stored in the domain controller. During the same multi-stage incident, it was noted that a file
+      named `ntdsutil.exe` was executed, along with another process `powershell.exe` with an encoded command. Further 
+      investigation led to a connection involving suspicious Azure Resource Manager operations originating from a proxy 
+      IP address.
+    question: During this investigation, what is the name of the Azure resource group involved in the suspicious Azure 
+      Resource Manager operation?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'ctfcat'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'ctfcat'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: There is a suspicious credential dump from NTDS.dit detected on the host `vnevado-dc`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: There is an Azure Resource Manager operation detected from a suspicious proxy IP address, and it's 
+          associated with the Resource Group `ctfcat`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_322_legacy_test_set_task_22
+  title: incident_322_legacy_test_set_task_22
+  description: What is the Resource ID associated with the Azure Resource Manager operation from the suspicious proxy IP
+    address?
+  inherit_shared: true
+  initial_context:
+    incident_context: An email containing a malicious URL (`dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io`)
+      was delivered and later removed. The recipient and mailbox address of this email were 
+      `alyssat@vnevado.alpineskihouse.co`, and it was sent from `raphaelt@vnevado.alpineskihouse.co` with the sender IP 
+      `202.205.215.225`. This incident led to a security alert involving resource management operations detected from an
+      IP address associated with proxy services, which could indicate potential malicious activities.
+    question: What is the Resource ID associated with the Azure Resource Manager operation from the suspicious proxy IP 
+      address?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '/subscriptions/7e838342-601f-4552-9baf-0dfb300cf555/resourcegroups/ctfcat/providers/microsoft.devtestlab/schedules/shutdown-computevm-vnevado-dc'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '/subscriptions/7e838342-601f-4552-9baf-0dfb300cf555/resourcegroups/ctfcat/providers/microsoft.devtestlab/schedules/shutdown-computevm-vnevado-dc'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The email account `Hailey Johnson@vnevado.alpineskihouse.co` received an email with a malicious URL
+          which was later removed.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: There was an Azure Resource Manager operation from a suspicious proxy IP address related to the 
+          resource with ResourceId 
+          `/subscriptions/7e838342-601f-4552-9baf-0dfb300cf555/resourcegroups/ctfcat/providers/microsoft.devtestlab/schedules/shutdown-computevm-vnevado-dc`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_322_legacy_test_set_task_23
+  title: incident_322_legacy_test_set_task_23
+  description: What was the email address of the user who accessed a link in an email that was later quarantined by ZAP?
+  inherit_shared: true
+  initial_context:
+    incident_context: During a recent multi-stage security incident, a malicious URL was clicked on a device identified 
+      as `vnevado-win11h` (IP `172.33.118.200`). The process involved was `msedge.exe` (Process ID `4256`).
+    question: What was the email address of the user who accessed a link in an email that was later quarantined by ZAP?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Hailey Johnson@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Hailey Johnson@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The user with AadUserId `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360` clicked on a malicious URL on their 
+          device.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The user with email `Hailey Johnson@vnevado.alpineskihouse.co` accessed a link in an email that was
+          later quarantined by zero-hour auto purge (ZAP).
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_322_legacy_test_set_task_24
+  title: incident_322_legacy_test_set_task_24
+  description: Can you identify the recipient who received a potentially malicious email and clicked on the link?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident involving multiple malicious URL clicks on various devices was reported, with 
+      specific focus on the connection from the IP address `231.60.52.209` on the host 
+      `vnevado-win11h.vnevado.alpineskihouse.co` to the URL `login.micro.demo.antoinetest.ovh` as seen in the proxy 
+      logs. There were also email messages containing malicious URLs that were removed after delivery.
+    question: Can you identify the recipient who received a potentially malicious email and clicked on the link?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'alyssat@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'alyssat@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.125
+        weight: 1.0
+        title: Checkpoint 1
+        description: The host `vnevado-win11h` made a connection to a malicious URL `login.micro.demo.antoinetest.ovh` 
+          from the IP `231.60.52.209`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.125
+        weight: 1.0
+        title: Checkpoint 2
+        description: The user with AadUserId `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360` clicked on a malicious URL on the 
+          device.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.125
+        weight: 1.0
+        title: Checkpoint 3
+        description: The email account `alyssat@vnevado.alpineskihouse.co` received an email with a malicious URL that 
+          was subsequently removed.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.125
+        weight: 1.0
+        title: Checkpoint 4
+        description: The email account `alyssat@vnevado.alpineskihouse.co` clicked on a potentially malicious URL.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4
+- task_id: incident_322_legacy_test_set_task_25
+  title: incident_322_legacy_test_set_task_25
+  description: In relation to a malicious URL that was clicked later on the same device, can you identify the other IP 
+    address that was recorded in the incident?
+  inherit_shared: true
+  initial_context:
+    incident_context: On 2024-08-01, a security incident was observed that involved suspicious Azure Resource Management
+      (ARM) activities performed by a user who signed in to a risky session. This alert was also linked to a reported IP
+      address `253.1.244.215`.
+    question: In relation to a malicious URL that was clicked later on the same device, can you identify the other IP 
+      address that was recorded in the incident?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '172.33.118.200'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '172.33.118.200'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: There are suspicious Azure Resource Management activities by a risky user with SID 
+          `S-1-5-21-1840151686-3534835288-156286563-1127`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious URL was clicked on a device with IP address `172.33.118.200`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_322_legacy_test_set_task_26
+  title: incident_322_legacy_test_set_task_26
+  description: Can you identify the URL that was detected in the proxy logs related to this incident?
+  inherit_shared: true
+  initial_context:
+    incident_context: During the investigation of a security incident involving a user who accessed a link in an email 
+      subsequently quarantined by zero-hour auto purge (ZAP), it was noted that the user, Hailey Johnson, clicked on a 
+      malicious URL `https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/` on 2024-08-01 
+      12:54:55.663380+00:00.
+    question: Can you identify the URL that was detected in the proxy logs related to this incident?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'login.micro.demo.antoinetest.ovh'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'login.micro.demo.antoinetest.ovh'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: User `Hailey Johnson@vnevado.alpineskihouse.co` accessed a link in an email that was later 
+          quarantined by zero-hour auto purge (ZAP).
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious URL was clicked on the device with hostname `vnevado-win11h`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: The malicious URL `login.micro.demo.antoinetest.ovh` was detected in proxy logs from IP address 
+          `231.60.52.209` to the device `vnevado-win11h.vnevado.alpineskihouse.co`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+- task_id: incident_322_legacy_test_set_task_27
+  title: incident_322_legacy_test_set_task_27
+  description: What is the Resource ID associated with the suspicious Azure Resource Manager operation from the proxy IP
+    address?
+  inherit_shared: true
+  initial_context:
+    incident_context: On August 1st, 2024, at 13:49 UTC, a malicious URL 
+      `https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/` was clicked on the device `vnevado-win11h`, 
+      associated with the IP address `172.33.118.200`, which initiated a process `msedge.exe`.
+    question: What is the Resource ID associated with the suspicious Azure Resource Manager operation from the proxy IP 
+      address?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '/subscriptions/7e838342-601f-4552-9baf-0dfb300cf555/resourcegroups/ctfcat/providers/microsoft.devtestlab/schedules/shutdown-computevm-vnevado-dc'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '/subscriptions/7e838342-601f-4552-9baf-0dfb300cf555/resourcegroups/ctfcat/providers/microsoft.devtestlab/schedules/shutdown-computevm-vnevado-dc'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The email account `Hailey Johnson@vnevado.alpineskihouse.co` clicked on a malicious URL.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: There was an Azure Resource Manager operation from a suspicious proxy IP address involving the 
+          resource with ResourceId 
+          `/subscriptions/7e838342-601f-4552-9baf-0dfb300cf555/resourcegroups/ctfcat/providers/microsoft.devtestlab/schedules/shutdown-computevm-vnevado-dc`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_322_legacy_test_set_task_28
+  title: incident_322_legacy_test_set_task_28
+  description: What is the IP address of the host that connected to the malicious URL as indicated in the proxy logs?
+  inherit_shared: true
+  initial_context:
+    incident_context: As part of a recent security investigation, there was a connection from the host 
+      `vnevado-win11h.vnevado.alpineskihouse.co` to the URL `login.micro.demo.antoinetest.ovh` which was detected in 
+      proxy logs. The IP address associated with this connection was `228.3.31.94`.
+    question: What is the IP address of the host that connected to the malicious URL as indicated in the proxy logs?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '231.60.52.209'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '231.60.52.209'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was a connection from IP address `231.60.52.209` to the URL 
+          `login.micro.demo.antoinetest.ovh`, which was detected as malicious in proxy logs.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+- task_id: incident_322_legacy_test_set_task_29
+  title: incident_322_legacy_test_set_task_29
+  description: As part of the same incident, a user clicked on a malicious URL. Can you provide the malicious URL?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident was detected involving a suspicious Azure Resource Manager operation from an 
+      IP address associated with proxy services, such as TOR. This activity may indicate a threat actor attempting to 
+      hide their source IP. The operation in question was performed on the host `vnevado-dc` with Subscription ID 
+      `7e838342-601f-4552-9baf-0dfb300cf555`, Resource Group `ctfcat`, and several Resource IDs related to the virtual 
+      machine and network interfaces. The proxy IP address in question is `253.1.244.215`.
+    question: As part of the same incident, a user clicked on a malicious URL. Can you provide the malicious URL?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was an Azure Resource Manager operation detected from a suspicious proxy IP address 
+          associated with the email account `Hailey Johnson@vnevado.alpineskihouse.co`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious URL `https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/` was clicked 
+          on a device.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_322_legacy_test_set_task_30
+  title: incident_322_legacy_test_set_task_30
+  description: A potentially malicious URL click was detected during this incident. Can you identify the recipient of 
+    the email that contained the malicious URL?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident involving Azure Resource Manager operations from a suspicious proxy IP address
+      was detected by Microsoft Defender for Resource Manager. This incident involves a host, identified as 
+      `vnevado-dc`, which is part of the resource group `ctfcat` under subscription 
+      `7e838342-601f-4552-9baf-0dfb300cf555`. An IP address `253.1.244.215` was flagged for a suspicious Azure Resource 
+      Manager operation. Additionally, email messages containing malicious URLs were delivered and later removed, 
+      indicating possible malicious activity.
+    question: A potentially malicious URL click was detected during this incident. Can you identify the recipient of the
+      email that contained the malicious URL?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'alyssat@vnevado.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'alyssat@vnevado.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was a suspicious Azure Resource Manager operation from a proxy IP address associated with an 
+          account having AadUserId `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 2
+        description: The email account `alyssat@vnevado.alpineskihouse.co` received an email with a malicious URL that 
+          was later removed.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.167
+        weight: 1.0
+        title: Checkpoint 3
+        description: The user of the email account `alyssat@vnevado.alpineskihouse.co` clicked on the malicious URL.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

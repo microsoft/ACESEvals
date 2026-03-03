@@ -1,0 +1,72 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_55
+  title: incident_55_latest_train_set_task_55
+  description: 'Which host is reported to have read the AD FS DKM key in the final alert of this incident?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A recent security incident began when the executable "iy2orr1e.rrg.exe" was run with a hidden, base-64–encoded
+      PowerShell command, triggering the alert "Attempt to hide use of dual-purpose tool". Subsequent activity in the same
+      incident included a suspected DCSync attempt followed shortly by an alert that an Active Directory Federation Services
+      (AD FS) Data Protection (DKM) key had been read—an action that could allow attackers to decrypt sensitive AD FS tokens.'
+    question: 'Which host is reported to have read the AD FS DKM key in the final alert of this incident?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'MB-DC1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'MB-DC1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Process entity: ExtractedFileName `powershell.exe` was launched on 2024-07-04 22:35:01, showing a renamed
+          system executable execution.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Account entity: Sid `S-1-5-21-551436448-9871687716-9837441745-1903` executed a suspicious LDAP query
+          two seconds later, indicating directory reconnaissance.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Host entity: HostName `mb-adfs` attempted to hide the use of a dual-purpose tool on 2024-07-06 00:09:58,
+          suggesting preparation for further activity.'
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 4
+        description: 'Host entity: HostName `MB-DC1` received a DCSync replication request on 2024-07-10 11:24:45, pointing
+          to an attempt to steal directory data.'
+      checkpoint_5:
+        target: trajectory
+        max_score: 0.2
+        weight: 1.0
+        title: Checkpoint 5
+        description: 'Host entity: HostName `MB-DC1` also performed an AD FS DKM key read at the same timestamp, confirming
+          `MB-DC1` as the final targeted asset in this attack chain.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4
+        - checkpoint_5

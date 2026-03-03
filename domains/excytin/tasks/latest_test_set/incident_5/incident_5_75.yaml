@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_75
+  title: incident_5_latest_test_set_task_75
+  description: 'According to the alert titled “Possible compromised user account delivering ransomware-related files,” what
+    is the SID of the user account suspected of spreading the ransomware?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During triage we noted that the host with IP address 107.224.99.179 ran several instances of “mimikatz.exe”
+      (e.g., PID 3008 at 2024-06-20 09:03:30 Z) after modifying LSASS memory. Shortly afterwards, a PSExec session was launched
+      toward the jump server “vnevado-jump,” indicating lateral movement activity that likely originated from the same source.'
+    question: 'According to the alert titled “Possible compromised user account delivering ransomware-related files,” what
+      is the SID of the user account suspected of spreading the ransomware?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-0-6-5'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-0-6-5'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'At 2024-07-04 22:35:01.998483+00:00, the attacker used the account with Name `tgs2z` (entity: account.Name)
+          to modify the LSASS process memory, indicating an attempt to bypass security checks.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'On 2024-07-10 11:24:45.260113+00:00, the attacker leveraged PSExec from the source IP address `99.83.111.100`
+          (entity: ip.Address) to laterally move to the jump server `Vnevado-jump`.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Earlier, at 2024-07-04 22:35:01.491898+00:00, a compromised user account with SID `S-0-6-5` (entity:
+          account.Sid) was observed depositing ransomware-related files across multiple devices, confirming the account’s
+          malicious use.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

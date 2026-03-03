@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_50
+  title: incident_5_latest_test_set_task_50
+  description: 'According to the correlated alert about the credential-theft tool execution, which IP address was associated
+    with that malicious activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-10 we observed lateral movement activity: a PSExec session targeting the Vnevado jump server.
+      The connection involved the user account tgs2z@vnevado.alpineskihouse.co, the executable notepad.exe, and source IPs
+      99.83.111.100 and 141.216.110.153. Pivoting from this alert, telemetry links the same investigation chain to an earlier
+      alert titled “Malicious credential theft tool execution detected,” suggesting the attacker may have staged credential-dumping
+      activity before attempting to reach the jump server.'
+    question: 'According to the correlated alert about the credential-theft tool execution, which IP address was associated
+      with that malicious activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '107.224.99.179'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Lateral movement was performed via PSExec to the jump server with HostName `vnevado-win10v`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A known credential-theft tool was executed from the external IP Address `107.224.99.179`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

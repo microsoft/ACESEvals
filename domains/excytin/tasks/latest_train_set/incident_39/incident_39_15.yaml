@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_15
+  title: incident_39_latest_train_set_task_15
+  description: 'According to the "Suspicious service launched" alert that occurred just prior to the LSASS access, which user
+    account was responsible for starting the suspicious service on host vnevado-win10v?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a credential-theft scenario, we observed a "Suspicious access to LSASS
+      service" alert on host vnevado-win10v. The alert involved tools such as mimikatz.exe attempting to interact with lsass.exe,
+      presumably to extract credentials for lateral movement. Shortly before this LSASS access was detected, another alert
+      flagged that a potentially malicious service had been launched on the same device. Identifying the user behind that
+      service start is critical to understand the scope of the compromise.'
+    question: 'According to the "Suspicious service launched" alert that occurred just prior to the LSASS access, which user
+      account was responsible for starting the suspicious service on host vnevado-win10v?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'lucasb'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Step 1 – account.Name: lucasb started a suspicious service at 2024-07-04 22:35:00.511266+00:00, indicating
+          possible persistence or privilege-escalation activity.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Step 2 – process.ExtractedFileName: powershell.exe was then launched (2024-07-04 22:35:03.532131+00:00)
+          and accessed LSASS memory, suggesting an attempt to harvest credentials after the service start.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

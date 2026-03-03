@@ -1,0 +1,44 @@
+tasks:
+- task_id: incident_134_latest_train_set_task_3
+  title: incident_134_latest_train_set_task_3
+  description: 'According to the investigation data, what is the primary email address of the mailbox that received the suspicious
+    messages sent from raphaelt@vnevado.alpineskihouse.co?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an ongoing Business Email Compromise (BEC) investigation, an alert titled "Suspicious emails
+      sent by BEC-related user" was raised on 2024-07-17. The alert indicates that the account raphaelt@vnevado.alpineskihouse.co
+      sent a series of suspicious messages from the external IP address 237.7.81.122 to at least one internal recipient. Security
+      teams are now trying to understand which mailbox may have been targeted so they can perform a deeper investigation and
+      apply additional protections.'
+    question: 'According to the investigation data, what is the primary email address of the mailbox that received the suspicious
+      messages sent from raphaelt@vnevado.alpineskihouse.co?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'nathan@avoriaz.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'nathan@avoriaz.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 1.0
+        weight: 1.0
+        title: Checkpoint 1
+        description: At 2024-07-17 11:55:04.449509+00:00, the alert 'Suspicious emails sent by BEC-related user' was 
+          triggered for mailbox field MailboxPrimaryAddress with value `nathan@avoriaz.alpineskihouse.co`, indicating 
+          that this user account may be compromised and involved in a business email compromise attempt.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1

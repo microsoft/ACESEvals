@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_38_latest_test_set_task_1
+  title: incident_38_latest_test_set_task_1
+  description: 'In the earlier "Suspicious process injection observed" alert that occurred just before the PowerShell execution,
+    which external IP address is listed as being contacted?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During analysis of a suspicious process-injection incident, we noted that a process named "powershell.exe"
+      (PID 4656) was started with a long base-64-encoded command at 2024-06-26T15:49:41Z. This activity is part of a series
+      of "Suspicious process injection observed" alerts that suggest the injected code might be reaching out to an external
+      host.'
+    question: 'In the earlier "Suspicious process injection observed" alert that occurred just before the PowerShell execution,
+      which external IP address is listed as being contacted?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '72.5.72.208'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '72.5.72.208'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Alert at 2024-07-04 22:35:01.343148+00:00 shows a suspicious process injection tied to user account
+          with AadUserId `12185914-91dd-4fb9-94f9-3252203b0426`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Just moments earlier, at 2024-07-04 22:35:00.869748+00:00, a related suspicious process injection 
+          was observed communicating with IP Address `72.5.72.208`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_12
+  title: incident_5_latest_test_set_task_12
+  description: 'According to the ''PsExec launched a command on a remote device'' alert, what is the Process ID (PID) of the
+    command that was executed remotely?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a ''Malicious credential theft tool execution detected'' alert, security
+      telemetry shows that "mimikatz.exe" was executed twice within seconds, indicating an attempt to dump credentials. Immediately
+      before or after this activity, another alert titled ''PsExec launched a command on a remote device'' was generated,
+      suggesting the attacker tried to move laterally by launching a command on a remote host using PsExec. Details of the
+      exact command executed via PsExec were not displayed in the initial report.'
+    question: 'According to the ''PsExec launched a command on a remote device'' alert, what is the Process ID (PID) of the
+      command that was executed remotely?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '8656'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '8656'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Malicious credential theft tool execution was detected from account with AadUserId 
+          `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: PsExec remotely launched `cmd.exe` with ProcessId `8656` at CreatedTimeUtc 
+          `2024-06-20t09:07:09.5458894z`, indicating potential lateral movement.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

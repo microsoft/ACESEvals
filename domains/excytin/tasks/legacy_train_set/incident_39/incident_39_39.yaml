@@ -1,0 +1,64 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_39
+  title: incident_39_legacy_train_set_task_39
+  description: 'What was the process and its details that were dropped and launched from a remote session as observed in the
+    final alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A sequence of alerts indicating potential human-operated malicious activity were observed on the device
+      `vnevado-win10v`. Initially, a known credential theft tool `mimikatz.exe` was executed, followed by the possible use
+      of the Rubeus kerberoasting tool. Lastly, a remote session dropped and launched a file, which might suggest an attacker
+      or malware attempting lateral movement or propagation.'
+    question: 'What was the process and its details that were dropped and launched from a remote session as observed in the
+      final alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process ID and Command Line: `7668__2024-06-27t14:34:10.0201983z__psexesvc.exe`'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process ID and Command Line: `7668__2024-06-27t14:34:10.0201983z__psexesvc.exe`'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A known credential theft tool was executed by the account named `tgs2z`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The tool `rubeus.exe`, which can perform kerberoasting and pass-the-ticket attacks, was detected.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: There was potential human-operated malicious activity originating from IP address 
+          `141.216.110.153`.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: A remote session dropped and executed the process `psexesvc.exe` with Process ID `7668` at 
+          `2024-06-27t14:34:10.0201983z`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

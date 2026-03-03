@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_322_latest_train_set_task_8
+  title: incident_322_latest_train_set_task_8
+  description: 'In the alert where Ntdsutil was used to collect Active Directory information, what was the Process ID of the
+    PowerShell process that executed the encoded command?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'Defender has raised an alert for suspicious Azure Resource Management (ARM) activity performed by the
+      risky user account "Hailey Johnson" (email: Hailey Johnson@vnevado.alpineskihouse.co) coming from IP address 253.1.244.215.
+      While investigating this cloud-based activity, we also found an earlier endpoint alert indicating that Active Directory
+      information was being collected with Ntdsutil. That alert shows a PowerShell executable launching an encoded command,
+      which is commonly used by attackers to hide their intent.'
+    question: 'In the alert where Ntdsutil was used to collect Active Directory information, what was the Process ID of the
+      PowerShell process that executed the encoded command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '2556'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '2556'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: A process with ProcessId__CreatedTimeUtc__CommandLine 
+          `2556__2024-08-01t12:37:29.6522416z__"powershell.exe" -encodedcommand ...` was executed, indicating an attempt
+          to collect Active Directory information with Ntdsutil.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: That process was observed on the host whose HostName is `vnevado-dc`, which was later involved in 
+          Azure Resource Manager actions coming from proxy infrastructure.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Subsequently, risky Azure Resource Management activity was detected from the proxy IP Address 
+          `253.1.244.215`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

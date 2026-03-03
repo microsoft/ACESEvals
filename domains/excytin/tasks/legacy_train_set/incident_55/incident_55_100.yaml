@@ -1,0 +1,62 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_100
+  title: incident_55_legacy_train_set_task_100
+  description: 'A process involved in earlier malicious activity used Task Scheduler to run a task. Can you identify the process
+    ID and the created timestamp of this activity along with the command line used?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a security incident involving unusual addition of credentials to an OAuth
+      application by Luciano Herrera (`Luciano Herrera@niseko.alpineskihouse.co`), multiple malicious activities were identified.
+      The user added a credential of type Password to the app SimulandApp. This pattern can indicate credential compromise
+      and potential abuse of the OAuth app. Subsequently, a suspicious LDAP query was executed indicating potential reconnaissance
+      activity.'
+    question: 'A process involved in earlier malicious activity used Task Scheduler to run a task. Can you identify the process
+      ID and the created timestamp of this activity along with the command line used?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process Id: 6892, Created Time UTC: 2024-07-02t09:48:23.6453903, Command Line: "schtasks.exe" /run /tn run-exportadfstokensignincert.2024-07-02_09_48_23'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process Id: 6892, Created Time UTC: 2024-07-02t09:48:23.6453903, Command Line: "schtasks.exe" /run
+          /tn run-exportadfstokensignincert.2024-07-02_09_48_23'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: User Luciano Herrera (pwilson@niseko.alpineskihouse.co) with AadUserId 
+          `2de70991-2799-4a95-b734-8e3df3a50118` performed an unusual addition of credentials to the application 
+          SimulandApp, which may indicate a compromise.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: A suspect LDAP query was executed using `powershell.exe`, indicating potential reconnaissance 
+          activity.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: There was a suspicious Task Scheduler activity where a process used `schtasks.exe` with the command
+          line `schtasks.exe /run /tn run-exportadfstokensignincert.2024-07-02_09_48_23` at 
+          `2024-07-02T09:48:23.6453903Z` with Process ID `6892`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

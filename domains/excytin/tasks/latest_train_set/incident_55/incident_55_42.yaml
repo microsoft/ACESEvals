@@ -1,0 +1,61 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_42
+  title: incident_55_latest_train_set_task_42
+  description: 'Six days after the Task Scheduler activity on host "mb-adfs", the same device generated a new alert when a
+    user clicked a malicious link. What is the exact URL that was clicked and identified as malicious on 2024-07-10 at 11:24:45
+    UTC?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation we observed that, on 2024-07-04, the server "mb-adfs" executed several suspicious
+      commands: a PowerShell script (process ID 6808) ran with an encoded command, followed seconds later by the creation
+      and immediate execution of a scheduled task via "schtasks.exe" (process IDs 4304 and 6892). This activity was flagged
+      in an alert titled "Suspicious Task Scheduler activity," indicating a possible attempt to establish persistence.'
+    question: 'Six days after the Task Scheduler activity on host "mb-adfs", the same device generated a new alert when a
+      user clicked a malicious link. What is the exact URL that was clicked and identified as malicious on 2024-07-10 at 11:24:45
+      UTC?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: A process with ExtractedFileName `powershell.exe` was used via Task Scheduler, indicating an 
+          attempt to establish persistence.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: On the host identified by AadDeviceId `7661dfd4-218f-4016-8a87-66d68a7f098e`, a process accessed 
+          LSASS memory, potentially harvesting credentials.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: A user on the same device clicked the malicious Url 
+          `https://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`, confirming further compromise 
+          activity.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

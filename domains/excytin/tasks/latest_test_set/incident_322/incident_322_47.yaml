@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_322_latest_test_set_task_47
+  title: incident_322_latest_test_set_task_47
+  description: 'According to the alert about the suspicious Azure Resource Manager operation, what is the unique identifier
+    (Subscription ID) of the affected Azure subscription?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During our investigation we noted that a user on host "vnevado-win11h" (device ID 76707c40-3343-490e-9205-88fdb51aefe0,
+      IP 172.33.118.200) executed the process "msedge.exe" which accessed the malicious site https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/.
+      This activity triggered the alert "Malicious URL was clicked on that device" at 2024-08-01 13:49 UTC. Pivoting from
+      this activity through the associated Azure AD user, we identified a related alert titled "Azure Resource Manager operation
+      from suspicious proxy IP address" that points to actions performed against one of our Azure subscriptions.'
+    question: 'According to the alert about the suspicious Azure Resource Manager operation, what is the unique identifier
+      (Subscription ID) of the affected Azure subscription?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '7e838342-601f-4552-9baf-0dfb300cf555'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '7e838342-601f-4552-9baf-0dfb300cf555'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A user with AadUserId `5e5dd0bd-f7ed-4583-8e9e-52f91e31a360` clicked a malicious URL on 2024-08-01 
+          13:49:58.880422+00:00.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A suspicious Azure Resource Manager operation was performed on subscription 
+          `7e838342-601f-4552-9baf-0dfb300cf555` on 2024-08-01 13:09:13.222398+00:00.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,57 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_39
+  title: incident_39_latest_test_set_task_39
+  description: 'According to the linked alert about a deceptive user account sign-in attempt, what is the username of the
+    suspicious account that tried to sign in?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a SID history injection on host "vnevado-dc", the account "lucasb" launched
+      a PowerShell command that attempted to stop the NTDS service, manipulate SID history, and restart the service. This
+      activity triggered the "SID history injection" alert. The same chain of activity is linked to a later alert that reports
+      a deceptive user account sign-in attempt, indicating the attacker may be trying to use a fake account for further access.'
+    question: 'According to the linked alert about a deceptive user account sign-in attempt, what is the username of the suspicious
+      account that tried to sign in?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'kyleg'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'kyleg'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: First, there was a sign-in attempt with a deceptive user account, field Name=`kyleg`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Immediately after, a new suspicious account was created, field 
+          Sid=`S-5-7-21-1843151660-3234030288-105586167-1422`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Finally, the attacker ran the process, field ExtractedFileName=`net.exe`, to perform a SID-history 
+          injection and gain elevated privileges.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

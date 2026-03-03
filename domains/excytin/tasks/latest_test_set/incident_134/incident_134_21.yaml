@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_134_latest_test_set_task_21
+  title: incident_134_latest_test_set_task_21
+  description: 'According to the "Malicious IP address" alert generated during this incident, what is the Azure AD user (AadUserId)
+    associated with the sign-in from the known malicious IP?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'Security monitoring detected that the user account "Nina Park" (email: Nina Park@vnevado.alpineskihouse.co,
+      SID: S-1-5-21-1874151667-3554330288-105586563-1715) was likely compromised following a password-spray attack. The alert
+      indicates the attacker signed in from an unusual location and browser, and the sign-in originated from an IP address
+      later reported as malicious. A separate alert titled "Malicious IP address" was raised for the same timeframe, linking
+      that suspicious IP to the affected account.'
+    question: 'According to the "Malicious IP address" alert generated during this incident, what is the Azure AD user (AadUserId)
+      associated with the sign-in from the known malicious IP?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'e036dee7-fa23-42ef-a019-468c8d3401f1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'e036dee7-fa23-42ef-a019-468c8d3401f1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'During a password-spray attack, a sign-in originated from the suspicious IP address (Address: 170.54.121.63).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Subsequently, the user account (AadUserId: e036dee7-fa23-42ef-a019-468c8d3401f1) was identified in a
+          ‘Malicious IP address’ alert, indicating that this account was accessed from a known-malicious source.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

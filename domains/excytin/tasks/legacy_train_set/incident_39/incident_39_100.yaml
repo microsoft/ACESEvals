@@ -1,0 +1,65 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_100
+  title: incident_39_legacy_train_set_task_100
+  description: 'Can you identify the Azure Active Directory (AAD) User ID associated with the malicious credential theft tool
+    execution?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A security incident involves a remote session where a file `psexesvc.exe` was dropped and executed,
+      indicating an attempt to move laterally or propagate malware. During the incident, Activity indicating the use of the
+      Rubeus tool was observed, which can perform kerberoasting and other attack techniques utilizing Kerberos authentication.
+      PsExec was also used to launch a command on a remote device, potentially to move laterally.'
+    question: 'Can you identify the Azure Active Directory (AAD) User ID associated with the malicious credential theft tool
+      execution?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A remote session dropped and launched the file `psexesvc.exe` with Process ID `5512` at 
+          `2024-06-27t14:33:27.3525354z`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The Rubeus tool activity indicated kerberoasting attempts involving the file `adminticket.txt`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: PsExec launched a command on a remote device by an account with AadUserId 
+          `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: A malicious credential theft tool was executed by the same account with AadUserId 
+          `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

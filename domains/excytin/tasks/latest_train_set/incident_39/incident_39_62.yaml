@@ -1,0 +1,52 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_62
+  title: incident_39_latest_train_set_task_62
+  description: 'According to that earlier alert (time 2024-07-04 22:35:00 UTC), which user account was specified in the mimikatz
+    command line (i.e., the value passed to the /user: parameter)?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the incident triage we saw a mimikatz execution on a host (hostname currently unknown) at 2024-06-27
+      14:32:37 UTC. The process (PID 6880) was launched with the command line: "mimikatz.exe" privilege::debug "sekurlsa::pth
+      /user:fk8mq /ntlm:96def1a633fc6790124d5f8fe21cc72b /domain:vnevado.alpineskihouse.co /run:\"powershell.exe dir \\vnevado-win10b\c$\""
+      exit This command tries a pass-the-hash attack for user “fk8mq”. A few seconds earlier another alert of the same type
+      was raised from the same host, indicating a separate mimikatz invocation.'
+    question: 'According to that earlier alert (time 2024-07-04 22:35:00 UTC), which user account was specified in the mimikatz
+      command line (i.e., the value passed to the /user: parameter)?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'kyleg'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'kyleg'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'A malicious credential-theft tool was detected on the host (Field: HostName, Value: `vnevado-win10v`).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Within that incident, a process was executed (Field: ProcessId__CreatedTimeUtc__CommandLine, Value:
+          `4112__2024-06-27t14:32:36.6706405z__"mimikatz.exe" privilege::debug "sekurlsa::pth /user:kyleg /ntlm:96def1a633fc6790124d5f8fe31cc72b
+          /domain:vnevado.alpineskihouse.co /run:\"powershell.exe dir \\vnevado-win10b\c$\"" exit`), indicating the use of
+          Mimikatz for credential theft.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

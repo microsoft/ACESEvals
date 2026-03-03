@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_34_latest_test_set_task_82
+  title: incident_34_latest_test_set_task_82
+  description: 'According to the alert about the suspicious PowerShell download or encoded command execution, what is the
+    SID of the account that ran the PowerShell process?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During our investigation we observed that the attacker used the binary "schtasks.exe" to create a one-time
+      task named "yrei" that launches the backdoor "winatp-intro-backdoor.exe" from the user SamuelF’s OneDrive folder. Just
+      a few seconds later, a related alert reported that PowerShell was invoked to download a payload or run an encoded command
+      – an activity commonly used by attackers to execute code in memory and avoid leaving artifacts on disk.'
+    question: 'According to the alert about the suspicious PowerShell download or encoded command execution, what is the SID
+      of the account that ran the PowerShell process?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1870156660-7534030218-135086563-1193'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-1870156660-7534030218-135086563-1193'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: An anomalous scheduled task was created that launched the process with ExtractedFileName 
+          `powershell.exe`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Moments later, PowerShell was used to download or run an encoded command by the account whose Sid 
+          is `S-1-5-21-1870156660-7534030218-135086563-1193`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

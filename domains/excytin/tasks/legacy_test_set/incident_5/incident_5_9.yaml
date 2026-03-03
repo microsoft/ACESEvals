@@ -1,0 +1,482 @@
+tasks:
+- task_id: incident_5_legacy_test_set_task_81
+  title: incident_5_legacy_test_set_task_81
+  description: Which device was the ransomware payload remotely launched on as indicated by the end alert?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident involving a possible compromised user account was reported. The user account 
+      was observed dropping a ransomware-related file on several devices, including a file named `get-userprttoken.ps1` 
+      on the host `vnevado-win11t`. The compromised account is suspected to spread laterally across the network, 
+      delivering ransomware-related files. Automated actions might be taken to disable the compromised account.
+    question: Which device was the ransomware payload remotely launched on as indicated by the end alert?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win11u'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vnevado-win11u'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A user account `dp5hn` appears to have been compromised and was observed dropping 
+          ransomware-related files on several devices.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A ransomware payload was remotely launched on the device with the host name `vnevado-win11u`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_82
+  title: incident_5_legacy_test_set_task_82
+  description: What is the file name of the process involved in the suspicious WMI process creation observed on the 
+    machine after the attempt to access PRT?
+  inherit_shared: true
+  initial_context:
+    incident_context: A recent security alert flagged a possible attempt to access Primary Refresh Token (PRT) on host 
+      `vnevado-win10r`, where the process `browsercore.exe` was involved. This scenario is often associated with 
+      attackers trying to move laterally within the organization or perform credential theft as PRT is a key artifact of
+      Azure AD authentication.
+    question: What is the file name of the process involved in the suspicious WMI process creation observed on the 
+      machine after the attempt to access PRT?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vssblatemp.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vssblatemp.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was a detected attempt to access the Primary Refresh Token (PRT) associated with the Azure AD
+          user with AadUserId `731adb71-b11c-4bbf-850b-57989b350e96`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A suspicious WMI process `vssblatemp.exe` was created on the machine, indicating potential malware 
+          activity.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_83
+  title: incident_5_legacy_test_set_task_83
+  description: During the system recovery setting tampering, what process and command line was used to disable automatic
+    Windows recovery features?
+  inherit_shared: true
+  initial_context:
+    incident_context: As part of a Ransomware infection observed in our organization, file backups were deleted via WMI 
+      or VSSAdmin on the host `vnevado-win10r`. The process involved was identified with 
+      ProcessId__CreatedTimeUtc__CommandLine `7236__2024-06-20t09:10:51.2193152z__vssblatemp.exe delete shadows /all`. 
+      Further investigation identified that system recovery setting tampering was observed on the same host, where 
+      adversaries might be attempting to delete or remove built-in operating systems data and turn off recovery services
+      to prevent recovering a corrupted system. This may deny access to available backups and recovery options.
+    question: During the system recovery setting tampering, what process and command line was used to disable automatic 
+      Windows recovery features?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process Id: 4828, Command Line: `bcdedit /set recoveryenabled no`'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process Id: 4828, Command Line: `bcdedit /set recoveryenabled no`'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: An attack was detected where file backups were deleted via `vssblatemp.exe`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: System recovery settings were tampered with using the process `bcdedit.exe` which was launched with
+          the command line `bcdedit /set recoveryenabled no` at `2024-06-20t09:31:59.6743318z` with Process ID `4828`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_84
+  title: incident_5_legacy_test_set_task_84
+  description: What command line and process ID were used for the tampering of system recovery settings observed 
+    earlier?
+  inherit_shared: true
+  initial_context:
+    incident_context: A suspicious remote activity was observed on a machine named `vnevado-win10s`. This alert flagged 
+      potentially malicious activities such as modifying files, passing WMI commands, and creating scheduled tasks from 
+      a remote machine. One of the processes involved had the ExtractedFileName `get-userprttoken.ps1`. The 
+      ProcessId__CreatedTimeUtc__CommandLine for this process was `6168__2024-06-20t09:10:53.0701359z__powershell -file 
+      c:\scripts\get-userprttoken.ps1`.
+    question: What command line and process ID were used for the tampering of system recovery settings observed earlier?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process Id: 1900, Command Line: vssblatemp.exe delete shadows /all'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process Id: 1900, Command Line: vssblatemp.exe delete shadows /all'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was suspicious remote activity initiated on the machine with the process `vssblatemp.exe` 
+          detected at `2024-07-04 22:35:03.258229+00:00`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: System recovery setting tampering was observed using the process `vssblatemp.exe` deleting all 
+          volume shadow copies with Process ID `1900` at `2024-06-20t09:32:02.4640548z`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_85
+  title: incident_5_legacy_test_set_task_85
+  description: In a related alert, there is evidence of system recovery settings being tampered with on the same device.
+    Can you determine the command line used to delete all volume shadow copies on this system?
+  inherit_shared: true
+  initial_context:
+    incident_context: A recent security incident indicates a tampering of system recovery settings on device 
+      `vnevado-win11t`. Adversaries might have attempted to delete or remove built-in operating system data and turn off
+      recovery services. The command lines used by adversaries to disable or delete system recovery features include 
+      using `vssblatemp.exe` to delete all volume shadow copies.
+    question: In a related alert, there is evidence of system recovery settings being tampered with on the same device. 
+      Can you determine the command line used to delete all volume shadow copies on this system?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vssblatemp.exe delete shadows /all'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vssblatemp.exe delete shadows /all'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A user with the SID `S-1-5-21-1840191660-8534830288-125585561-1522` exhibited suspicious behavior 
+          on their device indicating potential compromise.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: System recovery settings on the same device were tampered with, suggesting an attempt to disable 
+          recovery features. This action was performed by a process with Process ID `1900` at 
+          `2024-06-20t09:32:02.4640548z` using the command line `vssblatemp.exe delete shadows /all`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_86
+  title: incident_5_legacy_test_set_task_86
+  description: What is the URL associated with the activity from Manatee Tempest?
+  inherit_shared: true
+  initial_context:
+    incident_context: A suspicious and anomalous behavior was observed involving a user on device `vnevado-win11t`. This
+      behavior suggested a potential compromise and a series of unusual activities might indicate that this device is 
+      involved in a possible human-operated attack by an advanced threat actor. During this investigation, an alert 
+      indicating activity from a Russia-based cybercriminal group, Manatee Tempest, was raised. Manatee Tempest is known
+      for their partnership with Mustard Tempest, and they use techniques like drive-by download, malvertising, and 
+      FakeUpdates to gain initial access. They proceed with BLISTER loader to deliver Cobalt Strike for lateral movement
+      and ransomware deployment, often using domain fronting for command-and-control.
+    question: What is the URL associated with the activity from Manatee Tempest?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vectorsandarrows.com'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vectorsandarrows.com'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The user account `dp5hn` has exhibited suspicious and anomalous behavior on their device.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The URL `vectorsandarrows.com` is associated with the cybercriminal group Manatee Tempest, which 
+          uses drive-by downloads and other methods to gain access to target networks.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_87
+  title: incident_5_legacy_test_set_task_87
+  description: Related to this alert, there was also an incident where file backups were deleted. Can you identify the 
+    command used in the process that deleted the file snapshots and shadow copies?
+  inherit_shared: true
+  initial_context:
+    incident_context: 'For more information, read the Activity Profile: Iranian MOIS operators opportunistically deploy limited-impact
+      wiper in response to Israel-Hamas war Threat Analytics report: https://security.microsoft.com/threatanalytics3/c6674205-df28-453a-9e42-0010b7979bdd/overview?tid4b2462a4-bbee-495a-a0e1-f23ae524cc9c.'
+    question: Related to this alert, there was also an incident where file backups were deleted. Can you identify the 
+      command used in the process that deleted the file snapshots and shadow copies?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vssblatemp.exe delete shadows /all'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vssblatemp.exe delete shadows /all'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A possible attempt to access Primary Refresh Token (PRT) was detected for the AadUserId 
+          `731adb71-b11c-4bbf-850b-57989b350e96`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: File backups, including all snapshots and shadow copies, were deleted using process `7236` at 
+          `2024-06-20t09:10:51.2193152z` with the command line `vssblatemp.exe delete shadows /all`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_88
+  title: incident_5_legacy_test_set_task_88
+  description: What is the name of the file involved in the suspicious access to the LSASS service?
+  inherit_shared: true
+  initial_context:
+    incident_context: A security incident was triggered due to a known credential theft tool execution command line. The
+      process mimikatz.exe was used, showing an intent to dump user credentials. In relation to this, there was 
+      suspicious access to the LSASS service involving a specific file.
+    question: What is the name of the file involved in the suspicious access to the LSASS service?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'cryptdll.dll'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'cryptdll.dll'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A known credential theft tool named `mimikatz.exe` was executed.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious access to the LSASS service, potentially attempting to decrypt user passwords using the 
+          file `cryptdll.dll`, was detected.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_89
+  title: incident_5_legacy_test_set_task_89
+  description: Can you identify the SID of the account that was possibly compromised and observed delivering 
+    ransomware-related files?
+  inherit_shared: true
+  initial_context:
+    incident_context: A suspicious 'GenRansom' behavior was detected on host `vnevado-win11u` which is identified by its
+      AadDeviceId `bc00e484-d0e5-4da4-9472-95568cccc07e`. This kind of malware can perform annoying, disruptive, or 
+      harmful actions on affected machines, and it may replicate and spread to other machines. The malware was active 
+      and requires immediate attention to prevent further infection.
+    question: Can you identify the SID of the account that was possibly compromised and observed delivering 
+      ransomware-related files?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1840191660-8534830288-125585561-1522'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-1840191660-8534830288-125585561-1522'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious 'GenRansom' behavior was detected on host `vnevado-win11u`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A possible compromised user account with SID `S-1-5-21-1840191660-8534830288-125585561-1522` was 
+          observed delivering ransomware-related files.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+- task_id: incident_5_legacy_test_set_task_90
+  title: incident_5_legacy_test_set_task_90
+  description: What was the Process ID and command line observed during the suspicious hands-on keyboard user behavior?
+  inherit_shared: true
+  initial_context:
+    incident_context: A ransomware payload was remotely launched on a device from the IP address `99.83.111.100`. 
+      Attackers might be attempting to encrypt content on this device, rendering it unusable to users. This alert links 
+      to suspicious hands-on keyboard user behavior observed on the same device. Suspicious and anomalous user behavior 
+      might indicate that a user has been compromised. The end alert indicates that unusual activities, such as changes 
+      to the frequency and usage pattern of tools or applications, or the user performing a series of unusual 
+      activities, were noticed.
+    question: What was the Process ID and command line observed during the suspicious hands-on keyboard user behavior?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process Id: 88, Command Line: curl http://vectorsandarrows.com'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process Id: 88, Command Line: curl http://vectorsandarrows.com'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account `dp5hn` remotely launched a ransomware payload.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: There was suspicious hands-on keyboard behavior detected where a process with ID `88` executed the 
+          `curl http://vectorsandarrows.com` command on `2024-06-20t09:29:42.3927529z`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

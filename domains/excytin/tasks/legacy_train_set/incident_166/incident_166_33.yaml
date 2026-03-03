@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_166_legacy_train_set_task_33
+  title: incident_166_legacy_train_set_task_33
+  description: 'What is the primary email address of the mailbox that was used to send suspicious emails related to a BEC
+    (business email compromise) fraud attempt?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A suspicious inbox manipulation rule was detected on cloud application with AppId `20893`, indicating
+      that an attacker''s access to a user''s inbox might have been used to manipulate rules possibly to exfiltrate data from
+      the organization.'
+    question: 'What is the primary email address of the mailbox that was used to send suspicious emails related to a BEC (business
+      email compromise) fraud attempt?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tony@avoriaz.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'tony@avoriaz.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: The user's inbox rules, associated with AadUserId `89e933b9-5b2e-4bd6-bcdf-033db707ef82`, were 
+          manipulated suspiciously.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious emails were sent from the mailbox with the primary address 
+          `tony@avoriaz.alpineskihouse.co` by a possibly compromised user account.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

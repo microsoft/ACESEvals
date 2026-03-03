@@ -1,0 +1,52 @@
+tasks:
+- task_id: incident_34_legacy_train_set_task_20
+  title: incident_34_legacy_train_set_task_20
+  description: 'A process involved in earlier malicious activity used Task Scheduler to create, modify, or delete a task,
+    likely to establish persistence. Can you identify the file name of the suspicious process that was involved?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'As part of a recent security incident, an uncommon file named `winatp-intro-backdoor.exe` was created
+      on a machine and added to a Registry Key where it will run after a reboot. This is often done by attackers to ensure
+      they retain access to the machine even if it is turned off. The incident involved the IP address `72.5.72.208`, and
+      the process ID `10208` was associated with the command line `reg add hkcu\software\microsoft\windows\currentversion\runonce
+      /f /v yrei /t reg_expand_sz /d %userprofile%\desktop\winatp-intro-backdoor.exe`. For more information, you may refer
+      to the Simulated threat Threat Analytics report.'
+    question: 'A process involved in earlier malicious activity used Task Scheduler to create, modify, or delete a task, likely
+      to establish persistence. Can you identify the file name of the suspicious process that was involved?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'powershell.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: An uncommon file was created on the machine with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`
+          and added to a Run Key, which may indicate an attempt by an attacker to establish persistence.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A process identified as `powershell.exe` involved in earlier malicious activity used Task Scheduler
+          to potentially automate the launch of malicious code and establish persistence.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

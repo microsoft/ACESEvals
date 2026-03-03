@@ -1,0 +1,50 @@
+# SABER Sandbox for CTI Realm domain
+# Extends base SABER sandbox with Kusto client and CTI analysis tools
+#
+# NOTE: The canonical Dockerfile is server/docker/Dockerfile.sandbox
+#       (referenced by domain.yaml).  Keep this file in sync.
+FROM saber/sandbox:latest
+
+# Switch to root to install domain-specific packages
+USER root
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ---------------------------------------------------------------------------
+# Azure CLI  (for Kusto / Azure Data Explorer queries)
+# ---------------------------------------------------------------------------
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# ---------------------------------------------------------------------------
+# CTI-specific Python packages
+#   (requests already in base image)
+# ---------------------------------------------------------------------------
+RUN uv pip install --system --no-cache \
+    azure-kusto-data \
+    azure-kusto-ingest \
+    azure-identity \
+    pysigma \
+    httpx \
+    pyyaml \
+    jsonschema \
+    pandas \
+    stix2
+
+# ---------------------------------------------------------------------------
+# Copy CTI Realm tools and data
+# ---------------------------------------------------------------------------
+COPY server/docker/sandbox_tools/ /opt/cti_realm/tools/
+COPY server/data/cti_reports/ /opt/cti_realm/data/cti_reports/
+COPY server/docker/kusto_init/ /opt/cti_realm/data/kusto_init/
+COPY server/data/data/sigma_rules.json /opt/cti_realm/data/sigma_rules.json
+
+# ---------------------------------------------------------------------------
+# Environment
+# ---------------------------------------------------------------------------
+ENV PYTHONPATH=/workspace:/opt/cti_realm:/opt/cti_realm/tools
+
+# Domain-specific labels
+LABEL saber.domain="cti_realm"
+LABEL saber.component="sandbox"
+LABEL saber.scenario="threat-intelligence"

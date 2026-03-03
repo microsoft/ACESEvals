@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_75
+  title: incident_55_latest_train_set_task_75
+  description: 'Several days later, an alert reported an unusual addition of credentials to the OAuth application named "SimulandApp."
+    Which user email address performed this suspicious credential addition?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed that on 2024-07-04 a process running as "powershell.exe" executed
+      the script "contosoadfsblatempcreds.ps1" on a device (ID: 7661dfd4-218f-4016-8a87-66d68a7f098e). The activity was tied
+      to user accounts "pwilson" and "bjenkins" and resulted in the alert "A process was injected with potentially malicious
+      code," suggesting code was hidden inside another running process.'
+    question: 'Several days later, an alert reported an unusual addition of credentials to the OAuth application named "SimulandApp."
+      Which user email address performed this suspicious credential addition?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Luciano Herrera@niseko.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Luciano Herrera@niseko.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: An account identified by Sid `S-1-5-21-551436448-9871687716-9837441745-1903` was involved in a 
+          code-injection event on 2024-07-04, suggesting malicious activity.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, on 2024-07-10, the account with Email `Luciano Herrera@niseko.alpineskihouse.co` 
+          unusually added a Password credential to the OAuth application “SimulandApp,” indicating possible compromise 
+          or misuse.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

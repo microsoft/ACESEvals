@@ -1,0 +1,41 @@
+# Excytin domain metadata — inspect_evals convention
+slug: excytin
+name: "Excytin Incident Response"
+description: >
+  Cybersecurity incident response scenarios with database forensics
+  and SQL analysis capabilities across 8 distinct security incidents.
+version: "1.0.0"
+tags:
+  - incident-response
+  - database-forensics
+  - sql-analysis
+  - cybersecurity
+
+images:
+  sandbox:
+    tag: "saber/excytin/sandbox:latest"
+    dockerfile: "docker/Dockerfile.sandbox"
+  incident_5_db:
+    tag: "saber/excytin/incident-5:latest"
+    dockerfile: "docker/db/Dockerfile.incident_5"
+  incident_34_db:
+    tag: "saber/excytin/incident-34:latest"
+    dockerfile: "docker/db/Dockerfile.incident_34"
+  incident_38_db:
+    tag: "saber/excytin/incident-38:latest"
+    dockerfile: "docker/db/Dockerfile.incident_38"
+  incident_39_db:
+    tag: "saber/excytin/incident-39:latest"
+    dockerfile: "docker/db/Dockerfile.incident_39"
+  incident_55_db:
+    tag: "saber/excytin/incident-55:latest"
+    dockerfile: "docker/db/Dockerfile.incident_55"
+  incident_134_db:
+    tag: "saber/excytin/incident-134:latest"
+    dockerfile: "docker/db/Dockerfile.incident_134"
+  incident_166_db:
+    tag: "saber/excytin/incident-166:latest"
+    dockerfile: "docker/db/Dockerfile.incident_166"
+  incident_322_db:
+    tag: "saber/excytin/incident-322:latest"
+    dockerfile: "docker/db/Dockerfile.incident_322"

@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_33
+  title: incident_39_latest_train_set_task_33
+  description: 'One of those companion alerts was generated two seconds earlier (2024-07-04 22:35:00 UTC) for the same detection.
+    Which executable name (ExtractedFileName) was identified in that earlier alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a "Malicious credential theft tool execution detected" alert, you observed
+      a process (PID 5176) launching "mimikatz.exe" on 2024-07-04 22:35:02 UTC, suggesting credential-dumping activity. This
+      event is part of a cluster of nearly simultaneous alerts that all reference the same credential-theft technique.'
+    question: 'One of those companion alerts was generated two seconds earlier (2024-07-04 22:35:00 UTC) for the same detection.
+      Which executable name (ExtractedFileName) was identified in that earlier alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'powershell.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: The credential-theft alert at 2024-07-04 22:35:02 UTC ties the activity to the account 
+          Name=`tgs2z`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: The same alert sequence shows that the malicious command was executed through the process 
+          ExtractedFileName=`powershell.exe` at 2024-07-04 22:35:00 UTC.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

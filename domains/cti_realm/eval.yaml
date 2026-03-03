@@ -1,0 +1,29 @@
+# CTI Realm domain metadata — inspect_evals convention
+slug: cti_realm
+name: "CTI Realm - Cyber Threat Intelligence"
+description: >
+  Cyber threat intelligence analysis and detection rule development
+  benchmark with Kusto/KQL querying, MITRE ATT&CK mapping, and
+  Sigma rule generation across 100 detection scenarios.
+version: "1.0.0"
+tags:
+  - cti
+  - threat-intelligence
+  - detection-rules
+  - sigma
+  - kql
+  - mitre-attack
+  - cybersecurity
+
+images:
+  sandbox:
+    tag: "saber/cti_realm/sandbox:latest"
+    dockerfile: "docker/Dockerfile.sandbox"
+  kusto-init:
+    tag: "saber/cti_realm/kusto-init:latest"
+    dockerfile: "docker/Dockerfile.kusto-init"
+    context: "docker"
+  mitre-service:
+    tag: "saber/cti_realm/mitre-service:latest"
+    dockerfile: "docker/Dockerfile.mitre-service"
+    context: "docker"

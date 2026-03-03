@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_166_latest_train_set_task_30
+  title: incident_166_latest_train_set_task_30
+  description: 'According to a related alert raised about 50 minutes earlier for a "Suspicious SAP authentication," what is
+    the AppId of the cloud application that the risky user accessed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'At 2024-07-22 14:09:41 UTC, the user account "Jordan P" (AadUserId: 89e933b9-5b2e-4bd6-bcdf-033db707ef82,
+      email address hidden) signed in to SAP from IP address 107.253.5.27 and triggered the alert "BEC-related user signed
+      in to SAP." This sign-in is suspected to be linked to a broader business-email-compromise campaign.'
+    question: 'According to a related alert raised about 50 minutes earlier for a "Suspicious SAP authentication," what is
+      the AppId of the cloud application that the risky user accessed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '100'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '100'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'An account associated with business email compromise — Email: `Jordan P@vnevado.alpineskihouse.co` —
+          signed in to SAP in a suspicious manner.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'A risky sign-in was detected to the SAP cloud application — AppId: `100`.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

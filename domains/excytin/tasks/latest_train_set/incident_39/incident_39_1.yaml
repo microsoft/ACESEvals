@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_1
+  title: incident_39_latest_train_set_task_1
+  description: 'According to the command line of the malicious credential-theft tool execution, which user account was specified
+    in the "lsadump::dcsync" command?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a suspicious access to the LSASS service, several instances of "mimikatz.exe"
+      were observed being launched with privilege-elevation commands against the domain vnevado.alpineskihouse.co. Earlier
+      executions included pass-the-hash attempts for users such as "kyleg" and "fk8mq". Shortly after these events, Microsoft
+      Defender raised another alert flagging a malicious credential-theft tool execution, indicating that the attacker attempted
+      a DCSync-style domain controller replication to harvest credentials.'
+    question: 'According to the command line of the malicious credential-theft tool execution, which user account was specified
+      in the "lsadump::dcsync" command?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'xfbzkp'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'xfbzkp'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Malicious credential-theft tool execution detected: process.ProcessId=4748, process.CreatedTimeUtc=2024-06-27t14:33:38.0249949z,
+          process.CommandLine="mimikatz.exe" "lsadump::dcsync /domain:vnevado.alpineskihouse.co /user:xfbzkp" exit.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Suspicious access to LSASS service: account.Sid=S-5-7-21-1843151660-3234030288-105586167-1422 attempted
+          to read LSASS memory, likely using the previously launched credential-theft tool.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

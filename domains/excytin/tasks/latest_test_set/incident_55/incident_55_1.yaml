@@ -1,0 +1,67 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_1
+  title: incident_55_latest_test_set_task_1
+  description: 'Which account name was identified as sending the replication request during the suspected DCSync attack on
+    MB-DC1?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation, we observed that the user gsmith (gsmith@niseko.alpineskihouse.co) created
+      a suspicious service named DDLOXJDSQSNGMUKKFUXQ on host MB-ADFS. This activity may indicate an attempt to execute malicious
+      commands or facilitate lateral movement within the environment. Shortly after, other alerts signaled hands-on-keyboard
+      activity consistent with the Impacket toolkit and exploratory command execution. One of the later alerts flagged an
+      unauthorized directory-service replication originating from MB-WINCLIENT to MB-DC1, suggesting a possible DCSync attack.'
+    question: 'Which account name was identified as sending the replication request during the suspected DCSync attack on
+      MB-DC1?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Luciano Herrera'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Luciano Herrera'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: Account Name `gsmith` created the suspicious service DDLOXJDSQSNGMUKKFUXQ on MB-ADFS, indicating 
+          possible malicious persistence.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Process ExtractedFileName `powershell.exe` was launched through the Impacket toolkit, showing 
+          hands-on-keyboard activity for lateral movement.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: Account Sid `S-1-5-21-551436448-9871687716-9837441745-1903` ran a sequence of reconnaissance 
+          commands to explore the environment.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: Account Name `Luciano Herrera` initiated a suspected DCSync attack from MB-WINCLIENT to MB-DC1, 
+          attempting to replicate directory services data.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

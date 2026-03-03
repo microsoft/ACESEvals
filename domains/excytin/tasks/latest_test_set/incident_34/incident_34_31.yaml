@@ -1,0 +1,52 @@
+tasks:
+- task_id: incident_34_latest_test_set_task_31
+  title: incident_34_latest_test_set_task_31
+  description: 'According to the “Suspicious LDAP query” alert that followed the creation of the rogue scheduled task, which
+    executable process was responsible for launching the LDAP query?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of an incident on July 4 2024, security telemetry showed that a PowerShell
+      script created an anomalous scheduled task named "yrei" which was configured to run a file called "winatp-intro-backdoor.exe"
+      from a user’s Desktop folder. The task was created through a command issued by "schtasks.exe" only seconds before the
+      suspicious activity was detected. Immediately after this persistence mechanism was set up on the same machine, another
+      alert was raised for a “Suspicious LDAP query,” suggesting the attacker began performing directory reconnaissance.'
+    question: 'According to the “Suspicious LDAP query” alert that followed the creation of the rogue scheduled task, which
+      executable process was responsible for launching the LDAP query?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winword.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'winword.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'On host `vnevado-win10e` (Field: HostName), an anomalous scheduled task was created, suggesting the
+          attacker is trying to establish persistence.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'The process identified by `9780__2024-06-26t11:57:20.2959493z__"winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm`
+          (Field: ProcessId__CreatedTimeUtc__CommandLine) subsequently executed a suspicious LDAP query, indicating reconnaissance
+          activity.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

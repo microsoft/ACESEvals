@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_20
+  title: incident_39_latest_test_set_task_20
+  description: 'In the later "Anomalous account lookups" alert related to this sequence of events, what was the name of the
+    file that was observed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, security telemetry showed that the user Julian Burke (IT Director) on host
+      VNEVADO-Win10V initiated a suspected DCSync replication request against the domain controller VNEVADO-DC. Shortly after,
+      another alert indicated that Ethan Brooks (Account Executive) on the same workstation enumerated SMB sessions on the
+      domain controller to discover recent IP addresses associated with user accounts. These activities raise the possibility
+      of additional stages in the attack chain, including scripts or tools leveraged to gather further account information.'
+    question: 'In the later "Anomalous account lookups" alert related to this sequence of events, what was the name of the
+      file that was observed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'domaindominance27.ps1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'domaindominance27.ps1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The incident began with the execution of a suspicious PowerShell script whose file Name is 
+          `domaindominance27.ps1`, which was used for anomalous account look-ups.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, an attacker using the account with Sid 
+          `S-5-7-21-1843151660-3234030288-105586167-1422` performed SMB reconnaissance, enumerating sessions on the 
+          domain controller.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: The activity culminated in a suspected DCSync attack in which a replication request was sent to the
+          host whose HostName is `VNEVADO-DC`, indicating an attempt to exfiltrate directory service data.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

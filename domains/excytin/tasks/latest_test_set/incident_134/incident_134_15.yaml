@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_134_latest_test_set_task_15
+  title: incident_134_latest_test_set_task_15
+  description: 'During the follow-up investigation, a separate alert flagged a suspicious inbox manipulation rule that was
+    set up through a cloud application. What is the App ID of the cloud application involved in creating that rule?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 17 2024, an alert reported that an email containing the malicious URL "https://ms175052280.orangecliff-f53f26fd.eastus.azurecontainerapps.io/"
+      was delivered to and later removed from the mailbox of raphaelt@vnevado.alpineskihouse.co. The message originated from
+      alyssat@vnevado.alpineskihouse.co and the sender IP was 254.241.243.229. Because such removal often indicates post-delivery
+      threat activity, the investigation was expanded to look for any follow-up actions in the same user’s mailbox.'
+    question: 'During the follow-up investigation, a separate alert flagged a suspicious inbox manipulation rule that was
+      set up through a cloud application. What is the App ID of the cloud application involved in creating that rule?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '20893'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '20893'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A user with SID `S-1-5-21-1874151667-3554330288-105586563-1715` received an email containing a 
+          malicious URL that was subsequently removed.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Shortly after, a suspicious inbox manipulation rule was created via cloud application with AppId 
+          `20893`, suggesting the attacker may have gained access to the user's mailbox.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

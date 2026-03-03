@@ -1,0 +1,69 @@
+tasks:
+- task_id: incident_322_latest_test_set_task_57
+  title: incident_322_latest_test_set_task_57
+  description: 'According to the "Malicious Url detected in Proxy logs" alert, what is the external IP address that vnevado-win11h.vnevado.alpineskihouse.co
+    attempted to reach?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'As part of the ongoing investigation, we noted that attackers first executed the "Ntdsutil collecting
+      Active Directory information" alert on a domain controller at 2024-08-01 12:54:34 UTC. Shortly afterwards, a resource-management
+      operation was performed from a proxy-related IP, and a malicious URL was clicked on the same workstation. Minutes earlier,
+      proxy telemetry generated the alert "Malicious Url detected in Proxy logs" for a connection from an internal host (vnevado-win11h.vnevado.alpineskihouse.co)
+      to the domain login.micro.demo.antoinetest.ovh. The SOC now needs to determine which external address this host contacted,
+      as recorded in that proxy alert.'
+    question: 'According to the "Malicious Url detected in Proxy logs" alert, what is the external IP address that vnevado-win11h.vnevado.alpineskihouse.co
+      attempted to reach?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '228.3.31.94'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '228.3.31.94'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'HostName: vnevado-dc — At 2024-08-01T12:54:34Z, the host `vnevado-dc` ran `ntdsutil.exe`, suggesting
+          possible reconnaissance activity against Active Directory.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Sid: S-1-5-21-1840151686-3534835288-156286563-1127 — Roughly 15 minutes later, the same environment
+          saw a risky Azure Resource Manager operation performed by the user account with SID `S-1-5-21-1840151686-3534835288-156286563-1127`,
+          indicating potential attacker progression.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'HostName: vnevado-win11h — At 2024-08-01T13:49:58Z, a malicious URL was clicked from the endpoint `vnevado-win11h`,
+          showing the attacker is now interacting with client devices.'
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: 'Address: 228.3.31.94 — Proxy logs recorded an outbound connection from the IP address `228.3.31.94`,
+          tying the activity back to external infrastructure likely controlled by the attacker.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

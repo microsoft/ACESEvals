@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_166_latest_train_set_task_10
+  title: incident_166_latest_train_set_task_10
+  description: 'Roughly fifteen minutes after the inbox-rule change, a follow-up alert reported that the same compromised
+    user sent out suspicious emails. According to that alert, what is the email address of the recipient who received those
+    messages?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a Business Email Compromise (BEC) incident, analysts observed a suspicious
+      inbox-rule manipulation on 2024-07-22 at 10:00 UTC. The activity was tied to a cloud application identified by AppId
+      20893 and involved an unnamed user account whose mailbox rules were altered—likely to hide or reroute messages for data
+      exfiltration or fraudulent purposes.'
+    question: 'Roughly fifteen minutes after the inbox-rule change, a follow-up alert reported that the same compromised user
+      sent out suspicious emails. According to that alert, what is the email address of the recipient who received those messages?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'tony@avoriaz.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'tony@avoriaz.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Account compromise indicator: The user with Email `Jordan P@vnevado.alpineskihouse.co` had suspicious
+          inbox rules created or modified.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Follow-on activity: From the compromised mailbox, messages were sent to the Recipient `tony@avoriaz.alpineskihouse.co`,
+          indicating Business Email Compromise activity.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

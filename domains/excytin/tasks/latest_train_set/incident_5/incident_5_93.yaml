@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_5_latest_train_set_task_93
+  title: incident_5_latest_train_set_task_93
+  description: 'According to the subsequent alert about the detected ''CommandAndControl'' malware, what is the hostname of
+    the device where this lateral-movement activity was observed?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 4, 2024, security monitoring flagged a possible ransomware event on the workstation named "vnevado-win11u"
+      after multiple files (e.g., kiters.7z, syncretic.7z, earlap.doc) were suddenly renamed with a known ransomware-related
+      extension (.lockbit). This activity suggests the files were being mass-encrypted. Investigators also noted that, shortly
+      after the ransomware alert, a separate detection signaled that ''CommandAndControl'' malware had been discovered on
+      a different device—evidence of an attempted lateral movement within the network.'
+    question: 'According to the subsequent alert about the detected ''CommandAndControl'' malware, what is the hostname of
+      the device where this lateral-movement activity was observed?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win10r'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vnevado-win10r'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account Name `dp5hn` was involved in suspicious file-system changes that match known ransomware
+          behavior.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A host with HostName `vnevado-win10r` was later found infected with CommandAndControl malware, 
+          suggesting lateral movement from the earlier compromise.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

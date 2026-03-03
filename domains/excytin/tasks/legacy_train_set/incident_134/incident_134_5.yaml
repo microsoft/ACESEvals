@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_134_legacy_train_set_task_5
+  title: incident_134_legacy_train_set_task_5
+  description: 'A user''s mailbox was flagged as part of a suspicious business email compromise activity. Can you provide
+    the primary email address of this mailbox?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On July 17th, 2024, an anonymous sign-in attempt was detected from IP address `170.54.121.63`, which
+      may indicate the use of a Tor browser or anonymizer VPNs. This sign-in attempt is part of an ongoing security incident
+      involving multiple alerts related to BEC (business email compromise) fraud attempts.'
+    question: 'A user''s mailbox was flagged as part of a suspicious business email compromise activity. Can you provide the
+      primary email address of this mailbox?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'nathan@avoriaz.alpineskihouse.co'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'nathan@avoriaz.alpineskihouse.co'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was a sign-in from an anonymous IP address by a user with AadUserId 
+          `e036dee7-fa23-42ef-a019-468c8d3401f1`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious emails were sent by a possibly compromised user with the mailbox primary address 
+          `nathan@avoriaz.alpineskihouse.co`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

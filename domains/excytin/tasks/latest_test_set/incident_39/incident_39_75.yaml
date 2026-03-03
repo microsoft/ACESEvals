@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_75
+  title: incident_39_latest_test_set_task_75
+  description: 'According to the follow-up alert, which executable was identified as the credential theft tool deployed on
+    the device?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a suspicious account creation incident, analysts observed the execution
+      of several commands, including the use of "net.exe" to add a domain user (e.g., "bdadmin") and a PowerShell script executed
+      from the Downloads folder. Just a few seconds later, another alert was raised on the same device indicating that a well-known
+      credential-theft utility had been detected, suggesting the attacker attempted to harvest credentials right after creating
+      the new account.'
+    question: 'According to the follow-up alert, which executable was identified as the credential theft tool deployed on
+      the device?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'mimikatz.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'An attacker created a new, suspicious Azure AD account (Field: AadUserId, Value: `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Moments later, the credential-theft tool (Field: Name, Value: `mimikatz.exe`) was detected, indicating
+          an attempt to harvest credentials—potentially for that newly created account.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

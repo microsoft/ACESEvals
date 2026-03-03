@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_34_legacy_train_set_task_3
+  title: incident_34_legacy_train_set_task_3
+  description: 'Following this activity, there was a suspicious PowerShell download or encoded command execution. Can you
+    provide the process and command line details of the process that executed PowerShell?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation of a suspicious Task Scheduler activity, we found that the process `schtasks.exe`
+      was used to create and run a task named ''yrei'' to execute `winatp-intro-backdoor.exe`. This activity might indicate
+      an attempt to launch malicious code automatically and establish persistence. Refer to the threat analytics report provided
+      for more details.'
+    question: 'Following this activity, there was a suspicious PowerShell download or encoded command execution. Can you provide
+      the process and command line details of the process that executed PowerShell?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process Id: 9780, Command Line: "winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process Id: 9780, Command Line: "winword.exe" c:\scripts\rs4_winatp-intro-invoice.docm'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A process (`powershell.exe`) was used in suspicious Task Scheduler activity, potentially to 
+          establish persistence by launching malicious code automatically.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A process with Process ID `9780` launched at `2024-06-26t11:57:20.2959493z` using the command line 
+          `winword.exe c:\scripts\rs4_winatp-intro-invoice.docm`, possibly for executing encoded PowerShell commands or 
+          downloading files.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

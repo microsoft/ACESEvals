@@ -1,0 +1,66 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_35
+  title: incident_55_legacy_train_set_task_35
+  description: 'What is the file name of the process involved in the suspicious Task Scheduler activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A suspicious email with a malicious URL `http://kn017721628.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`
+      was delivered to the mailbox `santiago@vnevado.alpineskihouse.co` and later removed. The sender of this email was `4qs6v9m@vnevado.alpineskihouse.co`
+      using the IP address `106.214.87.198`. This incident triggered a series of alerts including an internal phishing campaign,
+      suspicious access to LSASS service, and ultimately suspicious Task Scheduler activity which might be an attempt to launch
+      malicious code automatically and establish persistence.'
+    question: 'What is the file name of the process involved in the suspicious Task Scheduler activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'iy2orr1e.rrg.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'iy2orr1e.rrg.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The email account with AadUserId `28058d92-fc24-4869-9231-6546a34b00f2` received an email with a 
+          malicious URL, which was later removed.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: The user with SID `S-1-5-21-561436748-3867387497-1732241745-3701` sent phishing emails from their 
+          account, indicating a possible account compromise.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: A suspicious access to the LSASS service was detected, involving a process with the file name 
+          `powershell.exe`, which may indicate an attempt to extract clear-text passwords.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: A suspicious task scheduler activity was detected, involving a process with the file name 
+          `iy2orr1e.rrg.exe`, which may indicate an attempt to launch malicious code automatically and establish 
+          persistence.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

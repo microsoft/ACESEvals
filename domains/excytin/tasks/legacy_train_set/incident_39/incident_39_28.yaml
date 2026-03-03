@@ -1,0 +1,55 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_28
+  title: incident_39_legacy_train_set_task_28
+  description: 'Can you identify the account that was used to register the suspicious file as a service?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During a recent security incident, a sign-in attempt was detected using a deceptive user account, which
+      could be an indicator of an attacker using a fake or decoy user account on the device `vnevado-win10v`. Following this,
+      multiple known dual-purpose tools, which could be used for malicious activities, were dropped on the same device. Such
+      tools might be used for credential theft, privilege escalation, and lateral movement. This chain of events leads us
+      to a suspicious file being registered as a service, which might indicate an attacker attempting to register the file
+      for persistence.'
+    question: 'Can you identify the account that was used to register the suspicious file as a service?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'LocalSystem'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'LocalSystem'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was a sign-in attempt using a deceptive user account on host `vnevado-win10v`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Multiple dual-purpose tools, including `psexesvc.exe`, were dropped on the device `vnevado-win10v`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: A suspicious file was registered as a service under the account `LocalSystem`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

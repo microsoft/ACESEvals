@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_322_latest_train_set_task_4
+  title: incident_322_latest_train_set_task_4
+  description: 'According to the proxy-log alert that followed the email and click activity, what is the internal IP address
+    that attempted to connect to the external host?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of an incident involving a malicious email, security telemetry showed that
+      a message from raphaelt@vnevado.alpineskihouse.co was delivered to alyssat@vnevado.alpineskihouse.co. The email originated
+      from sender-IP 202.205.215.225 and embedded the suspicious URL dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io.
+      Although the email was subsequently removed, a short time later the same URL was clicked from an endpoint in the environment.
+      Proxy logs then recorded a connection from one internal IP address to an external host (login.micro.demo.antoinetest.ovh),
+      indicating the device actually reached out to the malicious destination.'
+    question: 'According to the proxy-log alert that followed the email and click activity, what is the internal IP address
+      that attempted to connect to the external host?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '228.3.31.94'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '228.3.31.94'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account with Email `Hailey Johnson@vnevado.alpineskihouse.co` received an email that contained 
+          a malicious URL which was later removed.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Proxy logs show a connection to the malicious URL from IP Address `228.3.31.94`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: The host with HostName `vnevado-win11h` subsequently clicked on the malicious URL.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

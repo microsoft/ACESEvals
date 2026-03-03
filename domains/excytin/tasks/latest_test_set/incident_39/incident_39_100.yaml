@@ -1,0 +1,59 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_100
+  title: incident_39_latest_test_set_task_100
+  description: 'During the "File dropped and launched from remote location" alert that occurred seconds before the malware
+    detection, which user account was identified as having executed the dropped file on host "vnevado-win10v"?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On the device named "vnevado-win10v" (AadDeviceId 4d8d23e9-a77d-4e33-9435-b8c457e57ca1) Defender detected
+      the presence of the ‘Kekeo’ malware at 22:35:03 UTC on 2024-07-04. This alert suggests the machine might have been targeted
+      for follow-up activity. Immediately afterwards, a chain of alerts hinted at potential human-operated malicious activity
+      on the same host. Just seconds earlier, a remote session had reportedly dropped a file onto the system and executed
+      it, indicating possible lateral movement or propagation by an attacker.'
+    question: 'During the "File dropped and launched from remote location" alert that occurred seconds before the malware
+      detection, which user account was identified as having executed the dropped file on host "vnevado-win10v"?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'lucasb'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'File Name: rubeus.exe – The malware detection alert indicates that the file `rubeus.exe` (detected as
+          “Kekeo” malware) was found on the machine.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: "ExtractedFileName: psexesvc.exe – A process named `psexesvc.exe` was observed in the 'Potential human-operated
+          malicious activity' alert, suggesting hands-on-keyboard attacker activity."
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: "Account Name: lucasb – The 'File dropped and launched from remote location' alert shows the account
+          `lucasb` delivered and executed the remote file, linking the activity to this user."
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

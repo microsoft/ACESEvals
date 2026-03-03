@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_40
+  title: incident_55_latest_test_set_task_40
+  description: 'According to the related "Suspicious access to LSASS service" alert that was raised seconds earlier, which
+    DLL file was targeted during the attempted credential theft from LSASS?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-04 at 22:35:03 UTC, Microsoft Defender flagged a "Suspicious sequence of exploration activities"
+      on host "mb-adfs". Several command-line processes were observed, including executions of "whoami.exe" and a suspicious
+      binary "iy2orr1e.rrg.exe" launched by user account "gsmith" (SID S-2-5-21-571436798-3864380397-1837441745-3206). These
+      commands are typically used by attackers to enumerate system information and prepare for lateral movement after initial
+      compromise.'
+    question: 'According to the related "Suspicious access to LSASS service" alert that was raised seconds earlier, which
+      DLL file was targeted during the attempted credential theft from LSASS?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'cryptdll.dll'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'cryptdll.dll'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A process with field ExtractedFileName and value 'powershell.exe' executed a suspicious sequence of
+          exploration commands.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A suspicious access to the LSASS service was then carried out using the file with field Name and 
+          value 'cryptdll.dll'.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

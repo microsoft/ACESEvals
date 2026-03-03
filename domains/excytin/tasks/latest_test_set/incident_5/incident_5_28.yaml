@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_28
+  title: incident_5_latest_test_set_task_28
+  description: 'What executable was identified as the process that modified LSASS memory on the affected device?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation into a Possible attempt to access a Primary Refresh Token (PRT), telemetry
+      showed two unusual processes—"powershell.exe" running a long base-64 encoded command, and a follow-up launch of "browsercore.exe"—executing
+      within seconds of each other. These activities were tied to the same device (AadDeviceId withheld). Moments later, a
+      separate alert indicated that the Local Security Authority Subsystem Service (LSASS) process memory on that device had
+      been tampered with.'
+    question: 'What executable was identified as the process that modified LSASS memory on the affected device?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'mimikatz.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'mimikatz.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: On the host identified by AadDeviceId `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`, a possible attempt to
+          access a Primary Refresh Token (PRT) was detected.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Shortly afterwards, LSASS memory was modified by a process with ProcessId `2020`, created at 
+          `2024-06-20t09:03:47.538167z`, running the command line `"mimikatz.exe" privilege::debug "sekurlsa::pth 
+          /user:fk8mq /ntlm:96def1a633fc6790124d5f8fe21cc72b /domain:vnevado.alpineskihouse.co /run:..\notepad.exe 
+          //vnevado-jump cmd.exe"`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_99
+  title: incident_5_latest_test_set_task_99
+  description: 'According to the "Malicious credential theft tool execution detected" alert on 2024-07-04 22:35:02 UTC, which
+    external IP address was associated with this credential theft activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed that user "Grace Chen" (SID S-1-5-21-1840191660-8534830288-125585561-1522,
+      AAD ID 731adb71-b11c-4bbf-850b-57989b350e96) on host "vnevado-win11t" (device ID e5799261-6720-4297-961e-bd9ca4275033)
+      had an attempt to create, delete, or modify files over SMB blocked by attack disruption at 2024-07-10 11:24:45 UTC.
+      Shortly after, an alert titled "PSExec to Vnevado-jump" indicated possible lateral movement activity. Within the same
+      incident, an earlier alert was raised on 2024-07-04 22:35:02 UTC for a "Malicious credential theft tool execution detected,"
+      suggesting that credentials may have been dumped prior to the SMB activity.'
+    question: 'According to the "Malicious credential theft tool execution detected" alert on 2024-07-04 22:35:02 UTC, which
+      external IP address was associated with this credential theft activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '107.224.99.179'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '107.224.99.179'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'On 2024-07-04 22:35:02.702215+00:00, a malicious credential-theft tool was executed from the IP (Field:
+          Address, Value: `107.224.99.179`).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'On 2024-07-10 11:24:45.237800+00:00, an SMB remote file-access attempt was blocked, originating from
+          IP (Field: Address, Value: `99.83.111.100`).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'At 2024-07-10 11:24:45.260113+00:00, the attacker attempted lateral movement with PSExec to the jump
+          server, using the compromised account (Field: AadUserId, Value: `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

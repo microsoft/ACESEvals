@@ -1,0 +1,36 @@
+# Excytin per-sample sandbox — managed by inspect_ai DockerSandboxEnvironment
+# Lifecycle: sample_init → compose up, sample_cleanup → compose down
+
+services:
+  default:
+    image: saber/excytin/sandbox:latest
+    x-local: true
+    working_dir: /workspace
+    command: "tail -f /dev/null"
+    init: true
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+      # MYSQL_HOST is NOT set here — each task's prompt specifies the
+      # correct database container for the incident being investigated.
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=admin
+    networks:
+      - excytin-database
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+          pids: 256
+
+networks:
+  excytin-database:
+    external: true
+    name: ${SABER_PROJECT}_excytin-database

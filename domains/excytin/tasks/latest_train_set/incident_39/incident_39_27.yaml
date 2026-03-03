@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_27
+  title: incident_39_latest_train_set_task_27
+  description: 'According to the incident timeline, which external IP address is associated with the "Possible lateral movement"
+    alert that was raised at 22:35:01 UTC on 2024-07-04?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, a sign-in attempt using the deceptive account "kyleg" (SID S-0-6-5) was observed
+      coming from the external IP address 141.216.110.153. This event generated the alert "Sign-in attempt with deceptive
+      user account" on 2024-07-04 at 22:35:02 UTC. In the same incident timeline, another alert titled "Possible lateral movement"
+      was raised less than a second earlier on a different device, suggesting an attacker might be trying to pivot within
+      the environment.'
+    question: 'According to the incident timeline, which external IP address is associated with the "Possible lateral movement"
+      alert that was raised at 22:35:01 UTC on 2024-07-04?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '35.202.74.47'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '35.202.74.47'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious sign-in attempt detected on host with HostName `vnevado-win10b`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Possible lateral movement activity observed originating from IP Address `35.202.74.47`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

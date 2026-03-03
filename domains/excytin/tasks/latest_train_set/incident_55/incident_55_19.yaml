@@ -1,0 +1,61 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_19
+  title: incident_55_latest_train_set_task_19
+  description: 'According to the alert about the hands-on-keyboard attack carried out with the Impacket toolkit, which executable
+    did the attacker run on MB-WINCLIENT?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation, we observed that the user account ''Luciano Herrera'' (CIO) operating from
+      host MB-WINCLIENT initiated a suspicious DCSync-style replication request against the domain controller MB-DC1. Shortly
+      thereafter, the same workstation exhibited a sequence of reconnaissance commands consistent with an attacker exploring
+      the environment. Just moments before those exploration commands, Defender raised an alert titled “Ongoing hands-on-keyboard
+      attack via Impacket toolkit,” indicating that the adversary was remotely executing a command on MB-WINCLIENT to facilitate
+      lateral movement.'
+    question: 'According to the alert about the hands-on-keyboard attack carried out with the Impacket toolkit, which executable
+      did the attacker run on MB-WINCLIENT?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'powershell.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Attackers used the Impacket toolkit to execute the file with Name `powershell.exe` in order to move
+          laterally (Time: 2024-07-04 22:35:01.395957+00:00).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'That execution spawned a process whose ExtractedFileName is `powershell.exe`, which ran a suspicious
+          sequence of asset-discovery commands (Time: 2024-07-04 22:35:03.197761+00:00).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'With access established, the compromised account possessing Sid `S-1-5-21-551436448-9871687716-9837441745-1903`
+          initiated a DCSync replication request against the domain controller, attempting to harvest Active Directory credentials
+          (Time: 2024-07-10 11:24:45.469423+00:00).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

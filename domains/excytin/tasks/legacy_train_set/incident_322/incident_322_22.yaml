@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_322_legacy_train_set_task_22
+  title: incident_322_legacy_train_set_task_22
+  description: 'During the follow-up investigation, Microsoft Defender for Resource Manager detected a resource management
+    operation from a suspicious proxy IP address. Can you provide the name of the account that was involved in this suspicious
+    Azure Resource Manager operation?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A recent incident involved attackers using Ntdsutil to gather information for persistence or to move
+      laterally in our network or organization. As part of this activity, the file `ntdsutil.exe` was executed with the specific
+      command line to manage Active Directory Domain Services (AD DS) and Active Directory Lightweight Directory Services
+      (AD LDS). This event occured on a host with specific unnamed details and multiple processes were involved.'
+    question: 'During the follow-up investigation, Microsoft Defender for Resource Manager detected a resource management
+      operation from a suspicious proxy IP address. Can you provide the name of the account that was involved in this suspicious
+      Azure Resource Manager operation?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Hailey Johnson'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Hailey Johnson'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: There is a collection of Active Directory information with ntutil.exe on host `vnevado-dc`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: There is a suspicious Azure Resource Manager operation from an account with the name `Hailey 
+          Johnson`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

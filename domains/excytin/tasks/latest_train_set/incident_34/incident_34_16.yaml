@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_34_latest_train_set_task_16
+  title: incident_34_latest_train_set_task_16
+  description: 'Just three seconds later, the system raised an alert for a process that executed a suspicious PowerShell download
+    or encoded command. What is the name of the executable associated with that PowerShell activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed an anomaly in an Autostart Extension Point (ASEP) registry key:
+      a process executed the command `reg add HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce /f /v yrei /t reg_expand_sz
+      /d %USERPROFILE%\Desktop\winatp-intro-backdoor.exe` from IP address 72.5.72.208 at 22:35:01 UTC on July 4 2024. This
+      suggests an attempt to establish persistence after reboot.'
+    question: 'Just three seconds later, the system raised an alert for a process that executed a suspicious PowerShell download
+      or encoded command. What is the name of the executable associated with that PowerShell activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'powershell.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'powershell.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Alert observed a suspicious persistence attempt: Registry ASEP modification associated with account
+          AadUserId `16320fec-8d90-403b-b7fe-78f715d4728d`.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Subsequently, a process `powershell.exe` (ExtractedFileName field) executed a suspicious download 
+          or encoded command, indicating possible follow-up malicious activity.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_34_latest_train_set_task_29
+  title: incident_34_latest_train_set_task_29
+  description: 'Immediately after this Task Scheduler event, the investigation noted a separate alert for a suspicious LDAP
+    query. What was the name of the executable that issued this LDAP query?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On 2024-07-04 a security alert reported that a PowerShell script (PID 8604) dropped a file named "winatp-intro-backdoor.exe"
+      onto a user’s desktop and used "schtasks.exe" (PIDs 1348 and 1616) to create and run a scheduled task called "yrei".
+      This Task Scheduler activity was flagged as suspicious because such automation is often used by attackers to maintain
+      persistence.'
+    question: 'Immediately after this Task Scheduler event, the investigation noted a separate alert for a suspicious LDAP
+      query. What was the name of the executable that issued this LDAP query?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'winword.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'winword.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'On device with AadDeviceId `02b8f519-1123-4228-b32a-ccb78af3449f`, a process previously flagged for
+          malicious activity used Task Scheduler to create, modify, or delete a task (alert: Suspicious Task Scheduler activity).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Immediately after, the process with ExtractedFileName `winword.exe` executed a suspicious LDAP query,
+          indicating potential reconnaissance on the same device (alert: Suspicious LDAP query).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

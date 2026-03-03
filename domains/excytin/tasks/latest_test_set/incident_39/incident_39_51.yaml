@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_51
+  title: incident_39_latest_test_set_task_51
+  description: 'According to the alert that flagged the malicious credential-theft tool execution, what is the Azure AD user
+    ID (AadUserId) of the account involved in that activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed a SID history injection on domain controller vnevado-dc. The activity
+      was performed by the on-premises account “lucasb” (SID S-1-5-21-1440151660-4837038288-105596163-1120) using a PowerShell
+      command that stopped the NTDS service, manipulated SID history, and restarted the service. Only seconds later, additional
+      alerts were raised on the same host, including a detection that a known credential-theft tool was executed.'
+    question: 'According to the alert that flagged the malicious credential-theft tool execution, what is the Azure AD user
+      ID (AadUserId) of the account involved in that activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Step 1: A SID-history injection was performed through process.ExtractedFileName = `powershell.exe`,
+          indicating that PowerShell was used to tamper with account SIDs and gain elevated privileges.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Step 2: Immediately after, the attacker leveraged the Rubeus tool for kerberoasting using account.Name
+          = `tgs2z`, requesting Kerberos tickets that could later be cracked or replayed.'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Step 3: Finally, a malicious credential-theft utility was executed under account.AadUserId = `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`,
+          enabling the attacker to dump credentials and consolidate their privilege escalation.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

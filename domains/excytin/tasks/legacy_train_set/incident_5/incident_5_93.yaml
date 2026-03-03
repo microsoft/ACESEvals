@@ -1,0 +1,63 @@
+tasks:
+- task_id: incident_5_legacy_train_set_task_93
+  title: incident_5_legacy_train_set_task_93
+  description: 'What is the hostname of the system involved in the detected ransomware behavior in the file system?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A recent security incident involved suspicious ''GenRansom'' behavior detected on host `vnevado-win11u`,
+      sourced from a machine that showed signs of active malware. The incident involved malware that could potentially replicate
+      and execute commands from remote attackers. The initial alert indicated an active infection requiring precautionary
+      measures and checks for residual signs. Following this, a command and control behavior was blocked and file backups
+      were deleted, which is a common action during a ransomware infection.'
+    question: 'What is the hostname of the system involved in the detected ransomware behavior in the file system?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vnevado-win11t'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vnevado-win11t'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious 'GenRansom' behavior was detected on the host with AadDeviceId 
+          `bc00e484-d0e5-4da4-9472-95568cccc07e`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: Command and Control behavior was blocked for the user with SID 
+          `S-1-5-21-1840191660-8534830288-125585561-1522`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: File backups were deleted on the host `vnevado-win11t`.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: Ransomware behavior was detected in the file system of the host `vnevado-win11t`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

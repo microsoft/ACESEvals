@@ -1,0 +1,54 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_73
+  title: incident_5_latest_test_set_task_73
+  description: 'According to the "Suspicious WMI process creation" alert raised moments after the shadow-copy deletion, what
+    exact command line did the newly spawned process (PID 1868) run?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'At 22:35:00 UTC on July 4 2024, the host "vnevado-win10s" raised the alert "File backups were deleted"
+      after the local account "dp5hn" (SID S-1-5-21-1840191660-8534830288-125585561-1522) executed the program "vssblatemp.exe"
+      with the command line "vssblatemp.exe delete shadows /all"—a typical tactic seen in ransomware incidents to remove recovery
+      options. Only three seconds later, on the same machine, Microsoft Defender flagged another alert for a "Suspicious WMI
+      process creation" that launched a new process (PID 1868).'
+    question: 'According to the "Suspicious WMI process creation" alert raised moments after the shadow-copy deletion, what
+      exact command line did the newly spawned process (PID 1868) run?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'bcdedit /set bootstatuspolicy ignoreallfailures'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'bcdedit /set bootstatuspolicy ignoreallfailures'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: At 2024-07-04 22:35:00.451837+00:00, the alert 'File backups were deleted' shows that the account 
+          with field Sid=`S-1-5-21-1840191660-8534830288-125585561-1522` removed all file snapshots and shadow copies, a
+          behavior often seen in ransomware attacks to prevent recovery.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Three seconds later, at 2024-07-04 22:35:03.323868+00:00, the alert 'Suspicious WMI process 
+          creation' recorded a new process with field ProcessId=`1868`, CreatedTimeUtc=`2024-06-20t09:10:49.1654106z`, 
+          and CommandLine=`bcdedit /set bootstatuspolicy ignoreallfailures`, indicating the attacker is using WMI to 
+          launch a command that disables automatic recovery on reboot.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

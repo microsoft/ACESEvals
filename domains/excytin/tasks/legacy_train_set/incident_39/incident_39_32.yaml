@@ -1,0 +1,56 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_32
+  title: incident_39_legacy_train_set_task_32
+  description: 'Can you identify the Security Identifier (SID) of the account that was used in the overpass-the-hash attack?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'Involving a security incident where an attacker might be gathering information about potential targets,
+      a series of anomalous account lookups were detected, with activities conducted using the `net.exe` process to query
+      user and group information on the domain. Shortly after, suspicious access to the LSASS service was detected, indicating
+      potential credential theft to obtain clear-text passwords, likely intending lateral movement across the network. This
+      can lead to an attack where overpass-the-hash method is employed for successful logon using stolen credentials.'
+    question: 'Can you identify the Security Identifier (SID) of the account that was used in the overpass-the-hash attack?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-2-2-78'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-2-2-78'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: An anomalous chain of attempts to look up user account information has been observed on host 
+          `vnevado-win10v`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Suspicious access to the LSASS service has been detected, involving the process `lsass.exe`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: An attacker successfully logged on using an overpass-the-hash attack with the account having SID 
+          `S-2-2-78`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

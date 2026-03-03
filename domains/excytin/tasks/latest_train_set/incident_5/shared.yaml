@@ -1,0 +1,12 @@
+# Shared configuration for all incident_5 tasks
+# This configuration will be merged into the initial_context of all tasks in this directory
+
+initial_context:
+  database_connection:
+    hostname: "incident-5-db"
+    port: 3306
+    username: "admin"
+    password: "admin"
+    database: "env_monitor_db"
+    ssl_mode: "disabled"
+    connection_example: "mysql -h incident-5-db --skip-ssl -u admin -padmin env_monitor_db"

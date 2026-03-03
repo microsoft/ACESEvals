@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_99
+  title: incident_55_latest_test_set_task_99
+  description: 'According to the "Suspicious access to LSASS service" alert triggered at 2024-07-04 22:35:02 UTC, which DLL
+    file was involved in the attempted credential-dumping activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed that the user gsmith@niseko.alpineskihouse.co created a suspicious
+      service called "DDLOXJDSQSNGMUKKFUXQ" on host MB-ADFS (alert: "Suspicious service creation" on 2024-07-10). Shortly
+      afterwards, telemetry showed execution of the Impacket toolkit, suggesting hands-on-keyboard activity and potential
+      lateral movement (alert: "Ongoing hands-on-keyboard attack via Impacket toolkit" on 2024-07-04). Within the same sequence
+      of events, a subsequent alert flagged a suspicious attempt to access the LSASS process memory—an action commonly used
+      to harvest credentials.'
+    question: 'According to the "Suspicious access to LSASS service" alert triggered at 2024-07-04 22:35:02 UTC, which DLL
+      file was involved in the attempted credential-dumping activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vaultcli.dll'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vaultcli.dll'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Process ExtractedFileName=lsass.exe was executed via the Impacket toolkit, indicating hands-on-keyboard
+          activity (Time: 2024-07-04 22:35:01Z).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'File Name=vaultcli.dll was loaded to access the LSASS process memory, suggesting credential dumping
+          (Time: 2024-07-04 22:35:02Z).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Account Sid=S-2-5-21-571436798-3864380397-1837441745-3206 (user gsmith) subsequently created the suspicious
+          service DDLOXJDSQSNGMUKKFUXQ on host MB-ADFS to run malicious commands (Time: 2024-07-10 11:24:45Z).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

@@ -1,0 +1,57 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_50
+  title: incident_39_latest_train_set_task_50
+  description: 'Which executable (file name) did the attacker leverage, according to the “Successful logon using overpass-the-hash
+    with potentially stolen credentials” alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation of a sign-in attempt with a deceptive user account (user “tgs2z”) on host
+      “vnevado-win10v” coming from IP address 35.202.74.47, Microsoft Defender later raised another alert titled “Successful
+      logon using overpass-the-hash with potentially stolen credentials.” The alert notes that the attacker abused a well-known
+      Windows security-related process to obtain a Kerberos ticket and access network resources.'
+    question: 'Which executable (file name) did the attacker leverage, according to the “Successful logon using overpass-the-hash
+      with potentially stolen credentials” alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lsass.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'lsass.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: A sign-in attempt was made using the deceptive account Name `kyleg`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Potential human-operated malicious activity was detected involving account AadUserId 
+          `97e6a954-b6bd-48a5-808c-bd8464cce677`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: The attacker successfully performed an overpass-the-hash logon by leveraging the file Name 
+          `lsass.exe`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

@@ -1,0 +1,68 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_93
+  title: incident_55_latest_train_set_task_93
+  description: 'According to the "Suspected DCSync attack (replication of directory services)" alert, which user account was
+    recorded as issuing the replication request from MB-WINCLIENT to MB-DC1?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed that user account gsmith on host mb-adfs launched an unexpectedly
+      named executable "iy2orr1e.rrg.exe" via a hidden, encoded PowerShell command. This triggered an alert titled "Attempt
+      to hide use of dual-purpose tool." Subsequent alerts indicated suspicious remote activity and LDAP reconnaissance, suggesting
+      the attacker was escalating privileges and mapping the environment. Several days later, a suspected DCSync attack was
+      detected, where a user on workstation MB-WINCLIENT initiated a replication request to domain controller MB-DC1.'
+    question: 'According to the "Suspected DCSync attack (replication of directory services)" alert, which user account was
+      recorded as issuing the replication request from MB-WINCLIENT to MB-DC1?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Luciano Herrera'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Luciano Herrera'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Step 1 – account.AadUserId: ec3ec68b-fdeb-4fe4-9a29-acd445e1ccc5 attempted to disguise a dual-purpose
+          tool by launching it under an unexpected filename (Attempt to hide use of dual-purpose tool alert at 2024-07-04
+          22:35:01Z).'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Step 2 – process.ExtractedFileName: powershell.exe was observed initiating suspicious remote activity
+          only one second later (Suspicious remote activity alert at 2024-07-04 22:35:02Z).'
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: 'Step 3 – account.AadUserId: 2de70991-2799-4a95-b734-8e3df3a50118 performed a suspicious LDAP query,
+          indicating directory reconnaissance (Suspicious LDAP query alert at 2024-07-04 22:35:03Z).'
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: 'Step 4 – account.Name: Luciano Herrera was then caught issuing a DCSync replication request from MB-WINCLIENT
+          to MB-DC1, suggesting an attempt to exfiltrate password hashes (Suspected DCSync attack alert at 2024-07-10 11:24:45Z).'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_79
+  title: incident_55_legacy_train_set_task_79
+  description: 'Which account SID was identified in the sensitive credential memory read alert indicating a potential attack
+    on lsass.exe?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A suspicious LDAP query was executed by user `pwilson`, indicating potential reconnaissance activity.
+      The associated process was `ldaprequest.ps1` executed via `powershell.exe`. LDAP queries can be used by attackers to
+      learn an organization''s structure, which can lead to gaining higher privileges and access to important assets.'
+    question: 'Which account SID was identified in the sensitive credential memory read alert indicating a potential attack
+      on lsass.exe?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-561436748-3867387497-1732241745-3701'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-561436748-3867387497-1732241745-3701'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious LDAP query was executed using the process `powershell.exe`, indicating potential 
+          reconnaissance activity.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A process accessed the memory of lsass.exe to read sensitive credentials. The compromised account 
+          has the SID `S-1-5-21-561436748-3867387497-1732241745-3701`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

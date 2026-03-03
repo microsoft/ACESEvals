@@ -1,0 +1,53 @@
+tasks:
+- task_id: incident_34_latest_test_set_task_52
+  title: incident_34_latest_test_set_task_52
+  description: 'In the related "Suspicious Task Scheduler activity" alert, which Windows command-line utility did the attacker
+    use to create the scheduled task that launches the malicious file?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'An alert reported that an uncommon file named "winatp-intro-backdoor.exe" was created on a machine
+      reachable at IP 72.5.72.208, and a command was executed to add this file to the RunOnce registry key using the Windows
+      REG utility (Process ID 10208, time 2024-06-26T13:17:18Z). This behavior suggests an attempt to ensure the malware runs
+      after reboot. Investigators noted that a closely-timed alert indicates the same malware was also configured through
+      Windows Task Scheduler to maintain persistence.'
+    question: 'In the related "Suspicious Task Scheduler activity" alert, which Windows command-line utility did the attacker
+      use to create the scheduled task that launches the malicious file?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'schtasks.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'schtasks.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: An uncommon file was created and added to a Run Key on host with AadDeviceId 
+          `02b8f519-1123-4228-b32a-ccb78af3449f`, establishing persistence.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Earlier, the Task Scheduler was used by process with ProcessId `1348` at 
+          `2024-06-26T12:00:40.0878355Z` running the command line `"schtasks.exe" /create /sc once /tn yrei /tr 
+          "c:\users\samuelf\onedrive - (new) alpineskihouse\desktop\winatp-intro-backdoor.exe" /st 11:58 /f`, indicating
+          an attempt to schedule the malicious backdoor.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,49 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_90
+  title: incident_5_latest_test_set_task_90
+  description: 'Less than two seconds after the suspicious remote activity was detected, a separate alert reported that command-and-control
+    behaviour had been blocked. What URL was identified in that ‘Command and Control behavior was blocked’ alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'On host vnevado-win10r, several rapid-fire commands were executed remotely within seconds of each other,
+      such as disabling system recovery, altering boot-status policy, deleting shadow copies with vssblatemp.exe, and launching
+      a PowerShell script. These actions triggered a “Suspicious remote activity” alert at 22:35:00 UTC on 2024-07-04, indicating
+      a possible attempt to prepare the machine for further malicious operations.'
+    question: 'Less than two seconds after the suspicious remote activity was detected, a separate alert reported that command-and-control
+      behaviour had been blocked. What URL was identified in that ‘Command and Control behavior was blocked’ alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'http://vectorsandarrows.com/'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'http://vectorsandarrows.com/'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: Suspicious remote activity originated from the account Name `dp5hn`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: Moments later, a Command-and-Control attempt to the Url `http://vectorsandarrows.com/` was detected
+          and blocked.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

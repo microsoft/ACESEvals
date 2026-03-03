@@ -1,0 +1,58 @@
+tasks:
+- task_id: incident_55_latest_test_set_task_9
+  title: incident_55_latest_test_set_task_9
+  description: 'According to the July 4th alert about code injection into a process, which user account was involved in that
+    event?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation we noted that server MB-DC1 accessed the AD FS DKM key, and shortly afterwards
+      an account from host MB-WINCLIENT initiated a suspected DCSync replication request to the same domain controller. Looking
+      back in the timeline, an earlier alert on 2024-07-04 reported that malicious code had been injected into a running process,
+      suggesting that the attacker gained execution inside an existing application.'
+    question: 'According to the July 4th alert about code injection into a process, which user account was involved in that
+      event?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'pwilson'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'pwilson'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: HostName `MB-DC1` accessed (read) the AD FS DKM key at 2024-07-10 11:24:45Z, indicating possible 
+          exposure of federation service secrets.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Account Sid `S-1-5-21-551436448-9871687716-9837441745-1903` (user Luciano Herrera) sent a 
+          suspicious DCSync replication request from MB-WINCLIENT to domain controller MB-DC1 at 2024-07-10 11:24:45Z.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Account Name `pwilson` was involved in a process-injection event on 2024-07-04 22:35:02Z, showing 
+          that malicious code was executed within a legitimate process.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

@@ -1,0 +1,47 @@
+tasks:
+- task_id: incident_134_legacy_train_set_task_23
+  title: incident_134_legacy_train_set_task_23
+  description: 'Can you identify the IP address that was flagged as malicious during or around the time of the suspicious
+    sign-in?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A security incident involved an anonymous IP address sign-in, indicating the use of tools like the
+      Tor browser or anonymizer VPNs, with the AadUserId `e036dee7-fa23-42ef-a019-468c8d3401f1` on 2024-07-17 at 11:01:27.633644+00:00.
+      Shortly after, there was another concerning activity where a sign-in was detected from a known malicious IP address.'
+    question: 'Can you identify the IP address that was flagged as malicious during or around the time of the suspicious sign-in?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '170.54.121.63'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '170.54.121.63'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was a sign-in from an anonymous IP address for the account with AadUserId 
+          `e036dee7-fa23-42ef-a019-468c8d3401f1`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: There was a sign-in from a malicious IP address `170.54.121.63`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

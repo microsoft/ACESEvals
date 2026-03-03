@@ -1,0 +1,51 @@
+tasks:
+- task_id: incident_322_latest_test_set_task_25
+  title: incident_322_latest_test_set_task_25
+  description: 'According to the proxy-log alert involving the connection to login.micro.demo.antoinetest.ovh, what source
+    IP address was observed making that request?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the investigation we confirmed that user Hailey Johnson (account SID S-1-5-21-1840151686-3534835288-156286563-1127,
+      AAD ID 5e5dd0bd-f7ed-4583-8e9e-52f91e31a360) browsed to a known-malicious URL (https://dj01161621.bravesand-e1ccd718.eastus.azurecontainerapps.io/)
+      from Microsoft Edge. The action originated from device ID 76707c40-3343-490e-9205-88fdb51aefe0 over local address 172.33.118.200
+      at 13:49 UTC on 2024-08-01. A separate alert generated roughly an hour earlier reported that the same machine reached
+      out to the domain login.micro.demo.antoinetest.ovh, as recorded by the corporate proxy logs.'
+    question: 'According to the proxy-log alert involving the connection to login.micro.demo.antoinetest.ovh, what source
+      IP address was observed making that request?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '231.60.52.209'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '231.60.52.209'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'Step 1 – ip.Address: `231.60.52.209` made an outbound connection to the suspicious domain `login.micro.demo.antoinetest.ovh`,
+          as recorded in the proxy logs on 2024-08-01 12:47:22.846409 +00:00.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Step 2 – host.HostName: `vnevado-win11h` was later flagged at 2024-08-01 13:49:58.880422 +00:00 for
+          having a malicious URL clicked on the device, confirming user interaction with the threat.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

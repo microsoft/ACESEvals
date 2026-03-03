@@ -1,0 +1,53 @@
+tasks:
+- task_id: incident_55_legacy_train_set_task_47
+  title: incident_55_legacy_train_set_task_47
+  description: 'As part of a suspicious remote activity alert, which account name was involved in this remote activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A security incident was reported where a potentially malicious URL click was detected involving account
+      `Lucas Grey` with email `Lucas Grey@niseko.alpineskihouse.co`. The URL in question was `http://ym018491661.wittytree-b6f239d6.northeurope.azurecontainerapps.io/`.
+      Following this, there was an alert indicating that a malicious PowerShell Cmdlet was invoked on the machine, potentially
+      tied to activities like credential theft or network reconnaissance.'
+    question: 'As part of a suspicious remote activity alert, which account name was involved in this remote activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'LocalSystem'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'LocalSystem'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: User with AadUserId `a2d0f7c2-b0a0-43bd-bce0-27d8ae3be4d0` clicked on a potentially malicious URL.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious PowerShell Cmdlet was invoked using `powershell.exe` on a machine.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Suspicious remote activity was observed on a machine involving the account `LocalSystem`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

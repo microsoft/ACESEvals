@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_39_latest_test_set_task_79
+  title: incident_39_latest_test_set_task_79
+  description: 'In the follow-up alert that reported ''Kekeo'' malware attempting lateral movement, which account SID was
+    identified?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During investigation of an active ''Kekeo'' malware infection, the executable rubeus.exe was found
+      running (PID 2608) with the command line "rubeus.exe  dump /service:xfbzkp /user:lucasb" on 2024-07-04 22:35:03 UTC.
+      This alert indicated the malware was already active on the host and referenced an unspecified user account SID.'
+    question: 'In the follow-up alert that reported ''Kekeo'' malware attempting lateral movement, which account SID was identified?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-0-6-5'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-0-6-5'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: An active 'Kekeo' malware instance was detected, tied to the account with Sid 
+          `S-1-5-21-1540151660-3530000288-105586595-1517`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: During suspected lateral movement, 'Kekeo' malware activity was observed involving the account with
+          Sid `S-0-6-5`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

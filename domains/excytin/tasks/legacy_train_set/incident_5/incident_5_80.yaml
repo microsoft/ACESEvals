@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_5_legacy_train_set_task_80
+  title: incident_5_legacy_train_set_task_80
+  description: 'Related to this incident, PsExec was used to launch a command on a remote device likely for lateral movement.
+    Can you provide the Process ID and creation time of the `cmd.exe` process that was launched by PsExec?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'In a recent security incident, a known credential theft tool `mimikatz.exe` was executed. The execution
+      command line indicated an attempt to dump users'' credentials, keys, and plain-text passwords. The process had a Process
+      ID of 3008 and was created at 2024-06-20T09:03:30.2086323Z.'
+    question: 'Related to this incident, PsExec was used to launch a command on a remote device likely for lateral movement.
+      Can you provide the Process ID and creation time of the `cmd.exe` process that was launched by PsExec?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'Process ID: 8656, Creation time: 2024-06-20T09:07:09.5458894Z'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'Process ID: 8656, Creation time: 2024-06-20T09:07:09.5458894Z'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A known credential theft tool was executed by the account `tgs2z`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: PsExec was used to launch `cmd.exe` on a remote device with Process ID `8656` at 
+          `2024-06-20t09:07:09.5458894z`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

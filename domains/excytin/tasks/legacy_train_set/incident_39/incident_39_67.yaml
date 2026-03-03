@@ -1,0 +1,50 @@
+tasks:
+- task_id: incident_39_legacy_train_set_task_67
+  title: incident_39_legacy_train_set_task_67
+  description: 'Can you provide the command line execution details of the known credential theft tool that was detected?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During a suspicious access to the LSASS service on 2024-07-04, it was suspected that attackers decrypted
+      user passwords from the LSASS service''s memory. These credentials might have been used to infiltrate other machines
+      and servers in the network using lateral movement activities. One of the alerts connected to this incident indicated
+      the execution of a known malicious credential theft tool.'
+    question: 'Can you provide the command line execution details of the known credential theft tool that was detected?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '4748__2024-06-27t14:33:38.0249949z__"mimikatz.exe" "lsadump::dcsync /domain:vnevado.alpineskihouse.co /user:xfbzkp" exit'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '4748__2024-06-27t14:33:38.0249949z__"mimikatz.exe" "lsadump::dcsync /domain:vnevado.alpineskihouse.co
+          /user:xfbzkp" exit'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: There was a suspicious access to the LSASS service on host `vnevado-win10v` detected on 2024-07-04 
+          22:35:03.532131+00:00.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: A malicious credential theft tool, specifically `mimikatz.exe`, was executed on 2024-06-27 at 
+          14:33:38.0249949 UTC with the command line `mimikatz.exe lsadump::dcsync /domain:vnevado.alpineskihouse.co 
+          /user:xfbzkp` and Process ID `4748`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

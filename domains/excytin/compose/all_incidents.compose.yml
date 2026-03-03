@@ -1,0 +1,252 @@
+# Excytin permanent database services — all 8 incident MySQL instances
+# Lifecycle: task_init → compose up, task_cleanup → compose down
+# Managed by SaberSandboxEnvironment, NOT by inspect_ai
+
+services:
+  incident-5-db:
+    image: saber/excytin/incident-5:latest
+    container_name: saber-excytin-incident-5
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data/sql_files/incident_5.sql:/docker-entrypoint-initdb.d/incident_5.sql:ro
+      - ./data/csv_files/incident_5:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    labels:
+      - "saber.domain=excytin"
+
+  incident-34-db:
+    image: saber/excytin/incident-34:latest
+    container_name: saber-excytin-incident-34
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./data/sql_files/incident_34.sql:/docker-entrypoint-initdb.d/incident_34.sql:ro
+      - ./data/csv_files/incident_34:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    labels:
+      - "saber.domain=excytin"
+
+  incident-38-db:
+    image: saber/excytin/incident-38:latest
+    container_name: saber-excytin-incident-38
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./data/sql_files/incident_38.sql:/docker-entrypoint-initdb.d/incident_38.sql:ro
+      - ./data/csv_files/incident_38:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    labels:
+      - "saber.domain=excytin"
+
+  incident-39-db:
+    image: saber/excytin/incident-39:latest
+    container_name: saber-excytin-incident-39
+    ports:
+      - "3309:3306"
+    volumes:
+      - ./data/sql_files/incident_39.sql:/docker-entrypoint-initdb.d/incident_39.sql:ro
+      - ./data/csv_files/incident_39:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    labels:
+      - "saber.domain=excytin"
+
+  incident-55-db:
+    image: saber/excytin/incident-55:latest
+    container_name: saber-excytin-incident-55
+    ports:
+      - "3310:3306"
+    volumes:
+      - ./data/sql_files/incident_55.sql:/docker-entrypoint-initdb.d/incident_55.sql:ro
+      - ./data/csv_files/incident_55:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 10
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: "1.0"
+    labels:
+      - "saber.domain=excytin"
+
+  incident-134-db:
+    image: saber/excytin/incident-134:latest
+    container_name: saber-excytin-incident-134
+    ports:
+      - "3311:3306"
+    volumes:
+      - ./data/sql_files/incident_134.sql:/docker-entrypoint-initdb.d/incident_134.sql:ro
+      - ./data/csv_files/incident_134:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    labels:
+      - "saber.domain=excytin"
+
+  incident-166-db:
+    image: saber/excytin/incident-166:latest
+    container_name: saber-excytin-incident-166
+    ports:
+      - "3312:3306"
+    volumes:
+      - ./data/sql_files/incident_166.sql:/docker-entrypoint-initdb.d/incident_166.sql:ro
+      - ./data/csv_files/incident_166:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    labels:
+      - "saber.domain=excytin"
+
+  incident-322-db:
+    image: saber/excytin/incident-322:latest
+    container_name: saber-excytin-incident-322
+    ports:
+      - "3313:3306"
+    volumes:
+      - ./data/sql_files/incident_322.sql:/docker-entrypoint-initdb.d/incident_322.sql:ro
+      - ./data/csv_files/incident_322:/var/lib/mysql-files
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: env_monitor_db
+      MYSQL_ROOT_HOST: "%"
+    command: --secure-file-priv=/var/lib/mysql-files --bind-address=0.0.0.0 --innodb-redo-log-capacity=2147483648 --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=0 --innodb-doublewrite=0
+    networks:
+      - excytin-database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 20s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    labels:
+      - "saber.domain=excytin"
+
+networks:
+  excytin-database:
+    driver: bridge
+    internal: true
+    labels:
+      - "saber.domain=excytin"
+      - "saber.network.type=shared"

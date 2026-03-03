@@ -1,0 +1,66 @@
+tasks:
+- task_id: incident_5_legacy_train_set_task_33
+  title: incident_5_legacy_train_set_task_33
+  description: 'Can you provide the URL associated with the Manatee Tempest activity group mentioned in the latest alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A malicious credential theft tool execution was detected, involving the execution of `mimikatz.exe`,
+      `notepad.exe`, and `cmd.exe` to potentially dump users'' credentials and other sensitive information. This activity
+      was observed on 2024-07-04 and has been tracked throughout multiple suspicious movements including the use of PSExec
+      to a jump server and suspicious remote activities. Microsoft has linked this activity to the Manatee Tempest activity
+      group, a Russia-based cybercriminal organization known for various attacks including the Dridex banking trojan and ransomware
+      deployments.'
+    question: 'Can you provide the URL associated with the Manatee Tempest activity group mentioned in the latest alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'vectorsandarrows.com'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'vectorsandarrows.com'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: A known credential theft tool was executed by an account with AadUserId 
+          `1d94aaf6-efe6-4e76-ad56-ffd7d1257bc1`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: There was lateral movement using PSExec to the jump server from IP address `99.83.111.100`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 3
+        description: Suspicious remote activity was initiated by an account with AadUserId 
+          `731adb71-b11c-4bbf-850b-57989b350e96`.
+      checkpoint_4:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 4
+        description: The activity group Manatee Tempest, tracked by Microsoft, utilizes tactics such as malvertising and
+          FakeUpdates to gain initial access, followed by BLISTER loader to deliver Cobalt Strike beacons. This group is
+          associated with the URL `vectorsandarrows.com`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
+        - checkpoint_4

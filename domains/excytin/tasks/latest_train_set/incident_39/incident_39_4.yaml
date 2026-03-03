@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_4
+  title: incident_39_latest_train_set_task_4
+  description: 'During the subsequent investigation, a separate alert reported a SID history injection on the same device.
+    Which user account was identified as having its SID history modified in that alert?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A ''Suspicious service launched'' alert was raised on 2024-07-04 after the executables ''psexesvc.exe''
+      (Process ID 7668) and ''services.exe'' (Process ID 652) were observed running on the same endpoint. This activity may
+      indicate an attempt to maintain persistence or elevate privileges via malicious services.'
+    question: 'During the subsequent investigation, a separate alert reported a SID history injection on the same device.
+      Which user account was identified as having its SID history modified in that alert?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'lucasb'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'lucasb'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious service was launched on the host with HostName `vnevado-dc`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: An SID history injection was detected for the account with Name `lucasb`, indicating possible 
+          privilege escalation.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

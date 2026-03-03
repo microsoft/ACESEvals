@@ -1,0 +1,62 @@
+tasks:
+- task_id: incident_39_latest_train_set_task_48
+  title: incident_39_latest_train_set_task_48
+  description: 'Following these events, a remote session dropped a file and executed it on the host, triggering the "File
+    dropped and launched from remote location" alert. What is the SID of the account associated with this remote execution
+    activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, we observed an alert on 2024-07-04 titled "Multiple dual-purpose tools were
+      dropped" indicating that several utilities—such as the well-known credential-theft tool mimikatz.exe and scripts like
+      domaindominance27.ps1—were copied to a device. The activity suggests an attacker was preparing for credential theft
+      or lateral movement. Immediately afterward, a second alert reported possible use of the Rubeus kerberoasting tool on
+      the same endpoint, reinforcing the suspicion of Kerberos-related credential attacks.'
+    question: 'Following these events, a remote session dropped a file and executed it on the host, triggering the "File dropped
+      and launched from remote location" alert. What is the SID of the account associated with this remote execution activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1540151660-3530000288-105586595-1517'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-1540151660-3530000288-105586595-1517'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: At 2024-07-04 22:35:00.721436 UTC a remote session using account Sid 
+          `S-1-5-21-1540151660-3530000288-105586595-1517` dropped a file and immediately executed it on the endpoint.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Two seconds later, at 2024-07-04 22:35:02.140784 UTC, multiple dual-purpose tools were placed on 
+          the same machine by the account whose Sid is `S-5-7-21-1843151660-3234030288-105586167-1422`, indicating 
+          preparation for further post-exploitation activity.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Finally, at 2024-07-04 22:35:04.021732 UTC, the kerberoasting utility was invoked as process 
+          `ExtractedFileName = rubeus.exe`, confirming that the attacker is now attempting to harvest or reuse Kerberos 
+          credentials.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

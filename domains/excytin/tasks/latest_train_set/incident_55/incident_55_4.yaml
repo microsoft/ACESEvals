@@ -1,0 +1,60 @@
+tasks:
+- task_id: incident_55_latest_train_set_task_4
+  title: incident_55_latest_train_set_task_4
+  description: 'Threat hunting has revealed that the same activity chain quickly led to an alert about an attempted extraction
+    of Active Directory Federation Service (ADFS) private keys via a suspicious LDAP query. Which user account was identified
+    in the alert that flagged the ADFS private key extraction attempt?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'While investigating a suspicious sequence of exploration activities on host ''mb-winclient'', we observed
+      several Windows command–line utilities (such as svchost.exe, whoami.exe, and powershell.exe) being executed under the
+      user account ''bjenkins''. These actions originated from IP address 72.5.72.208 on 2024-07-04 and may indicate that
+      the attacker was gathering information for lateral movement or privilege escalation across the network.'
+    question: 'Threat hunting has revealed that the same activity chain quickly led to an alert about an attempted extraction
+      of Active Directory Federation Service (ADFS) private keys via a suspicious LDAP query. Which user account was identified
+      in the alert that flagged the ADFS private key extraction attempt?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'gsmith'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'gsmith'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: The account with Name `gsmith` attempted an ADFS private key extraction via a suspicious LDAP query
+          at 2024-07-04 22:35:02.751926+00:00.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: Immediately afterward, the same account with Name `gsmith` executed a suspicious sequence of 
+          exploration activities at 2024-07-04 22:35:03.106654+00:00.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: These exploration activities were carried out by the process whose ExtractedFileName is 
+          `powershell.exe` at 2024-07-04 22:35:03.197761+00:00.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3

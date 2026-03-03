@@ -1,0 +1,48 @@
+tasks:
+- task_id: incident_34_legacy_train_set_task_9
+  title: incident_34_legacy_train_set_task_9
+  description: 'What is the Security Identifier (SID) of the account that performed the suspicious Task Scheduler activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'A suspicious PowerShell activity was observed on the machine which might indicate usage of PowerShell
+      during installation, exploration, or lateral movement activities by attackers. Attackers often use PowerShell to bypass
+      security protection mechanisms by executing their payload in memory without leaving any trace. As part of this activity,
+      the process `winword.exe` executed a file `winatp-intro-backdoor.exe`. Subsequently, Task Scheduler activity was noted,
+      which might involve malicious code being launched automatically to establish persistence.'
+    question: 'What is the Security Identifier (SID) of the account that performed the suspicious Task Scheduler activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'S-1-5-21-1870156660-7534030218-135086563-1193'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'S-1-5-21-1870156660-7534030218-135086563-1193'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: A suspicious PowerShell command line was executed using the process `powershell.exe`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: The user with SID `S-1-5-21-1870156660-7534030218-135086563-1193` used Task Scheduler in a 
+          suspicious manner, likely attempting to establish persistence by creating, modifying, or deleting a task.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

@@ -1,0 +1,52 @@
+tasks:
+- task_id: incident_34_latest_test_set_task_20
+  title: incident_34_latest_test_set_task_20
+  description: 'According to the follow-up alert that reported the uncommon file being added to a Run Key, what external IP
+    address was associated with that activity?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During the incident investigation, Microsoft Defender flagged an alert titled "An anomalous scheduled
+      task was created." We observed a PowerShell process (PID 8604) running a lengthy base-64 encoded command that wrote
+      a file named "winatp-intro-backdoor.exe" to the user’s Desktop and immediately registered a one-time task called "yrei"
+      through a subsequent "schtasks.exe" process (PID 1348). This sequence suggests an attempt to establish persistence on
+      the host. Shortly afterward, another alert was raised—"An uncommon file was created and added to a Run Key"—which is
+      often indicative of malware ensuring execution after reboot.'
+    question: 'According to the follow-up alert that reported the uncommon file being added to a Run Key, what external IP
+      address was associated with that activity?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - '72.5.72.208'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: '72.5.72.208'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 1
+        description: 'A scheduled task was created that references the suspicious file (ExtractedFileName: `winatp-intro-backdoor.exe`),
+          indicating a potential persistence attempt.'
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.5
+        weight: 1.0
+        title: Checkpoint 2
+        description: 'Moments later, an uncommon file was added to a Run registry key and the machine communicated with a
+          suspicious external host (Address: `72.5.72.208`), reinforcing evidence of malicious activity.'
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

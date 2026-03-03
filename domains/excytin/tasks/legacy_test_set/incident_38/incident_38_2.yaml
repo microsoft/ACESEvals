@@ -1,0 +1,52 @@
+tasks:
+- task_id: incident_38_legacy_test_set_task_11
+  title: incident_38_legacy_test_set_task_11
+  description: During the investigation, it was found that a process injected code abnormally into another process, 
+    leading to possible abnormal behaviors. Can you identify the URL that was connected to this suspicious process 
+    injection?
+  inherit_shared: true
+  initial_context:
+    incident_context: An unexpected behavior was observed with a process running with no command line arguments on 
+      2024-07-04. The legitimate process by this name does not normally exhibit this behavior; this could be due to 
+      extraneous code injected into it or it masquerading as the legitimate process. The IP address associated with this
+      activity is `202.183.149.174`.
+    question: During the investigation, it was found that a process injected code abnormally into another process, 
+      leading to possible abnormal behaviors. Can you identify the URL that was connected to this suspicious process 
+      injection?
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'https://wcdstaticfilesprdeus.blob.core.windows.net/wcdstaticfiles/winatp-intro-fileless.txt'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'https://wcdstaticfilesprdeus.blob.core.windows.net/wcdstaticfiles/winatp-intro-fileless.txt'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 1
+        description: The user account with SID `S-1-5-21-1240151660-3534038288-105586567-4122` exhibited unexpected 
+          behavior observed in a process ran with no command line arguments.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.25
+        weight: 1.0
+        title: Checkpoint 2
+        description: A suspicious process injection was observed involving a URL 
+          `https://wcdstaticfilesprdeus.blob.core.windows.net/wcdstaticfiles/winatp-intro-fileless.txt`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2

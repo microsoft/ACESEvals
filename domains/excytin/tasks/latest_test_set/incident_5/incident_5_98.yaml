@@ -1,0 +1,59 @@
+tasks:
+- task_id: incident_5_latest_test_set_task_98
+  title: incident_5_latest_test_set_task_98
+  description: 'According to the follow-up alert at 22:35:04 UTC, which executable was identified as the credential theft
+    tool that was run on the device?'
+  inherit_shared: true
+  initial_context:
+    incident_context: 'During an investigation, the account "dp5hn" (SID S-1-5-21-1840191660-8534830288-125585561-1522, Azure
+      AD ID 731adb71-b11c-4bbf-850b-57989b350e96) on host "vnevado-win10r" (Device ID 9d4887ba-0b69-47d6-89bc-9b32787f379e)
+      triggered an alert titled "Possible attempt to access Primary Refresh Token (PRT)" on 2024-07-04 at 22:35:00 UTC. The
+      process involved was launched with command line 1792__2024-06-20T09:11:00.6379159Z__"browsercore.exe". Just a few seconds
+      later, another alert—classified as a known credential-theft tool execution—was raised on the same endpoint.'
+    question: 'According to the follow-up alert at 22:35:04 UTC, which executable was identified as the credential theft tool
+      that was run on the device?'
+    # Main task submission evaluation - uses LLM-as-a-judge by default
+    # To use static matching instead, change strategy to "static" and set:
+    #   criteria:
+    #     expected_answers:
+    #       - 'notepad.exe'
+  scoring:
+    llm_judge:
+      model: openai/azure/gpt-4.1
+      steps_per_message: 50
+      judge_system_template: judge/checkpoint_judge_system.md
+      judge_user_template: judge/checkpoint_judge_user.md
+      submission:
+        target: submission
+        judge_system_template: judge/submission_judge_system.md
+        judge_user_template: judge/submission_judge_user.md
+        description: 'notepad.exe'
+        max_score: 1.0
+      checkpoint_1:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 1
+        description: A possible attempt to access a Primary Refresh Token (PRT) was detected from the process with 
+          ExtractedFileName `browsercore.exe`.
+      checkpoint_2:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 2
+        description: The same PRT-access attempt was observed on the host identified by AadDeviceId 
+          `4d8d23e9-a77d-4e33-9435-b8c457e57ca1`.
+      checkpoint_3:
+        target: trajectory
+        max_score: 0.333
+        weight: 1.0
+        title: Checkpoint 3
+        description: Minutes later, a malicious credential-theft tool was executed, identified as the process with 
+          ExtractedFileName `notepad.exe`.
+  scoring_aggregation:
+    max:
+      scores:
+      - submission
+      - - checkpoint_1
+        - checkpoint_2
+        - checkpoint_3
