@@ -347,8 +347,11 @@ async def run_single(tasks: list[TaskRunOptions], debug_errors: bool) -> list[Ev
             else:
                 raise
         except anyio.get_cancelled_exc_class():
-            # child tasks have already each handled this and updated results
-            pass
+            # child tasks may have handled this and updated results;
+            # if no results were collected, re-raise so callers know
+            # the eval was cancelled rather than returning an empty list
+            if not results:
+                raise
         finally:
             # clear ui
             clear_task_screen()

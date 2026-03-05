@@ -125,6 +125,14 @@ SCORES_PER_ROW = 4
 
 
 def task_scores(scores: list[EvalScore], pad_edge: bool = False) -> list[Table]:
+    # Filter out scorers that had zero scored samples (all NaN metrics).
+    # This avoids flooding the display with NaN rows when --limit restricts
+    # which samples run but scorers are registered for all tasks.
+    scores = [
+        s for s in scores
+        if s.scored_samples is None or s.scored_samples > 0
+    ]
+
     rows: list[Table] = []
 
     # Process scores in groups
