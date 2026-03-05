@@ -1,0 +1,33 @@
+# CRSBench per-sample sandbox — managed by inspect_ai DockerSandboxEnvironment
+# Provides a vulnerability research workstation with clang, ASAN, gdb, and build tools.
+
+services:
+  default:
+    image: saber/crsbench/sandbox:latest
+    x-local: true
+    working_dir: /workspace
+    command: "tail -f /dev/null"
+    init: true
+    environment:
+      - CC=clang
+      - CXX=clang++
+      - ASAN_OPTIONS=detect_leaks=0:abort_on_error=1
+    networks:
+      - sandbox-net
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          # ASAN instrumentation needs extra memory beyond the 2G default
+          memory: 4G
+          pids: 256
+
+networks:
+  sandbox-net:
+    driver: bridge
+    internal: true

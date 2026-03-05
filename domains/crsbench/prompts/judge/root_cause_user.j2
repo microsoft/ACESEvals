@@ -1,0 +1,38 @@
+## Bug-Fix Task: {{ question }}
+
+**Project:** {{ initial_context.project }}
+**Harness:** {{ initial_context.harness_name }}
+**Benchmark:** {{ initial_context.benchmark_id }}
+
+---
+
+## Agent Execution Trace ({{ episode.get_step_count() }} steps)
+
+{% for step in episode.steps %}
+**[{{ step.step_number }}]** {{ step.tool_name }}
+Input: {{ step.tool_input | string | truncate(300) }}
+{% if step.assistant_message %}
+Agent Message: {{ step.assistant_message | truncate(800) }}
+{% endif %}
+{% if step.reasoning %}
+Agent Reasoning: {{ step.reasoning | truncate(600) }}
+{% endif %}
+Output: {{ step.output | string | truncate(1000) }}
+
+{% endfor %}
+
+---
+
+## Evaluation Task
+
+Review the agent's execution trace above and determine whether the agent successfully identified the root cause of the vulnerability.
+
+Key things to look for:
+- Did the agent examine the source code in `/workspace/source/`?
+- Did the agent identify the vulnerability type (buffer overflow, use-after-free, etc.)?
+- Did the agent locate the specific source code (file, function, line) that causes the vulnerability?
+- Did the agent explain why the code is vulnerable?
+- Did the agent connect the ASAN crash report to specific source code?
+
+Use the STEP_EVALUATIONS format with `[step_number: checkpoint_id]` notation.
+If no checkpoints were completed, respond with `[NO_COMPLETIONS]`.

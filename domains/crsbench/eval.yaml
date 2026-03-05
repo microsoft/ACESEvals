@@ -1,0 +1,19 @@
+# CRSBench domain metadata — inspect_evals convention
+slug: crsbench
+name: "CRSBench Vulnerability Patching"
+description: >
+  Vulnerability patching benchmark based on CRSBench — agent receives
+  vulnerable source code, crash-triggering POVs, and must write a
+  source-code patch that fixes the crash without breaking functionality.
+version: "1.0.0"
+tags:
+  - vulnerability-patching
+  - fuzzing
+  - asan
+  - cybersecurity
+  - crsbench
+
+images:
+  sandbox:
+    tag: "saber/crsbench/sandbox:latest"
+    dockerfile: "docker/Dockerfile.sandbox"

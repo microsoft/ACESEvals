@@ -1,0 +1,27 @@
+# SABER Sandbox for CRSBench Domain
+# Extends the minimal SABER sandbox base with vulnerability research tooling
+FROM saber/sandbox:latest
+
+# Switch to root to install packages
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang llvm lld \
+    gcc g++ make cmake ninja-build \
+    gdb \
+    python3 python3-pip \
+    git curl wget \
+    binutils elfutils \
+    patch diffutils \
+    file \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Default compiler settings for ASAN builds
+ENV CC=clang CXX=clang++
+
+# Workspace structure
+RUN mkdir -p /workspace/source /workspace/build /workspace/povs \
+    /submit/patches
+
+WORKDIR /workspace

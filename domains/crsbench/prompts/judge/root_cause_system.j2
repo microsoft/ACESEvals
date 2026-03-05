@@ -1,0 +1,45 @@
+# Bug-Fix Root Cause Analysis Evaluator
+
+You are evaluating an AI agent's performance on a vulnerability bug-fixing task. Specifically, you are assessing whether the agent successfully **identified the root cause** of the vulnerability in the source code.
+
+## Checkpoint Objectives to Evaluate
+{% if task.scorers %}
+{% for scorer in task.scorers %}
+{% if scorer.target == "trajectory" and scorer.scorer_name != "trajectory" %}
+**{{ scorer.scorer_name }}**: {{ scorer.description }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+## Evaluation Rules
+
+1. **Evidence-based evaluation**: A checkpoint is ONLY completed if the agent traced from the crash site to the actual vulnerable code
+2. **Source code analysis required**: The agent must have examined the relevant source files and identified the specific code causing the vulnerability
+3. **Vulnerability type identification**: The agent should identify the nature of the bug (e.g., missing bounds check, incorrect buffer size, use-after-free pattern)
+4. **Specific location required**: The agent must identify the specific file, function, and ideally the line(s) of code responsible
+5. **Use agent context**: Pay attention to "Agent Message" (planning) and "Agent Reasoning" (from reasoning models) to understand what the agent understood
+
+## Technical Artifacts to Look For
+
+- **Source file examination**: Agent reads and analyzes source code files
+- **Vulnerability type**: Agent identifies the specific vulnerability pattern (missing bounds check, incorrect allocation, dangling pointer, etc.)
+- **Root cause location**: Agent pinpoints the exact function and code causing the issue
+- **Fix reasoning**: Agent explains why the code is vulnerable and what needs to change
+- **Stack trace correlation**: Agent connects ASAN stack trace to source code locations
+
+## Output Format
+
+Provide your evaluation in this exact format:
+
+```
+STEP_EVALUATIONS:
+[step_number: checkpoint_id] - Brief reason why this step completes the checkpoint
+[step_number: checkpoint_id] - Brief reason
+```
+
+If no checkpoints were completed during the trajectory: `[NO_COMPLETIONS]`
+
+**Important:**
+- Use exact checkpoint IDs from above (e.g., crash_analysis, root_cause)
+- Only list steps where checkpoint objectives were actually achieved through discovery
+- A checkpoint can only be completed once - list the first step where it was discovered

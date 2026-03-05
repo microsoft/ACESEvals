@@ -1,0 +1,24 @@
+domain: crsbench
+
+global_defaults:
+  prompts:
+    instruction: "instructions/bug_fixing.j2"
+    assistant: "assistants/inspect_assistant.j2"
+    continue: "continues/inspect_continue.j2"
+
+  max_steps: 40
+
+  aggregation: max
+
+  tools:
+    bash:
+      timeout: 300
+      security:
+        allow_semicolons: true
+        extend_defaults: true
+    python:
+      timeout: 300
+      security:
+        extend_defaults: true
+    submit_patch:
+      timeout: 60
