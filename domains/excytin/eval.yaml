@@ -17,25 +17,25 @@ images:
     dockerfile: "docker/Dockerfile.sandbox"
   incident_5_db:
     tag: "saber/excytin/incident-5:latest"
-    dockerfile: "docker/db/Dockerfile.incident_5"
+    dockerfile: "docker/db/Dockerfile.db"
   incident_34_db:
     tag: "saber/excytin/incident-34:latest"
-    dockerfile: "docker/db/Dockerfile.incident_34"
+    dockerfile: "docker/db/Dockerfile.db"
   incident_38_db:
     tag: "saber/excytin/incident-38:latest"
-    dockerfile: "docker/db/Dockerfile.incident_38"
+    dockerfile: "docker/db/Dockerfile.db"
   incident_39_db:
     tag: "saber/excytin/incident-39:latest"
-    dockerfile: "docker/db/Dockerfile.incident_39"
+    dockerfile: "docker/db/Dockerfile.db"
   incident_55_db:
     tag: "saber/excytin/incident-55:latest"
-    dockerfile: "docker/db/Dockerfile.incident_55"
+    dockerfile: "docker/db/Dockerfile.db"
   incident_134_db:
     tag: "saber/excytin/incident-134:latest"
-    dockerfile: "docker/db/Dockerfile.incident_134"
+    dockerfile: "docker/db/Dockerfile.db"
   incident_166_db:
     tag: "saber/excytin/incident-166:latest"
-    dockerfile: "docker/db/Dockerfile.incident_166"
+    dockerfile: "docker/db/Dockerfile.db"
   incident_322_db:
     tag: "saber/excytin/incident-322:latest"
-    dockerfile: "docker/db/Dockerfile.incident_322"
+    dockerfile: "docker/db/Dockerfile.db"
