@@ -11,8 +11,6 @@ from inspect_ai import Task, task
 
 from saber.task import create_task
 
-from .setup import DownloadBenchmarkData
-
 
 @task
 def crsbench(**kwargs: str | None) -> Task:
@@ -22,6 +20,9 @@ def crsbench(**kwargs: str | None) -> Task:
     vulnerable source code, crash-triggering POVs, and must write a
     source-code patch that fixes the crash without breaking functionality.
 
+    Downloads benchmark data from HuggingFace on first run if not already
+    present locally (via auto-discovered setup hooks).
+
     Args:
         **kwargs: Keyword arguments forwarded to ``create_task``
             (e.g., task_filter, agent, rebuild, run_preflight,
@@ -30,7 +31,4 @@ def crsbench(**kwargs: str | None) -> Task:
     Returns:
         Fully configured inspect_ai Task.
     """
-    return create_task(
-        setup_hooks=[DownloadBenchmarkData()],
-        **kwargs,
-    )
+    return create_task(**kwargs)

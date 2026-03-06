@@ -11,6 +11,11 @@ services:
     environment:
       - CC=clang
       - CXX=clang++
+      - CFLAGS=-fsanitize=address -fno-omit-frame-pointer -g
+      - CXXFLAGS=-fsanitize=address -fno-omit-frame-pointer -g
+      - SRC=/workspace/source
+      - OUT=/workspace/build
+      - LIB_FUZZING_ENGINE=/usr/lib/llvm-19/lib/libFuzzer.a
       - ASAN_OPTIONS=detect_leaks=0:abort_on_error=1
     networks:
       - sandbox-net

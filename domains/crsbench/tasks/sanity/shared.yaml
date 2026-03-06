@@ -1,5 +1,0 @@
-sandbox_environment: "default"
-
-initial_context:
-  sanitizer: address
-  mode: bug_fixing

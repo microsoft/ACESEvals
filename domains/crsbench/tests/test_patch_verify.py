@@ -6,6 +6,7 @@ patches, multiple POVs, missing test script, build failures, etc.).
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -101,11 +102,14 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(),                                      # run POV 1 (no crash)
             _make_exec_result(),                                      # test -f test.sh (exists)
+            _make_exec_result(),                                      # chmod +x scripts
             _make_exec_result(),                                      # bash test.sh (pass)
         ])
 
@@ -125,6 +129,8 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
@@ -144,6 +150,8 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
@@ -157,6 +165,29 @@ class TestPatchVerifyScore1_0:
         assert result.value == pytest.approx(1.0)
 
     @pytest.mark.asyncio
+    async def test_patch_already_applied_proceeds_to_build(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Patch already applied: forward fails, reverse dry-run succeeds → continue to build/test → 1.0."""
+        ctx = _make_ctx(criteria_extra={"test_script": ""})
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
+            _make_exec_result(returncode=1),                          # patch apply fails
+            _make_exec_result(returncode=0),                          # reverse dry-run succeeds → already applied
+            _make_exec_result(),                                      # build succeeds
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # run POV (no crash)
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+            result = await strategy.score(ctx, None)
+
+        assert isinstance(result, Score)
+        assert result.value == pytest.approx(1.0)
+
+    @pytest.mark.asyncio
     async def test_max_score_scaling(
         self, strategy: CRSBenchPatchVerifyStrategy
     ) -> None:
@@ -164,6 +195,8 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx(max_score=5.0, criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # normalise patch paths
+            _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),
             _make_exec_result(),
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
@@ -184,11 +217,14 @@ class TestPatchVerifyScore0_5:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(),                                      # run POV (no crash)
             _make_exec_result(),                                      # test -f (exists)
+            _make_exec_result(),                                      # chmod +x scripts
             _make_exec_result(returncode=1, stderr="FAIL: test_foo"),  # bash test.sh fails
         ])
 
@@ -207,11 +243,14 @@ class TestPatchVerifyScore0_5:
         ctx = _make_ctx(max_score=10.0)
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # normalise patch paths
+            _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),
             _make_exec_result(),
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
             _make_exec_result(),
             _make_exec_result(),
+            _make_exec_result(),  # chmod +x scripts
             _make_exec_result(returncode=1, stderr="assertion error"),
         ])
 
@@ -262,7 +301,10 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/bad.diff\n"),
-            _make_exec_result(returncode=1, stderr="FAILED -- saving rejects"),
+            _make_exec_result(),                                                    # normalise patch paths
+            _make_exec_result(),                                                    # reverse + cleanup
+            _make_exec_result(returncode=1, stderr="FAILED -- saving rejects"),  # patch apply fails
+            _make_exec_result(returncode=1),  # reverse dry-run also fails → truly bad patch
         ])
 
         with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
@@ -272,10 +314,56 @@ class TestPatchVerifyScore0_0:
         assert "failed to apply" in (result.explanation or "").lower()
 
     @pytest.mark.asyncio
+    async def test_patch_truly_fails_with_stdout_error(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Patch fails with error in stdout (not stderr) → stdout captured in explanation."""
+        ctx = _make_ctx()
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/bad.diff\n"),             # find patch
+            _make_exec_result(),                                                    # normalise patch paths
+            _make_exec_result(),                                                    # reverse + cleanup
+            _make_exec_result(returncode=1, stdout="FAILED -- saving rejects", stderr=""),  # apply fails
+            _make_exec_result(returncode=1),                                      # reverse dry-run also fails
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(0.0)
+        explanation = result.explanation or ""
+        assert "FAILED" in explanation or "saving rejects" in explanation
+
+    @pytest.mark.asyncio
+    async def test_patch_already_applied_but_crashes_still(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Patch already applied (reverse dry-run succeeds) but POV still crashes → 0.0."""
+        ctx = _make_ctx(criteria_extra={"test_script": ""})
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
+            _make_exec_result(returncode=1),                          # patch apply fails
+            _make_exec_result(returncode=0),                          # reverse dry-run succeeds → already applied
+            _make_exec_result(),                                      # build succeeds
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(returncode=1, stderr="ASAN: crash"),     # POV crashes
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(0.0)
+        assert "still crashes" in (result.explanation or "").lower()
+
+    @pytest.mark.asyncio
     async def test_build_fails(self, strategy: CRSBenchPatchVerifyStrategy) -> None:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),                                       # normalise patch paths
+            _make_exec_result(),                                       # reverse + cleanup
             _make_exec_result(),                                       # patch apply OK
             _make_exec_result(returncode=2, stderr="error: undefined"),  # build fails
         ])
@@ -293,6 +381,8 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
@@ -313,6 +403,8 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # normalise patch paths
+            _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),
             _make_exec_result(),
             _make_exec_result(stdout=""),  # no POVs
@@ -336,6 +428,8 @@ class TestPatchVerifyEdgeCases:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/a.diff\n/submit/patches/b.diff\n"),
+            _make_exec_result(),  # normalise patch paths
+            _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),  # patch apply (a.diff)
             _make_exec_result(),  # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
@@ -346,9 +440,9 @@ class TestPatchVerifyEdgeCases:
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
-        # Verify the first patch file was used in the apply command
-        apply_call = sbx.exec.call_args_list[1]
-        assert "/submit/patches/a.diff" in str(apply_call)
+        # Verify the first patch file was passed to the normaliser
+        normalise_call = sbx.exec.call_args_list[1]
+        assert "/submit/patches/a.diff" in str(normalise_call)
 
     @pytest.mark.asyncio
     async def test_multiple_povs_all_must_pass(
@@ -358,6 +452,8 @@ class TestPatchVerifyEdgeCases:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # normalise patch paths
+            _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),  # patch apply
             _make_exec_result(),  # build
             _make_exec_result(
@@ -381,6 +477,8 @@ class TestPatchVerifyEdgeCases:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),  # patch apply
             _make_exec_result(),  # build
             _make_exec_result(
@@ -408,6 +506,8 @@ class TestPatchVerifyEdgeCases:
         )
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # normalise patch paths
+            _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),  # patch apply
             _make_exec_result(),  # build via custom script
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
@@ -419,7 +519,7 @@ class TestPatchVerifyEdgeCases:
 
         assert result.value == pytest.approx(1.0)
         # Verify build command used custom script
-        build_call = sbx.exec.call_args_list[2]
+        build_call = sbx.exec.call_args_list[4]
         args_str = str(build_call)
         assert "build_asan.sh" in args_str
 
@@ -453,3 +553,190 @@ class TestPatchVerifyEdgeCases:
 
         assert result.value == pytest.approx(0.0)
         assert "Expected DomainCriteria" in (result.explanation or "")
+
+
+# ---------------------------------------------------------------------------
+# Patch normaliser (inline Python script) tests
+# ---------------------------------------------------------------------------
+
+
+class TestPatchNormaliser:
+    """Direct tests for the inline patch normaliser script.
+
+    The normaliser runs as an inline Python snippet inside the Docker sandbox.
+    These tests verify syntax validity and hunk-header count correction by
+    running the script locally via ``subprocess``.
+    """
+
+    @staticmethod
+    def _build_normaliser_script(source_dir: str) -> str:
+        """Reconstruct the normaliser script with the given source_dir."""
+        return "\n".join([
+            "import re, sys, os, pathlib",
+            f"src = {str(source_dir)!r}",
+            "def resolve(p):",
+            "  if os.path.exists(os.path.join(src, p)): return p",
+            "  base = os.path.basename(p)",
+            "  for root, dirs, files in os.walk(src):",
+            "    if base in files:",
+            "      return os.path.relpath(os.path.join(root, base), src)",
+            "  return p",
+            "lines = pathlib.Path(sys.argv[1]).read_text()",
+            "out = []",
+            "for ln in lines.splitlines():",
+            "  m = re.match(r'^(---|\\+\\+\\+)\\s+(.*)', ln)",
+            "  if not m:",
+            "    out.append(ln + chr(10))",
+            "    continue",
+            "  raw = m.group(2).replace(src + '/', '').lstrip('/')",
+            "  raw = re.sub(r'^[ab]/', '', raw)",
+            "  raw = re.sub(r'\\t.*', '', raw)",
+            "  raw = re.sub(r'\\.(bak|orig|old|new)(\\s.*|[0-9].*)?$', '', raw)",
+            "  raw = raw.rstrip('~')",
+            "  raw = resolve(raw)",
+            "  prefix = 'a/' if m.group(1) == '---' else 'b/'",
+            "  out.append(m.group(1) + ' ' + prefix + raw + chr(10))",
+            "fixed = []",
+            "i = 0",
+            "while i < len(out):",
+            "  hm = re.match(r'^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@(.*)', out[i])",
+            "  if not hm:",
+            "    fixed.append(out[i])",
+            "    i += 1",
+            "    continue",
+            "  oc = nc = 0",
+            "  j = i + 1",
+            "  while j < len(out):",
+            "    hl = out[j].rstrip(chr(10))",
+            "    if hl.startswith('@@') or hl.startswith('diff ') or re.match(r'^(---|\\+\\+\\+) [ab]/', hl):",
+            "      break",
+            "    if hl.startswith('+'):",
+            "      nc += 1",
+            "    elif hl.startswith('-'):",
+            "      oc += 1",
+            "    elif hl.startswith(chr(92)):",
+            "      pass",
+            "    else:",
+            "      oc += 1",
+            "      nc += 1",
+            "    j += 1",
+            "  fixed.append('@@ -%s,%d +%s,%d @@%s' % (hm.group(1), oc, hm.group(2), nc, hm.group(3)) + chr(10))",
+            "  i += 1",
+            "out = fixed",
+            "pathlib.Path(sys.argv[2]).write_text(''.join(out))",
+        ])
+
+    def test_syntax_valid(self, tmp_path: Path) -> None:
+        """Normaliser script is syntactically valid Python."""
+        script = self._build_normaliser_script(str(tmp_path))
+        compile(script, "<normaliser>", "exec")  # raises SyntaxError on failure
+
+    def test_hunk_header_counts_corrected(self, tmp_path: Path) -> None:
+        """Wrong @@ counts are recalculated to match actual hunk content."""
+        import subprocess
+
+        # Build a source tree so resolve() can find mock.c
+        src_dir = tmp_path / "source" / "mock-c"
+        src_dir.mkdir(parents=True)
+        (src_dir / "mock.c").write_text("/* dummy */")
+
+        # Patch with WRONG hunk counts: claims -18,8 +18,18 but real is 7/9
+        bad_patch = (
+            "--- a/mock-c/mock.c\n"
+            "+++ b/mock-c/mock.c\n"
+            "@@ -18,8 +18,18 @@ void parse_buffer_section(...) {\n"
+            "   uint32_t buf_size = ((uint32_t *)data)[0];\n"
+            "   uint32_t idx = ((uint32_t *)data)[1];\n"
+            "   if (buf_size + 8 != size)\n"
+            "     return;\n"
+            "+  if (idx > buf_size)\n"
+            "+    return;\n"
+            "   uint8_t *buf = (uint8_t *)malloc(buf_size);\n"
+            "-  memcpy(&buf[idx], &data[8],  buf_size);\n"
+            "+  memcpy(&buf[idx], &data[8], buf_size - idx);\n"
+            " }\n"
+        )
+        patch_file = tmp_path / "bad.diff"
+        patch_file.write_text(bad_patch)
+
+        out_file = tmp_path / "fixed.diff"
+        # Use sys.argv[2] for output path instead of hardcoded /tmp/_n.diff
+        script = self._build_normaliser_script(str(tmp_path / "source"))
+        result = subprocess.run(
+            ["python3", "-c", script, str(patch_file), str(out_file)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+        output = out_file.read_text()
+        # Old: 6 context + 1 delete = 7; New: 6 context + 3 add = 9
+        # (the function annotation after @@ is preserved)
+        assert "@@ -18,7 +18,9 @@ void parse_buffer_section(...) {" in output
+
+    def test_correct_counts_unchanged(self, tmp_path: Path) -> None:
+        """Patch with already-correct counts passes through unchanged."""
+        import subprocess
+
+        src_dir = tmp_path / "source" / "src"
+        src_dir.mkdir(parents=True)
+        (src_dir / "hello.c").write_text("/* dummy */")
+
+        good_patch = (
+            "--- a/src/hello.c\n"
+            "+++ b/src/hello.c\n"
+            "@@ -1,3 +1,4 @@\n"
+            " line1\n"
+            " line2\n"
+            "+added\n"
+            " line3\n"
+        )
+        patch_file = tmp_path / "good.diff"
+        patch_file.write_text(good_patch)
+
+        out_file = tmp_path / "out.diff"
+        script = self._build_normaliser_script(str(tmp_path / "source"))
+        result = subprocess.run(
+            ["python3", "-c", script, str(patch_file), str(out_file)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+        output = out_file.read_text()
+        assert "@@ -1,3 +1,4 @@" in output
+
+    def test_absolute_paths_normalised(self, tmp_path: Path) -> None:
+        """Absolute paths in --- / +++ are resolved to relative a/b/ paths."""
+        import subprocess
+
+        src_dir = tmp_path / "source" / "lib"
+        src_dir.mkdir(parents=True)
+        (src_dir / "util.c").write_text("/* dummy */")
+
+        abs_patch = (
+            "--- /workspace/source/lib/util.c\n"
+            "+++ /workspace/source/lib/util.c\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-old\n"
+            "+new\n"
+        )
+        patch_file = tmp_path / "abs.diff"
+        patch_file.write_text(abs_patch)
+
+        out_file = tmp_path / "out.diff"
+        script = self._build_normaliser_script(str(tmp_path / "source"))
+        result = subprocess.run(
+            ["python3", "-c", script, str(patch_file), str(out_file)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0
+
+        output = out_file.read_text()
+        # Absolute paths should NOT survive; basename resolve should find lib/util.c
+        assert "--- a/" in output
+        assert "+++ b/" in output

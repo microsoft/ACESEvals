@@ -18,18 +18,28 @@ import yaml
 # ---------------------------------------------------------------------------
 
 SAMPLE_META_YAML: dict[str, object] = {
-    "project": "sanity-mock-c",
-    "language": "c",
-    "cp_sources": ["src/"],
-    "harnesses": [
+    "patch_exclude_list": ["build.sh", "Makefile"],
+    "delta_mode": {
+        "base_commit": "aaa111",
+        "ref_commit": "bbb222",
+    },
+    "full_mode": {
+        "base_commit": "bbb222",
+    },
+    "harness_files": [
         {
             "name": "fuzz_target",
-            "source": "harnesses/fuzz_target.c",
+            "path": "$PROJECT/fuzz/fuzz_target.c",
             "vulns": [
                 {
                     "vuln_keyword": "cpv_0",
-                    "sanitizer": "address",
-                    "difficulty": 1,
+                    "povs": [
+                        {
+                            "id": "pov_0",
+                            "sanitizer": "address",
+                            "error_token": "ERROR: AddressSanitizer: stack-buffer-overflow",
+                        },
+                    ],
                 },
             ],
         },
@@ -38,34 +48,54 @@ SAMPLE_META_YAML: dict[str, object] = {
 
 
 SAMPLE_META_MULTI_HARNESS: dict[str, object] = {
-    "project": "sanity-mock-c",
-    "language": "c",
-    "cp_sources": ["src/", "lib/"],
-    "harnesses": [
+    "patch_exclude_list": ["build.sh"],
+    "delta_mode": {
+        "base_commit": "aaa111",
+        "ref_commit": "bbb222",
+    },
+    "full_mode": {
+        "base_commit": "bbb222",
+    },
+    "harness_files": [
         {
             "name": "fuzz_target",
-            "source": "harnesses/fuzz_target.c",
+            "path": "$PROJECT/fuzz/fuzz_target.c",
             "vulns": [
                 {
                     "vuln_keyword": "cpv_0",
-                    "sanitizer": "address",
-                    "difficulty": 1,
+                    "povs": [
+                        {
+                            "id": "pov_0",
+                            "sanitizer": "address",
+                            "error_token": "ERROR: AddressSanitizer: stack-buffer-overflow",
+                        },
+                    ],
                 },
             ],
         },
         {
             "name": "fuzz_parser",
-            "source": "harnesses/fuzz_parser.c",
+            "path": "$PROJECT/fuzz/fuzz_parser.c",
             "vulns": [
                 {
                     "vuln_keyword": "cpv_1",
-                    "sanitizer": "address",
-                    "difficulty": 2,
+                    "povs": [
+                        {
+                            "id": "pov_0",
+                            "sanitizer": "address",
+                            "error_token": "ERROR: AddressSanitizer: heap-buffer-overflow",
+                        },
+                    ],
                 },
                 {
                     "vuln_keyword": "cpv_2",
-                    "sanitizer": "memory",
-                    "difficulty": 3,
+                    "povs": [
+                        {
+                            "id": "pov_0",
+                            "sanitizer": "memory",
+                            "error_token": "ERROR: MemorySanitizer: use-of-uninitialized-value",
+                        },
+                    ],
                 },
             ],
         },
@@ -138,43 +168,69 @@ def benchmarks_root(
 class TestCRSBenchModels:
     """Tests for Pydantic models parsing meta.yaml data."""
 
+    def test_pov_model_valid(self) -> None:
+        """CRSBenchPOV accepts valid POV data."""
+        from crsbench.scripts.models import CRSBenchPOV
+
+        pov = CRSBenchPOV(
+            id="pov_0",
+            sanitizer="address",
+            error_token="ERROR: AddressSanitizer: stack-buffer-overflow",
+        )
+        assert pov.id == "pov_0"
+        assert pov.sanitizer == "address"
+
     def test_vuln_model_valid(self) -> None:
         """CRSBenchVuln accepts valid vulnerability data."""
-        from crsbench.scripts.models import CRSBenchVuln
+        from crsbench.scripts.models import CRSBenchPOV, CRSBenchVuln
 
         vuln = CRSBenchVuln(
             vuln_keyword="cpv_0",
-            sanitizer="address",
-            difficulty=1,
+            povs=(
+                CRSBenchPOV(
+                    id="pov_0",
+                    sanitizer="address",
+                    error_token="ERROR: AddressSanitizer: stack-buffer-overflow",
+                ),
+            ),
         )
         assert vuln.vuln_keyword == "cpv_0"
-        assert vuln.sanitizer == "address"
-        assert vuln.difficulty == 1
+        assert vuln.povs[0].sanitizer == "address"
 
     def test_vuln_model_frozen(self) -> None:
         """CRSBenchVuln is immutable."""
-        from crsbench.scripts.models import CRSBenchVuln
+        from crsbench.scripts.models import CRSBenchPOV, CRSBenchVuln
 
         vuln = CRSBenchVuln(
             vuln_keyword="cpv_0",
-            sanitizer="address",
-            difficulty=1,
+            povs=(
+                CRSBenchPOV(
+                    id="pov_0",
+                    sanitizer="address",
+                    error_token="ERROR: AddressSanitizer: stack-buffer-overflow",
+                ),
+            ),
         )
         with pytest.raises(Exception):  # ValidationError for frozen model
             vuln.vuln_keyword = "cpv_1"  # type: ignore[misc]
 
     def test_harness_model_valid(self) -> None:
         """CRSBenchHarness accepts valid harness data."""
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchVuln
+        from crsbench.scripts.models import CRSBenchHarness, CRSBenchPOV, CRSBenchVuln
 
         harness = CRSBenchHarness(
             name="fuzz_target",
-            source="harnesses/fuzz_target.c",
+            path="$PROJECT/fuzz/fuzz_target.c",
             vulns=(
                 CRSBenchVuln(
                     vuln_keyword="cpv_0",
-                    sanitizer="address",
-                    difficulty=1,
+                    povs=(
+                        CRSBenchPOV(
+                            id="pov_0",
+                            sanitizer="address",
+                            error_token="ERROR: AddressSanitizer: stack-buffer-overflow",
+                        ),
+                    ),
                 ),
             ),
         )
@@ -186,20 +242,20 @@ class TestCRSBenchModels:
         from crsbench.scripts.models import CRSBenchMeta
 
         meta = CRSBenchMeta(**SAMPLE_META_YAML)
-        assert meta.project == "sanity-mock-c"
-        assert meta.language == "c"
-        assert len(meta.harnesses) == 1
-        assert meta.harnesses[0].name == "fuzz_target"
-        assert meta.cp_sources == ("src/",)
+        assert meta.patch_exclude_list == ("build.sh", "Makefile")
+        assert meta.delta_mode is not None
+        assert meta.delta_mode.base_commit == "aaa111"
+        assert len(meta.harness_files) == 1
+        assert meta.harness_files[0].name == "fuzz_target"
 
     def test_meta_model_multi_harness(self) -> None:
         """CRSBenchMeta handles multiple harnesses."""
         from crsbench.scripts.models import CRSBenchMeta
 
         meta = CRSBenchMeta(**SAMPLE_META_MULTI_HARNESS)
-        assert len(meta.harnesses) == 2
-        assert meta.harnesses[1].name == "fuzz_parser"
-        assert len(meta.harnesses[1].vulns) == 2
+        assert len(meta.harness_files) == 2
+        assert meta.harness_files[1].name == "fuzz_parser"
+        assert len(meta.harness_files[1].vulns) == 2
 
     def test_meta_model_frozen(self) -> None:
         """CRSBenchMeta is immutable."""
@@ -207,7 +263,7 @@ class TestCRSBenchModels:
 
         meta = CRSBenchMeta(**SAMPLE_META_YAML)
         with pytest.raises(Exception):
-            meta.project = "other"  # type: ignore[misc]
+            meta.patch_exclude_list = ()  # type: ignore[misc]
 
     def test_meta_from_yaml_file(self, benchmark_dir: Path) -> None:
         """CRSBenchMeta can be loaded from a real meta.yaml file."""
@@ -216,7 +272,7 @@ class TestCRSBenchModels:
         meta_path = benchmark_dir / ".aixcc" / "meta.yaml"
         raw = yaml.safe_load(meta_path.read_text())
         meta = CRSBenchMeta(**raw)
-        assert meta.project == "sanity-mock-c"
+        assert meta.patch_exclude_list == ("build.sh", "Makefile")
 
 
 # ---------------------------------------------------------------------------
@@ -227,42 +283,42 @@ class TestCRSBenchModels:
 class TestGenerateBugfixTask:
     """Tests for the generate_bugfix_task function."""
 
-    def test_task_id_format(self, benchmark_dir: Path) -> None:
-        """Task ID uses benchmark_id__harness_name__bugfix with underscores."""
-        from crsbench.scripts.generate_tasks import generate_bugfix_task
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchVuln
+    def _make_harness_and_vuln(self):
+        """Helper to create a harness + vuln with new model schema."""
+        from crsbench.scripts.models import CRSBenchHarness, CRSBenchPOV, CRSBenchVuln
 
         harness = CRSBenchHarness(
             name="fuzz_target",
-            source="harnesses/fuzz_target.c",
+            path="$PROJECT/fuzz/fuzz_target.c",
             vulns=(
                 CRSBenchVuln(
                     vuln_keyword="cpv_0",
-                    sanitizer="address",
-                    difficulty=1,
+                    povs=(
+                        CRSBenchPOV(
+                            id="pov_0",
+                            sanitizer="address",
+                            error_token="ERROR: AddressSanitizer: stack-buffer-overflow",
+                        ),
+                    ),
                 ),
             ),
         )
-        task = generate_bugfix_task(benchmark_dir, harness, harness.vulns[0])
+        return harness, harness.vulns[0]
+
+    def test_task_id_format(self, benchmark_dir: Path) -> None:
+        """Task ID uses benchmark_id__harness_name__bugfix with underscores."""
+        from crsbench.scripts.generate_tasks import generate_bugfix_task
+
+        harness, vuln = self._make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
         assert task["task_id"] == "sanity_mock_c_delta_01__fuzz_target__cpv_0__bugfix"
 
     def test_initial_context(self, benchmark_dir: Path) -> None:
         """Initial context contains project, harness_name, benchmark_id."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchVuln
 
-        harness = CRSBenchHarness(
-            name="fuzz_target",
-            source="harnesses/fuzz_target.c",
-            vulns=(
-                CRSBenchVuln(
-                    vuln_keyword="cpv_0",
-                    sanitizer="address",
-                    difficulty=1,
-                ),
-            ),
-        )
-        task = generate_bugfix_task(benchmark_dir, harness, harness.vulns[0])
+        harness, vuln = self._make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
         ctx = task["initial_context"]
         assert ctx["project"] == "sanity-mock-c"
         assert ctx["harness_name"] == "fuzz_target"
@@ -271,43 +327,38 @@ class TestGenerateBugfixTask:
     def test_initial_files(self, benchmark_dir: Path) -> None:
         """Initial files reference correct data paths."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchVuln
 
-        harness = CRSBenchHarness(
-            name="fuzz_target",
-            source="harnesses/fuzz_target.c",
-            vulns=(
-                CRSBenchVuln(
-                    vuln_keyword="cpv_0",
-                    sanitizer="address",
-                    difficulty=1,
-                ),
-            ),
-        )
-        task = generate_bugfix_task(benchmark_dir, harness, harness.vulns[0])
+        harness, vuln = self._make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
         files = task["initial_files"]
         assert "/workspace/source" in files
         assert "sanity-mock-c-delta-01/staged/" in files["/workspace/source"]
         assert "/workspace/povs/" in files
         assert "cpv_0/blobs/" in files["/workspace/povs/"]
+        assert not any("build" in key for key in files), (
+            f"No build/ entries expected in initial_files, got: {list(files.keys())}"
+        )
+
+    def test_no_build_directory_in_initial_files(self, benchmark_dir: Path) -> None:
+        """initial_files must not contain any build/ keys or values."""
+        from crsbench.scripts.generate_tasks import generate_bugfix_task
+
+        harness, vuln = self._make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
+        files = task["initial_files"]
+        assert not any("build/" in key for key in files), (
+            f"No build/ key expected in initial_files, got: {list(files.keys())}"
+        )
+        assert not any("/build/" in str(v) for v in files.values()), (
+            f"No /build/ value expected in initial_files, got: {list(files.values())}"
+        )
 
     def test_scoring_structure(self, benchmark_dir: Path) -> None:
         """Scoring includes crsbench_patch_verify, llm_judge, tool_call."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchVuln
 
-        harness = CRSBenchHarness(
-            name="fuzz_target",
-            source="harnesses/fuzz_target.c",
-            vulns=(
-                CRSBenchVuln(
-                    vuln_keyword="cpv_0",
-                    sanitizer="address",
-                    difficulty=1,
-                ),
-            ),
-        )
-        task = generate_bugfix_task(benchmark_dir, harness, harness.vulns[0])
+        harness, vuln = self._make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
         scoring = task["scoring"]
         assert "crsbench_patch_verify" in scoring
         assert "llm_judge" in scoring
@@ -322,40 +373,18 @@ class TestGenerateBugfixTask:
     def test_scoring_aggregation(self, benchmark_dir: Path) -> None:
         """Scoring aggregation uses average."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchVuln
 
-        harness = CRSBenchHarness(
-            name="fuzz_target",
-            source="harnesses/fuzz_target.c",
-            vulns=(
-                CRSBenchVuln(
-                    vuln_keyword="cpv_0",
-                    sanitizer="address",
-                    difficulty=1,
-                ),
-            ),
-        )
-        task = generate_bugfix_task(benchmark_dir, harness, harness.vulns[0])
+        harness, vuln = self._make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
         agg = task["scoring_aggregation"]
         assert "average" in agg
 
     def test_title_and_description(self, benchmark_dir: Path) -> None:
         """Task has a meaningful title and description."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchVuln
 
-        harness = CRSBenchHarness(
-            name="fuzz_target",
-            source="harnesses/fuzz_target.c",
-            vulns=(
-                CRSBenchVuln(
-                    vuln_keyword="cpv_0",
-                    sanitizer="address",
-                    difficulty=1,
-                ),
-            ),
-        )
-        task = generate_bugfix_task(benchmark_dir, harness, harness.vulns[0])
+        harness, vuln = self._make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
         assert "title" in task
         assert "description" in task
         assert "fuzz_target" in task["title"]
@@ -504,8 +533,8 @@ class TestLoadBenchmarkMeta:
         from crsbench.scripts.generate_tasks import load_benchmark_meta
 
         meta = load_benchmark_meta(benchmark_dir)
-        assert meta.project == "sanity-mock-c"
-        assert meta.language == "c"
+        assert meta.patch_exclude_list == ("build.sh", "Makefile")
+        assert len(meta.harness_files) == 1
 
     def test_raises_on_missing_meta(self, tmp_path: Path) -> None:
         """Raises FileNotFoundError when meta.yaml is missing."""

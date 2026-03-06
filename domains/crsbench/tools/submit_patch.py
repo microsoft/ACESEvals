@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import posixpath
+
 from inspect_ai.tool import Tool, tool
 from inspect_ai.util import sandbox
 
 _DIFF_MARKERS = ("---", "+++", "@@", "diff ")
+_TARGET = "/submit/patches/patch.diff"
+_SUCCESS_MSG = (
+    "Patch submitted successfully: /submit/patches/patch.diff\n"
+    "The patch will be verified during scoring (apply \u2192 rebuild \u2192 "
+    "run POVs \u2192 run tests)."
+)
 
 
 @tool
@@ -45,23 +53,24 @@ def submit_patch(timeout: int = 60) -> Tool:
                 "Expected lines starting with '---', '+++', or '@@'."
             )
 
-        # 3. Ensure target directory exists
+        # 3. If already at the target path, skip copy
+        normalized = posixpath.normpath(patch_path)
+        if normalized == _TARGET:
+            return _SUCCESS_MSG
+
+        # 4. Ensure target directory exists
         await sbx.exec(
             ["mkdir", "-p", "/submit/patches"], timeout=timeout
         )
 
-        # 4. Copy to submit directory
+        # 5. Copy to submit directory
         result = await sbx.exec(
-            ["cp", patch_path, "/submit/patches/patch.diff"],
+            ["cp", patch_path, _TARGET],
             timeout=timeout,
         )
         if result.returncode != 0:
             return f"ERROR: Failed to copy patch: {result.stderr}"
 
-        return (
-            "Patch submitted successfully: /submit/patches/patch.diff\n"
-            "The patch will be verified during scoring (apply → rebuild → "
-            "run POVs → run tests)."
-        )
+        return _SUCCESS_MSG
 
     return execute

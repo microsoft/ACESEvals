@@ -188,3 +188,53 @@ class TestSubmitPatchTool:
         # All four exec calls should use timeout=30
         for call in sbx.exec.call_args_list:
             assert call.kwargs.get("timeout") == 30
+
+    @pytest.mark.asyncio
+    async def test_same_file_skips_copy(self) -> None:
+        """When patch_path is already the target, skip mkdir and cp."""
+        from crsbench.tools.submit_patch import submit_patch
+
+        diff_content = "--- a/f.c\n+++ b/f.c\n@@ -1 +1 @@\n-old\n+new\n"
+        sbx = MagicMock()
+        sbx.exec = AsyncMock(
+            side_effect=[
+                # test -f → file exists
+                _make_exec_result(returncode=0),
+                # head -5 → valid diff content
+                _make_exec_result(returncode=0, stdout=diff_content),
+            ]
+        )
+
+        with patch("crsbench.tools.submit_patch.sandbox", return_value=sbx):
+            execute = submit_patch()
+            result = await execute(patch_path="/submit/patches/patch.diff")
+
+        assert "successfully" in result.lower()
+        # Only 2 exec calls: test -f and head -5 (no mkdir, no cp)
+        assert sbx.exec.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_same_file_with_trailing_slash_normalization(self) -> None:
+        """Normalizable path that resolves to target also skips copy."""
+        from crsbench.tools.submit_patch import submit_patch
+
+        diff_content = "--- a/f.c\n+++ b/f.c\n@@ -1 +1 @@\n-old\n+new\n"
+        sbx = MagicMock()
+        sbx.exec = AsyncMock(
+            side_effect=[
+                # test -f → file exists
+                _make_exec_result(returncode=0),
+                # head -5 → valid diff content
+                _make_exec_result(returncode=0, stdout=diff_content),
+            ]
+        )
+
+        with patch("crsbench.tools.submit_patch.sandbox", return_value=sbx):
+            execute = submit_patch()
+            result = await execute(
+                patch_path="/submit/patches/../patches/patch.diff"
+            )
+
+        assert "successfully" in result.lower()
+        # Only 2 exec calls: test -f and head -5 (no mkdir, no cp)
+        assert sbx.exec.call_count == 2

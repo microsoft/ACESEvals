@@ -16,6 +16,7 @@ Score tiers:
 from __future__ import annotations
 
 import logging
+import posixpath
 import shlex
 
 # Domain loggers use saber.domains.* namespace so they inherit
@@ -86,20 +87,145 @@ class CRSBenchPatchVerifyStrategy:
         logger.info("Found patch: %s", patch_file)
 
         # Step 2: Apply patch to source
+        # Agents may produce patches with varied path formats:
+        #   - git style:     --- a/mock-c/mock.c
+        #   - diff -u style: --- /workspace/source/mock-c/mock.c.bak
+        #   - tmp copy:      --- /tmp/mock.c.old   2026-03-06 ...
+        # Normalise the patch so it always uses git-style a/ b/ paths
+        # relative to the source directory, then apply with git apply
+        # (more reliable context matching) or fall back to GNU patch.
+        src_q = shlex.quote(str(source_dir))
+
+        # Inline Python normaliser avoids sed ERE escaping pitfalls.
+        # Strips absolute source_dir prefixes, a/ b/ prefixes, backup
+        # suffixes (.bak, .orig, .old, .new, ~), timestamps, and re-adds
+        # a/ b/.  When the stripped path doesn't exist in source_dir it
+        # searches the tree for a matching basename so patches created
+        # against /tmp copies still resolve correctly.  Finally, recalculate
+        # @@ hunk header line counts since LLMs frequently get them wrong.
+        normalise_script = "\n".join([
+            "import re, sys, os, pathlib",
+            f"src = {str(source_dir)!r}",
+            "def resolve(p):",
+            "  if os.path.exists(os.path.join(src, p)): return p",
+            "  base = os.path.basename(p)",
+            "  for root, dirs, files in os.walk(src):",
+            "    if base in files:",
+            "      return os.path.relpath(os.path.join(root, base), src)",
+            "  return p",
+            "lines = pathlib.Path(sys.argv[1]).read_text()",
+            "out = []",
+            "for ln in lines.splitlines():",
+            "  m = re.match(r'^(---|\\+\\+\\+)\\s+(.*)', ln)",
+            "  if not m:",
+            "    out.append(ln + chr(10))",
+            "    continue",
+            "  raw = m.group(2).replace(src + '/', '').lstrip('/')",
+            "  raw = re.sub(r'^[ab]/', '', raw)",
+            "  raw = re.sub(r'\\t.*', '', raw)",
+            "  raw = re.sub(r'\\.(bak|orig|old|new)(\\s.*|[0-9].*)?$', '', raw)",
+            "  raw = raw.rstrip('~')",
+            "  raw = resolve(raw)",
+            "  prefix = 'a/' if m.group(1) == '---' else 'b/'",
+            "  out.append(m.group(1) + ' ' + prefix + raw + chr(10))",
+            # --- pass 2: fix hunk-header line counts ---
+            "fixed = []",
+            "i = 0",
+            "while i < len(out):",
+            "  hm = re.match(r'^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@(.*)', out[i])",
+            "  if not hm:",
+            "    fixed.append(out[i])",
+            "    i += 1",
+            "    continue",
+            "  oc = nc = 0",
+            "  j = i + 1",
+            "  while j < len(out):",
+            "    hl = out[j].rstrip(chr(10))",
+            "    if hl.startswith('@@') or hl.startswith('diff ') or re.match(r'^(---|\\+\\+\\+) [ab]/', hl):",
+            "      break",
+            "    if hl.startswith('+'):",
+            "      nc += 1",
+            "    elif hl.startswith('-'):",
+            "      oc += 1",
+            "    elif hl.startswith(chr(92)):",
+            "      pass",
+            "    else:",
+            "      oc += 1",
+            "      nc += 1",
+            "    j += 1",
+            "  fixed.append('@@ -%s,%d +%s,%d @@%s' % (hm.group(1), oc, hm.group(2), nc, hm.group(3)) + chr(10))",
+            "  i += 1",
+            "out = fixed",
+            "pathlib.Path('/tmp/_n.diff').write_text(''.join(out))",
+        ])
+        norm_result = await sbx.exec(
+            ["python3", "-c", normalise_script, str(patch_file)],
+            timeout=30,
+        )
+        norm_pf = "/tmp/_n.diff"
+        if norm_result.returncode != 0:
+            logger.warning(
+                "Patch normaliser failed (rc=%d): %s",
+                norm_result.returncode,
+                (norm_result.stderr or norm_result.stdout)[:300],
+            )
+            # Fall back to the original patch file
+            norm_pf = str(patch_file)
+
+        # Agents commonly apply the patch themselves during exploration before
+        # submitting.  Undo any previous (possibly fuzz-applied) application so
+        # the scorer works from a clean baseline.  If no prior application
+        # exists, the reverse is a harmless no-op.
+        await sbx.exec(
+            [
+                "bash", "-c",
+                f"cd {src_q} && "
+                f"patch -R -p1 --fuzz=3 --batch < {norm_pf} 2>/dev/null; "
+                # Also remove .rej / .orig artefacts from earlier failed attempts.
+                f"find {src_q} \\( -name '*.rej' -o -name '*.orig' \\) -delete 2>/dev/null; "
+                "true",
+            ],
+            timeout=60,
+        )
+
         apply_result = await sbx.exec(
-            ["bash", "-c", f"cd {shlex.quote(str(source_dir))} && patch -p1 --forward < {shlex.quote(str(patch_file))}"],
+            [
+                "bash", "-c",
+                f"cd {src_q} && "
+                f"git apply --whitespace=nowarn {norm_pf} 2>&1 || "
+                f"patch -p1 --fuzz=3 --forward < {norm_pf}",
+            ],
             timeout=60,
         )
         if apply_result.returncode != 0:
-            return Score(
-                value=0.0,
-                answer=ctx.submission,
-                explanation=f"Patch failed to apply: {apply_result.stderr[:500]}",
+            # Check if the patch is already applied (reverse dry-run)
+            reverse_check = await sbx.exec(
+                ["bash", "-c", f"cd {src_q} && patch -R -p1 --fuzz=3 --dry-run < {norm_pf}"],
+                timeout=60,
             )
+            if reverse_check.returncode == 0:
+                logger.info("Patch already applied, skipping apply step")
+            else:
+                combined = (apply_result.stdout + "\n" + apply_result.stderr).strip()
+                return Score(
+                    value=0.0,
+                    answer=ctx.submission,
+                    explanation=f"Patch failed to apply: {combined[:500]}",
+                )
 
         # Step 3: Rebuild with ASAN
+        # Set AIxCC-compatible env vars for build.sh scripts that expect them
+        out_dir = posixpath.dirname(harness_path) if harness_path else "/workspace/build"
+        env_prefix = (
+            f"SRC={shlex.quote(str(source_dir))} "
+            f"OUT={shlex.quote(str(out_dir))} "
+            "CC=clang CXX=clang++ "
+            "CFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
+            "CXXFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
+            "LIB_FUZZING_ENGINE=/usr/lib/llvm-19/lib/libFuzzer.a "
+        )
         if build_script:
-            build_cmd = f"bash {shlex.quote(str(build_script))}"
+            build_cmd = f"{env_prefix} bash {shlex.quote(str(build_script))}"
         else:
             build_cmd = (
                 f"cd {shlex.quote(str(source_dir))} && make clean 2>/dev/null; "
@@ -170,8 +296,15 @@ class CRSBenchPatchVerifyStrategy:
                 timeout=10,
             )
             if test_check.returncode == 0:
+                # Ensure scripts are executable (files copied from host may
+                # lack the execute bit) and pass AIxCC env vars so test.sh
+                # can rebuild / link as needed.
+                await sbx.exec(
+                    ["bash", "-c", f"chmod +x {shlex.quote(str(test_script))} {src_q}/*.sh 2>/dev/null || true"],
+                    timeout=10,
+                )
                 test_result = await sbx.exec(
-                    ["bash", test_script],
+                    ["bash", "-c", f"{env_prefix} {shlex.quote(str(test_script))}"],
                     timeout=300,
                 )
                 if test_result.returncode != 0:

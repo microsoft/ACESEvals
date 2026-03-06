@@ -8,27 +8,40 @@ You are an expert security engineer. A vulnerability has been found in a C/C++ p
 
 ## Your Workspace
 
-- `/workspace/source/` — Project source code (vulnerable version)
-- `/workspace/build/{{ initial_context.harness_name }}` — Pre-compiled fuzz harness binary (with ASAN)
+- `/workspace/source/` — Project source code (vulnerable version), includes `build.sh`
+- `/workspace/build/` — Output directory for compiled binaries
 - `/workspace/povs/` — Crash-triggering inputs (POVs) that demonstrate the vulnerability
 - `/submit/patches/` — **Place your patch file here** (unified diff format)
 
+## Pre-configured Environment Variables
+
+The following environment variables are already set in your shell:
+- `$SRC=/workspace/source` — Source directory
+- `$OUT=/workspace/build` — Build output directory
+- `$CC=clang`, `$CXX=clang++` — Compilers
+- `$CFLAGS` / `$CXXFLAGS` — Includes `-fsanitize=address -fno-omit-frame-pointer -g`
+- `$LIB_FUZZING_ENGINE` — Fuzzing engine library for linking harnesses
+- `$ASAN_OPTIONS` — AddressSanitizer runtime configuration
+
 ## Approach
 
-1. **Reproduce the crash**: Run each POV against the harness to see the ASAN output
+1. **Build the harness**: Compile the fuzz harness with AddressSanitizer
    ```
-   /workspace/build/{{ initial_context.harness_name }} /workspace/povs/<pov_file>
+   bash $SRC/build.sh
    ```
-2. **Analyze the crash**: Read the ASAN output — identify crash type, location, stack trace
-3. **Find the root cause**: Trace from crash site to the actual bug in source code
-4. **Write a patch**: Create a minimal fix as a unified diff
-5. **Verify locally**: Apply patch → rebuild → test with POVs
+2. **Reproduce the crash**: Run each POV against the built harness to see the ASAN output
    ```
-   cd /workspace/source && patch -p1 < /submit/patches/patch.diff
-   cd /workspace/source && make clean && make CC=clang CFLAGS="-fsanitize=address -fno-omit-frame-pointer -g"
+   $OUT/{{ initial_context.harness_name }} /workspace/povs/<pov_file>
    ```
-   > **Note:** If a build script is available at `/workspace/source/build.sh`, use that instead of the `make` command above.
-6. **Submit**: Ensure your patch is at `/submit/patches/patch.diff`
+3. **Analyze the crash**: Read the ASAN output — identify crash type, location, stack trace
+4. **Find the root cause**: Trace from crash site to the actual bug in source code
+5. **Write a patch**: Create a minimal fix as a unified diff
+6. **Verify locally**: Apply patch → rebuild → test with POVs
+   ```
+   cd $SRC && patch -p1 < /submit/patches/patch.diff
+   bash $SRC/build.sh
+   ```
+7. **Submit**: Ensure your patch is at `/submit/patches/patch.diff`
 
 ## Patch Format
 

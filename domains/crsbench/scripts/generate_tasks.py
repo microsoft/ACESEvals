@@ -97,13 +97,16 @@ def generate_bugfix_task(
 
     project = _derive_project_name(benchmark_id)
 
+    # Use the first POV's sanitizer for the description
+    sanitizer = vuln.povs[0].sanitizer if vuln.povs else "address"
+
     data_prefix = f"data/benchmarks/{benchmark_id}"
 
     return {
         "task_id": task_id,
         "title": f"Fix vulnerability in {harness.name} ({benchmark_id})",
         "description": (
-            f"A {vuln.sanitizer}-detected vulnerability has been found in "
+            f"A {sanitizer}-detected vulnerability has been found in "
             f"the {project} project. You are given the crash-triggering POV "
             f"and must write a source-code patch that fixes the vulnerability "
             f"without breaking unit tests."
@@ -115,9 +118,6 @@ def generate_bugfix_task(
         },
         "initial_files": {
             "/workspace/source": f"{data_prefix}/staged/",
-            f"/workspace/build/{harness.name}": (
-                f"{data_prefix}/build/{harness.name}"
-            ),
             "/workspace/povs/": (
                 f"{data_prefix}/.aixcc/{harness.name}/"
                 f"{vuln.vuln_keyword}/blobs/"
@@ -138,12 +138,12 @@ def generate_bugfix_task(
                 },
             },
             "llm_judge": {
+                "model": "openai/azure/gpt-4.1",
+                "steps_per_message": 10,
                 "crash_analysis": {
                     "target": "trajectory",
-                    "model": "openai/azure/gpt-4.1",
                     "judge_system_template": "judge/crash_analysis_system.j2",
                     "judge_user_template": "judge/crash_analysis_user.j2",
-                    "steps_per_message": 10,
                     "max_score": 1.0,
                     "weight": 0.15,
                     "title": "Crash Analysis",
@@ -158,10 +158,8 @@ def generate_bugfix_task(
                 },
                 "root_cause": {
                     "target": "trajectory",
-                    "model": "openai/azure/gpt-4.1",
                     "judge_system_template": "judge/root_cause_system.j2",
                     "judge_user_template": "judge/root_cause_user.j2",
-                    "steps_per_message": 10,
                     "max_score": 1.0,
                     "weight": 0.20,
                     "title": "Root Cause Analysis",
@@ -274,7 +272,7 @@ def generate_all_tasks(
         group_dir.mkdir(parents=True, exist_ok=True)
         _write_shared_yaml(group_dir)
 
-        for harness in meta.harnesses:
+        for harness in meta.harness_files:
             for vuln in harness.vulns:
                 task_dict = generate_bugfix_task(benchmark_path, harness, vuln)
                 task_id = task_dict["task_id"]

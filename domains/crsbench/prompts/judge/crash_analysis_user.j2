@@ -1,8 +1,8 @@
 ## Bug-Fix Task: {{ question }}
 
-**Project:** {{ initial_context.project }}
-**Harness:** {{ initial_context.harness_name }}
-**Benchmark:** {{ initial_context.benchmark_id }}
+**Project:** {{ task.initial_context.project }}
+**Harness:** {{ task.initial_context.harness_name }}
+**Benchmark:** {{ task.initial_context.benchmark_id }}
 
 ---
 
@@ -28,7 +28,7 @@ Output: {{ step.output | string | truncate(1000) }}
 Review the agent's execution trace above and determine whether the agent successfully reproduced the crash and analyzed the ASAN output.
 
 Key things to look for:
-- Did the agent run the POV inputs against the harness binary (`/workspace/build/{{ initial_context.harness_name }}`)?
+- Did the agent run the POV inputs against the harness binary (`/workspace/build/{{ task.initial_context.harness_name }}`)?
 - Did the agent observe and interpret the AddressSanitizer crash report?
 - Did the agent identify the crash type (e.g., heap-buffer-overflow, use-after-free)?
 - Did the agent identify the crash location from the stack trace?
