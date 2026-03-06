@@ -1706,6 +1706,29 @@ async def model_proxy_server(
                                 {"type": "content_block_stop", "index": index},
                             )
 
+                        elif block_type == "redacted_thinking":
+                            # redacted_thinking blocks carry encrypted reasoning
+                            # data from cross-model scenarios (e.g. OpenAI
+                            # content_filter responses with redacted reasoning
+                            # round-tripped through the Anthropic bridge).
+                            yield _sse_anthropic(
+                                "content_block_start",
+                                {
+                                    "type": "content_block_start",
+                                    "index": index,
+                                    "content_block": {
+                                        "type": "redacted_thinking",
+                                        "data": block.get("data", ""),
+                                    },
+                                },
+                            )
+
+                            # content_block_stop (no deltas for redacted blocks)
+                            yield _sse_anthropic(
+                                "content_block_stop",
+                                {"type": "content_block_stop", "index": index},
+                            )
+
                         elif block_type == "compaction":
                             # Compaction blocks stream differently - a single delta
                             # with the complete content (no intermediate streaming)
