@@ -500,6 +500,11 @@ def content_block_to_content(
                 return ContentText(text=c)
             else:
                 return content_block_to_content(list(c)[0])
+    elif block["type"] == "tool_reference":
+        # tool_reference blocks appear in tool_result content from Claude Code's
+        # ToolSearch tool.  They carry only a tool_name; represent them as text
+        # so the conversation round-trips without data loss.
+        return ContentText(text=block.get("tool_name", ""))
     else:
         raise RuntimeError(f"Unsupported content block type: {type(block)}")
 
