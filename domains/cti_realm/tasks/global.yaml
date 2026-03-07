@@ -6,8 +6,6 @@ global_defaults:
   prompts:
     instruction: "instructions/cti_realm.j2"
     assistant: "assistants/inspect_assistant.j2"
-    submit: "submits/inspect_submit.j2"
-    continue: "continues/inspect_continue.j2"
 
   max_steps: 30
 
