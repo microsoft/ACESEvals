@@ -50,6 +50,7 @@ class ActiveSample:
         message_limit: int | None,
         token_limit: int | None,
         cost_limit: float | None,
+        tool_call_limit: int | None,
         time_limit: int | None,
         working_limit: int | None,
         fails_on_error: bool,
@@ -73,6 +74,7 @@ class ActiveSample:
         self.message_limit = message_limit
         self.token_limit = token_limit
         self.cost_limit = cost_limit
+        self.tool_call_limit = tool_call_limit
         self.time_limit = time_limit
         self.working_limit = working_limit
         self.fails_on_error = fails_on_error
@@ -241,6 +243,7 @@ async def active_sample(
     message_limit: int | None,
     token_limit: int | None,
     cost_limit: float | None,
+    tool_call_limit: int | None,
     time_limit: int | None,
     working_limit: int | None,
     fails_on_error: bool,
@@ -264,6 +267,7 @@ async def active_sample(
         message_limit=message_limit,
         token_limit=token_limit,
         cost_limit=cost_limit,
+        tool_call_limit=tool_call_limit,
         time_limit=time_limit,
         working_limit=working_limit,
         sandboxes=await sandbox_connections(),
@@ -362,6 +366,12 @@ def set_active_sample_total_messages(total_messages: int) -> None:
     active = sample_active()
     if active:
         active.total_messages = total_messages
+
+
+def set_active_sample_tool_call_limit(tool_call_limit: int | None) -> None:
+    active = sample_active()
+    if active:
+        active.tool_call_limit = tool_call_limit
 
 
 _active_model_event: ContextVar[ModelEvent | None] = ContextVar(

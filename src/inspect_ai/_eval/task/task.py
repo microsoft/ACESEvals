@@ -89,6 +89,7 @@ class Task:
         time_limit: int | None = None,
         working_limit: int | None = None,
         cost_limit: float | None = None,
+        tool_call_limit: int | None = None,
         early_stopping: "EarlyStopping" | None = None,
         display_name: str | None = None,
         name: str | None = None,
@@ -138,6 +139,7 @@ class Task:
                 time spent waiting on retries or shared resources.
             cost_limit: Limit on total cost (in dollars) for each sample.
                 Requires model cost data via set_model_cost() or --model-cost-config.
+            tool_call_limit: Limit on total tool calls used for each sample.
             early_stopping: Early stopping callbacks.
             name: Task name. If not specified is automatically
                 determined based on the registered name of the task.
@@ -197,6 +199,7 @@ class Task:
         self.time_limit = time_limit
         self.working_limit = working_limit
         self.cost_limit = cost_limit
+        self.tool_call_limit = tool_call_limit
         self.early_stopping = early_stopping
         self.version = version
         self._display_name = display_name

@@ -141,6 +141,7 @@ from inspect_ai.util._limit import (
     record_sample_limit_data,
 )
 from inspect_ai.util._limit import time_limit as create_time_limit
+from inspect_ai.util._limit import tool_call_limit as create_tool_call_limit
 from inspect_ai.util._limit import working_limit as create_working_limit
 from inspect_ai.util._sandbox import SandboxTimeoutError
 from inspect_ai.util._sandbox.context import sandbox_connections
@@ -549,6 +550,10 @@ async def task_run(options: TaskRunOptions, task_cancel: TaskCancel | None) -> E
                         sample = deepcopy(sample_store[sample_index])
                         if log_images:
                             sample = await sample_with_base64_content(sample)
+                        # Extract per-sample tool call limit from metadata (fallback to global limit)
+                        sample_tool_call_limit = config.tool_call_limit
+                        if sample.metadata:
+                            sample_tool_call_limit = sample.metadata.get("tool_call_limit", config.tool_call_limit)
                         state = deepcopy(
                             TaskState(
                                 sample_id=sample.id or 0,
@@ -561,6 +566,7 @@ async def task_run(options: TaskRunOptions, task_cancel: TaskCancel | None) -> E
                                 message_limit=config.message_limit,
                                 token_limit=config.token_limit,
                                 cost_limit=config.cost_limit,
+                                tool_call_limit=sample_tool_call_limit,
                                 completed=False,
                                 metadata=sample.metadata if sample.metadata else {},
                                 sample_uuid=sample_uuid,
@@ -1004,6 +1010,7 @@ async def task_run_sample(
             message_limit=state.message_limit,
             token_limit=state.token_limit,
             cost_limit=state.cost_limit,
+            tool_call_limit=state.tool_call_limit,
             time_limit=time_limit,
             working_limit=working_limit,
             fails_on_error=fails_on_error or (retry_on_error > 0),
@@ -1105,6 +1112,7 @@ async def task_run_sample(
                             state._token_limit,
                             state._cost_limit,
                             state._message_limit,
+                            state._tool_call_limit,
                             create_time_limit(time_limit),
                             create_working_limit(working_limit),
                         ):

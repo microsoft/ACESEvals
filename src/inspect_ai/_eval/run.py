@@ -213,6 +213,12 @@ async def eval_run(
                 else:
                     task.cost_limit = task_eval_config.cost_limit
 
+                # sample tool call limit
+                if task_eval_config.tool_call_limit is None:
+                    task_eval_config.tool_call_limit = task.tool_call_limit
+                else:
+                    task.tool_call_limit = task_eval_config.tool_call_limit
+
                 # fail_on_error
                 if task_eval_config.fail_on_error is None:
                     task_eval_config.fail_on_error = task.fail_on_error

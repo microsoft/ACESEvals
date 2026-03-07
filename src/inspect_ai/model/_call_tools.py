@@ -140,6 +140,12 @@ async def _execute_tools_impl(
     if isinstance(message, ChatMessageAssistant) and message.tool_calls:
         from inspect_ai.event._tool import ToolEvent
         from inspect_ai.log._transcript import transcript
+        from inspect_ai.util._limit import check_tool_call_limit, record_tool_call_usage
+
+        # Record and check tool call usage
+        tool_call_count = len(message.tool_calls)
+        record_tool_call_usage(tool_call_count)
+        check_tool_call_limit()
 
         tool_calls = message.tool_calls
         tdefs = await tool_defs(tools)

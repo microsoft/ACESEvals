@@ -98,6 +98,7 @@ class EvalSetArgsInTaskIdentifier:
     time_limit: int | None = None
     working_limit: int | None = None
     cost_limit: float | None = None
+    tool_call_limit: int | None = None
 
 
 def eval_set(
@@ -144,6 +145,7 @@ def eval_set(
     time_limit: int | None = None,
     working_limit: int | None = None,
     cost_limit: float | None = None,
+    tool_call_limit: int | None = None,
     model_cost_config: str | dict[str, ModelCost] | None = None,
     max_samples: int | None = None,
     max_dataset_memory: int | None = None,
@@ -259,6 +261,7 @@ def eval_set(
             time spent waiting on retries or shared resources.
         cost_limit: Limit on total cost (in dollars) for each sample.
             Requires model cost data via set_model_cost() or --model-cost-config.
+        tool_call_limit: Limit on total tool calls for each sample.
         model_cost_config: YAML or JSON file with model prices for cost tracking.
         max_samples: Maximum number of samples to run in parallel
             (default is max_connections)
@@ -354,6 +357,7 @@ def eval_set(
             time_limit=time_limit,
             working_limit=working_limit,
             cost_limit=cost_limit,
+            tool_call_limit=tool_call_limit,
             model_cost_config=model_cost_config,
             max_samples=max_samples,
             max_dataset_memory=max_dataset_memory,
@@ -520,6 +524,7 @@ def eval_set(
             time_limit=time_limit,
             working_limit=working_limit,
             cost_limit=cost_limit,
+            tool_call_limit=tool_call_limit,
         )
         # validate that:
         #  (1) All tasks have a unique identifier
@@ -1066,6 +1071,7 @@ def task_identifier(
         time_limit: int | None
         working_limit: int | None
         cost_limit: float | None
+        tool_call_limit: int | None
 
     if isinstance(task, ResolvedTask):
         assert eval_set_args is not None, (
@@ -1101,6 +1107,9 @@ def task_identifier(
             cost_limit=task.task.cost_limit
             if eval_set_args.cost_limit is None
             else eval_set_args.cost_limit,
+            tool_call_limit=task.task.tool_call_limit
+            if eval_set_args.tool_call_limit is None
+            else eval_set_args.tool_call_limit,
         )
     else:
         task_file = task.eval.task_file or ""
@@ -1118,6 +1127,7 @@ def task_identifier(
             time_limit=task.eval.config.time_limit,
             working_limit=task.eval.config.working_limit,
             cost_limit=task.eval.config.cost_limit,
+            tool_call_limit=task.eval.config.tool_call_limit,
         )
 
     # strip args from eval_plan as we've changed the way this is serialized

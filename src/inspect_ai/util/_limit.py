@@ -41,7 +41,7 @@ class LimitExceededError(Exception):
     def __init__(
         self,
         type: Literal[
-            "message", "time", "working", "token", "cost", "operator", "custom"
+            "message", "time", "working", "token", "cost", "tool_call", "operator", "custom"
         ],
         *,
         value: float,
@@ -196,6 +196,9 @@ class SampleLimits:
     time: Limit
     """Time limit."""
 
+    tool_call: Limit
+    """Tool call limit."""
+
 
 def sample_limits() -> SampleLimits:
     """Get the top-level limits applied to the current `Sample`."""
@@ -220,6 +223,7 @@ def sample_limits() -> SampleLimits:
         message=get_root_node(message_limit_tree.get(), "message"),
         working=get_root_node(working_limit_tree.get(), "working"),
         time=get_root_node(time_limit_tree.get(), "time"),
+        tool_call=get_root_node(tool_call_limit_tree.get(), "tool_call"),
     )
 
 
@@ -232,6 +236,7 @@ def record_sample_limit_data(message_usage: float) -> None:
             message=_LimitData(current_limits.message, usage=message_usage),
             working=_LimitData(current_limits.working),
             time=_LimitData(current_limits.time),
+            tool_call=_LimitData(current_limits.tool_call),
         )
     )
 
@@ -401,6 +406,33 @@ def check_message_limit(count: int, raise_for_equal: bool) -> None:
     node.check(count, raise_for_equal)
 
 
+def record_tool_call_usage(count: int) -> None:
+    """Record tool call usage against any active tool call limits.
+
+    Does not check if the limit has been exceeded.
+
+    Args:
+      count: The number of tool calls being recorded.
+    """
+    node = tool_call_limit_tree.get()
+    if node is None:
+        return
+    node.record(count)
+
+
+def check_tool_call_limit() -> None:
+    """Check if the current tool call usage exceeds _any_ of the tool call limits.
+
+    Within the current execution context (e.g. async task) and its parent contexts only.
+
+    Note that all active tool call limits are checked, not just the most recent one.
+    """
+    node = tool_call_limit_tree.get()
+    if node is None:
+        return
+    node.check()
+
+
 def time_limit(limit: float | None) -> _TimeLimit:
     """Limits the wall clock time which can elapse.
 
@@ -441,6 +473,26 @@ def working_limit(limit: float | None) -> _WorkingLimit:
         manager is open. A value of None means unlimited time.
     """
     return _WorkingLimit(limit)
+
+
+def tool_call_limit(limit: int | None) -> _ToolCallLimit:
+    """Limits the total number of tool calls which can be made.
+
+    The counter starts when the context manager is opened and ends when it is closed.
+
+    These limits can be stacked.
+
+    This relies on "cooperative" checking - consumers must call `check_tool_call_limit()`
+    themselves whenever tool calls are made.
+
+    When a limit is exceeded, a `LimitExceededError` is raised.
+
+    Args:
+      limit: The maximum number of tool calls that can be made while the context
+        manager is open. Tool calls made before the context manager was opened are
+        not counted. A value of None means unlimited tool calls.
+    """
+    return _ToolCallLimit(limit)
 
 
 def record_waiting_time(waiting_time: float) -> None:
@@ -554,6 +606,7 @@ cost_limit_tree: _Tree[_CostLimit] = _Tree("cost_limit_tree")
 message_limit_tree: _Tree[_MessageLimit] = _Tree("message_limit_tree")
 working_limit_tree: _Tree[_WorkingLimit] = _Tree("working_limit_tree")
 time_limit_tree: _Tree[_TimeLimit] = _Tree("time_limit_tree")
+tool_call_limit_tree: _Tree[_ToolCallLimit] = _Tree("tool_call_limit_tree")
 
 
 class _Node:
@@ -951,6 +1004,84 @@ def _validate_time_limit(name: str, value: float | None) -> None:
         raise ValueError(
             f"{name} limit value must be a non-negative float or None: {value}"
         )
+
+
+class _ToolCallLimit(Limit, _Node):
+    def __init__(self, limit: int | None) -> None:
+        super().__init__()
+        self._validate_tool_call_limit(limit)
+        self._limit = limit
+        self._usage = 0
+
+    def __enter__(self) -> Limit:
+        super()._check_reuse()
+        tool_call_limit_tree.push(self)
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self._pop_and_check_identity(tool_call_limit_tree)
+
+    @property
+    def usage(self) -> float:
+        return float(self._usage)
+
+    @property
+    def limit(self) -> int | None:
+        """Get the configured tool call limit value."""
+        return self._limit
+
+    @limit.setter
+    def limit(self, value: int | None) -> None:
+        """Update the tool call limit value.
+
+        This does not trigger a check of the tool call limit (which could now have been
+        exceeded).
+        """
+        self._validate_tool_call_limit(value)
+        self._limit = value
+
+    def record(self, count: int) -> None:
+        """Record tool call usage for this node and its ancestor nodes."""
+        if self.parent is not None:
+            self.parent.record(count)
+        self._usage += count
+
+    def check(self) -> None:
+        """Check if this tool call limit or any ancestor limits have been exceeded.
+
+        The checks occur from root to leaf. This is so that if multiple limits are
+        simultaneously exceeded, the outermost (closest to root) one raises the error,
+        preventing certain sub-agent architectures from ending up in an infinite loop.
+        """
+        if self.parent is not None:
+            self.parent.check()
+        self._check_self()
+
+    def _validate_tool_call_limit(self, value: int | None) -> None:
+        if value is not None and value < 0:
+            raise ValueError(
+                f"Tool call limit value must be a non-negative integer or None: {value}"
+            )
+
+    def _check_self(self) -> None:
+        from inspect_ai.event._sample_limit import SampleLimitEvent
+        from inspect_ai.log._transcript import transcript
+
+        if self.limit is None:
+            return
+        if self._usage > self.limit:
+            message = f"Tool call limit exceeded. value: {self._usage:,}; limit: {self.limit:,}"
+            transcript()._event(
+                SampleLimitEvent(type="tool_call", limit=self.limit, message=message)
+            )
+            raise LimitExceededError(
+                "tool_call", value=self._usage, limit=self.limit, message=message, source=self
+            )
 
 
 class _LimitData(Limit):

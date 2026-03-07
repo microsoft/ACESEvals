@@ -159,6 +159,9 @@ class EvalConfig(BaseModel):
     cost_limit: float | None = Field(default=None)
     """Maximum cost (in dollars) per sample."""
 
+    tool_call_limit: int | None = Field(default=None)
+    """Maximum tool calls per sample."""
+
     max_samples: int | None = Field(default=None)
     """Maximum number of samples to run in parallel."""
 
@@ -234,7 +237,7 @@ class EvalConfig(BaseModel):
 
 
 EvalSampleLimitType = Literal[
-    "context", "time", "working", "message", "token", "cost", "operator", "custom"
+    "context", "time", "working", "message", "token", "cost", "tool_call", "operator", "custom"
 ]
 
 

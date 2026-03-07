@@ -31,6 +31,7 @@ from inspect_ai.util._limit import (
 from inspect_ai.util._limit import cost_limit as create_cost_limit
 from inspect_ai.util._limit import message_limit as create_message_limit
 from inspect_ai.util._limit import token_limit as create_token_limit
+from inspect_ai.util._limit import tool_call_limit as create_tool_call_limit
 from inspect_ai.util._limited_conversation import ChatMessageList
 from inspect_ai.util._store import Store, store_jsonable
 from inspect_ai.util._store_model import SMT
@@ -159,6 +160,7 @@ class TaskState:
         message_limit: int | None = None,
         token_limit: int | None = None,
         cost_limit: float | None = None,
+        tool_call_limit: int | None = None,
         completed: bool = False,
         metadata: dict[str, Any] | None = None,
         store: dict[str, Any] | None = None,
@@ -177,6 +179,7 @@ class TaskState:
         self._message_limit = create_message_limit(message_limit)
         self._token_limit = create_token_limit(token_limit)
         self._cost_limit = create_cost_limit(cost_limit)
+        self._tool_call_limit = create_tool_call_limit(tool_call_limit)
         self._completed = completed
         self._store = Store(store)
         self._uuid = sample_uuid or uuid()
@@ -376,6 +379,29 @@ class TaskState:
     def cost_usage(self) -> float:
         """Total cost (in dollars) used for the current sample."""
         return sample_total_cost()
+
+    @property
+    def tool_call_limit(self) -> int | None:
+        """Limit on total tool calls allowed per conversation."""
+        return self._tool_call_limit.limit
+
+    @tool_call_limit.setter
+    def tool_call_limit(self, calls: int | None) -> None:
+        """Set limit on total tool calls allowed per conversation.
+
+        Note: Tool call limits are checked cooperatively during tool execution,
+        not immediately on limit setting.
+        """
+        self._tool_call_limit.limit = calls
+
+        from inspect_ai.log._samples import set_active_sample_tool_call_limit
+
+        set_active_sample_tool_call_limit(calls)
+
+    @property
+    def tool_call_usage(self) -> int:
+        """Total tool calls used for the current sample."""
+        return int(self._tool_call_limit.usage)
 
     @property
     def completed(self) -> bool:

@@ -127,6 +127,7 @@ def eval(
     working_limit: int | None = None,
     cost_limit: float | None = None,
     model_cost_config: str | dict[str, ModelCost] | None = None,
+    tool_call_limit: int | None = None,
     max_samples: int | None = None,
     max_dataset_memory: int | None = None,
     max_tasks: int | None = None,
@@ -230,6 +231,7 @@ def eval(
             Requires model cost data via set_model_cost() or --model-cost-config.
         model_cost_config: YAML or JSON file with model prices for cost tracking
             or dict of model -> `ModelCost`
+        tool_call_limit: Limit on number of tool calls to execution environment
         max_samples: Maximum number of samples to run in parallel
             (default is max_connections)
         max_dataset_memory: Maximum MB of dataset sample data to hold in
@@ -312,6 +314,7 @@ def eval(
                 working_limit=working_limit,
                 cost_limit=cost_limit,
                 model_cost_config=model_cost_config,
+                tool_call_limit=tool_call_limit,
                 max_samples=max_samples,
                 max_dataset_memory=max_dataset_memory,
                 max_tasks=max_tasks,
@@ -397,6 +400,7 @@ async def eval_async(
     working_limit: int | None = None,
     cost_limit: float | None = None,
     model_cost_config: str | dict[str, ModelCost] | None = None,
+    tool_call_limit: int | None = None,
     max_samples: int | None = None,
     max_dataset_memory: int | None = None,
     max_tasks: int | None = None,
@@ -483,6 +487,7 @@ async def eval_async(
             Requires model cost data via set_model_cost() or --model-cost-config.
         model_cost_config: YAML or JSON file with model prices for cost tracking
             or dict of model -> `ModelCost`
+        tool_call_limit: Limit on tool calls to execution environment
         max_samples: Maximum number of samples to run in parallel (default is max_connections)
         max_dataset_memory: Maximum MB of dataset sample data to hold in
             memory per task. When exceeded, samples are paged to a temporary
@@ -558,6 +563,7 @@ async def eval_async(
                 working_limit=working_limit,
                 cost_limit=cost_limit,
                 model_cost_config=model_cost_config,
+                tool_call_limit=tool_call_limit,
                 max_samples=max_samples,
                 max_dataset_memory=max_dataset_memory,
                 max_tasks=max_tasks,
@@ -635,6 +641,7 @@ async def _eval_async_inner(
     working_limit: int | None = None,
     cost_limit: float | None = None,
     model_cost_config: str | dict[str, ModelCost] | None = None,
+    tool_call_limit: int | None = None,
     max_samples: int | None = None,
     max_dataset_memory: int | None = None,
     max_tasks: int | None = None,
@@ -813,6 +820,7 @@ async def _eval_async_inner(
             cost_limit=cost_limit,
             time_limit=time_limit,
             working_limit=working_limit,
+            tool_call_limit=tool_call_limit,
             max_samples=max_samples,
             max_dataset_memory=max_dataset_memory,
             max_tasks=max_tasks,
