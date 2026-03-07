@@ -1324,19 +1324,19 @@ async def task_run_sample(
                                                     ),
                                                 )
                                             )
-                                            async with span(
-                                                name=scorer_name, type="scorer"
-                                            ):
-                                                if not scorer:
-                                                    continue
-                                                score_result = await scorer(
-                                                    state, Target(sample.target)
+                                            if not scorer:
+                                                continue
+                                            score_result = await scorer(
+                                                state, Target(sample.target)
+                                            )
+                                            if scorer_name in state.scores:
+                                                raise RuntimeError(
+                                                    f"Scorer {scorer_name} has modified state.scores"
                                                 )
-                                                if scorer_name in state.scores:
-                                                    raise RuntimeError(
-                                                        f"Scorer {scorer_name} has modified state.scores"
-                                                    )
-                                                if score_result is not None:
+                                            if score_result is not None:
+                                                async with span(
+                                                    name=scorer_name, type="scorer"
+                                                ):
                                                     state.scores[scorer_name] = (
                                                         score_result
                                                     )

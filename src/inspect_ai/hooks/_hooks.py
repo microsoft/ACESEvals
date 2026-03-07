@@ -1,4 +1,5 @@
 import math
+import threading
 from dataclasses import dataclass
 from logging import getLogger
 from typing import Awaitable, Callable, Literal, Type, TypeVar, cast
@@ -28,6 +29,11 @@ from inspect_ai.tool._tool_info import ToolInfo
 from inspect_ai.util._limit import LimitExceededError
 
 logger = getLogger(__name__)
+
+# Re-entrancy guard for emit_sample_event: logger.warning() inside the function
+# creates a LoggerEvent that re-enters emit_sample_event() causing infinite
+# recursion.  A thread-local flag prevents this.
+_in_emit: threading.local = threading.local()
 
 
 @dataclass(frozen=True)
@@ -667,22 +673,32 @@ def emit_sample_event(
     sample_id: str,
     event: Event,
 ) -> None:
-    active = sample_active()
-    if active is None or active.event_send is None:
+    # Re-entrancy guard: logger.warning() inside this function creates a
+    # LoggerEvent that re-enters emit_sample_event() → infinite recursion.
+    if getattr(_in_emit, "active", False):
         return
-    if event.pending:
-        return
-    data = SampleEvent(
-        eval_set_id=eval_set_id,
-        run_id=run_id,
-        eval_id=eval_id,
-        sample_id=sample_id,
-        event=event,
-    )
+    _in_emit.active = True
     try:
-        active.event_send.send_nowait(data)
-    except (anyio.ClosedResourceError, anyio.BrokenResourceError):
-        pass
+        active = sample_active()
+        if active is None or active.event_send is None:
+            return
+        if event.pending:
+            return
+        data = SampleEvent(
+            eval_set_id=eval_set_id,
+            run_id=run_id,
+            eval_id=eval_id,
+            sample_id=sample_id,
+            event=event,
+        )
+        try:
+            active.event_send.send_nowait(data)
+        except anyio.WouldBlock:
+            logger.warning("Sample event queue full, dropping event")
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError):
+            pass
+    finally:
+        _in_emit.active = False
 
 
 def start_sample_event_emitter() -> None:
