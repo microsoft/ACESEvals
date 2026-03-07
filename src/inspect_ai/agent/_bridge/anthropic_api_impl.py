@@ -529,7 +529,16 @@ def anthropic_stop_reason(stop_reason: StopReason) -> AnthropicStopReason:
         case "tool_calls":
             return "tool_use"
         case "content_filter":
-            return "refusal"
+            # Map to end_turn so the Claude Code CLI treats refusals as
+            # normal completions instead of exiting with code 1.  The
+            # refusal text ("I'm sorry …") is still present in the
+            # response content, so no information is lost.
+            logger.warning(
+                "Model returned stop_reason='content_filter' — mapping to "
+                "'end_turn' for CLI compatibility. Response content may "
+                "reflect a content policy refusal."
+            )
+            return "end_turn"
         case "unknown":
             return "end_turn"
 

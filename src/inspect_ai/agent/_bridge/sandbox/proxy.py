@@ -1258,7 +1258,10 @@ async def model_proxy_server(
 
         except Exception as ex:
             _handle_model_proxy_error(ex)
-            os._exit(1)
+            return {
+                "status": 500,
+                "body": {"error": {"message": str(ex), "type": "proxy_error"}},
+            }
 
     @server.route("/v1/chat/completions", method="POST")
     async def chat_completions(request: dict[str, Any]) -> dict[str, Any]:
@@ -1468,7 +1471,10 @@ async def model_proxy_server(
                 return {"status": 200, "body": completion}
         except Exception as ex:
             _handle_model_proxy_error(ex)
-            os._exit(1)
+            return {
+                "status": 500,
+                "body": {"error": {"message": str(ex), "type": "proxy_error"}},
+            }
 
     @server.route("/v1/messages", method="POST")
     async def anthropic(request: dict[str, Any]) -> dict[str, Any]:
@@ -1818,7 +1824,10 @@ async def model_proxy_server(
                 return {"status": 200, "body": completion}
         except Exception as ex:
             _handle_model_proxy_error(ex)
-            os._exit(1)
+            return {
+                "status": 500,
+                "body": {"error": {"message": str(ex), "type": "proxy_error"}},
+            }
 
     # ---------- Google Gemini API routes ----------
     # Route patterns for Google's Gemini API using wildcard matching
@@ -1872,7 +1881,10 @@ async def model_proxy_server(
 
         except Exception as ex:
             _handle_model_proxy_error(ex)
-            os._exit(1)
+            return {
+                "status": 500,
+                "body": {"error": {"message": str(ex), "type": "proxy_error"}},
+            }
 
     # return configured server
     return server
@@ -1898,23 +1910,27 @@ async def run_model_proxy_server(port: int) -> None:
 
 
 def _handle_model_proxy_error(ex: Exception) -> None:
-    # Any error that occurs in here is essentially fatal to the entire
-    # agent. The exception results either from:
-    #
-    #  - The call to generate (which already benefits from Inspect's std
-    #    model retry behavior). In normal Inspect agents if generate fails
-    #    after requisite retries the sample fails, same here
-    #  - A logic error or unexpected data condition in our simulated
-    #    streaming -- if we are unable to stream a request back then
-    #    the agent can't proceed, so we fail the script hard
-    #
-    # Writing to stderr and exiting the script is seen as preferable to
-    # returning 500 to the proxied agent. This is because we are in a
-    # hard failure anyway so we need the user to see the error message
-    # and have the task fail (the 500 error would just result in retries)
-    sys.stderr.write(f"Unexpected error during model proxy call: {ex}\n")
-    sys.stderr.write(traceback.format_exc())
+    # Log the error to stderr and persist to a file.  The caller returns
+    # an HTTP 500 response so the agent CLI can retry or fail gracefully
+    # instead of losing the server process entirely.
+    import traceback
+
+    msg = f"Unexpected error during model proxy call: {ex}"
+    tb = traceback.format_exc()
+    full_msg = f"{msg}\n{tb}"
+    sys.stderr.write(full_msg)
     sys.stderr.flush()
+
+    # Also persist to a file for host-side diagnostics.
+    try:
+        import datetime
+
+        log_path = "/tmp/model_proxy_error.log"
+        with open(log_path, "a") as f:
+            ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            f.write(f"[{ts}] {full_msg}\n")
+    except Exception:
+        pass  # Best-effort; don't mask the original error
 
 
 async def _call_bridge_model_service_async(method: str, **params: Any) -> Any:
