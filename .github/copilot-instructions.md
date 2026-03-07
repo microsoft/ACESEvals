@@ -82,29 +82,6 @@ SABER uses structured logging with categories:
 - `LogCategory.AGENT`: Agent solver and tool execution
 - `LogCategory.TASK_MANAGER`: Task and benchmark loading
 
-## File-Specific Instructions
-
-See `.github/instructions/` for context-specific guidance:
-- `tests.instructions.md` – Testing conventions and coverage
-- `domains.instructions.md` – Domain configuration and task definitions
-
-## Subagent Delegation
-
-When delegating work to subagents via `runSubagent`:
-
-| Task Type | Agent File to Read First |
-|-----------|--------------------------|
-| **Implementation** | `.github/agents/implementer.agent.md` |
-| **Code Review** | `.github/agents/code-reviewer.agent.md` |
-| **Planning** | `.github/agents/implementation-plan.agent.md` |
-| **Orchestration** | `.github/agents/orchestrator.agent.md` |
-
-**Required behavior:**
-1. Read the relevant agent file BEFORE writing the subagent prompt
-2. Include the agent's persona, principles, and output format in the prompt
-3. For reviewers: require the rating system (🟢/🟡/🔴) and categorized findings
-4. For implementers: enforce TDD (tests first), strong Pydantic typing, no `Any`
-
 ## Local Development
 
 ```bash

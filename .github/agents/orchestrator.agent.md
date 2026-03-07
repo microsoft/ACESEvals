@@ -19,6 +19,7 @@ When delegating work via `runSubagent`, **always read the relevant agent file fi
 | **Implementation** | `.github/agents/implementer.agent.md` | Writing new code, features, fixes |
 | **Code Review** | `.github/agents/code-reviewer.agent.md` | Reviewing completed work |
 | **Planning** | `.github/agents/implementation-plan.agent.md` | Creating phased implementation plans |
+| **Eval Runs** | `.github/agents/eval-runner.agent.md` | Running evals, analyzing scores, debugging failures |
 
 ## Delegation Process
 
@@ -59,6 +60,12 @@ You are a [PERSONA from agent file].
 - Require categorized findings: Must-Fix, Should-Fix, Nits
 - Require verification (actually run tests, check for `Any` types)
 
+**For Eval Runners:**
+- Require reading all three skill files before starting
+- Require `--display plain` on all eval commands
+- Require structured report with scores table, tool call summary, and evidence
+- Require parsing the actual `.eval` ZIP — no guessing at results
+
 ## Workflow Patterns
 
 ### Implementation + Review Cycle
@@ -83,8 +90,17 @@ You are a [PERSONA from agent file].
 1. Plan domain/task changes (planning agent)
 2. Implement changes (implementer agent)
 3. Review changes (code-reviewer agent)
-4. Test with: uv run inspect eval domains/<domain> -T task_filter="<task>"
-5. Done when tests pass and review is 🟢
+4. Run eval to verify (eval-runner agent)
+5. Done when tests pass, review is 🟢, and eval scores match expectations
+```
+
+### Eval Run + Analysis
+```
+1. Delegate eval run (eval-runner agent)
+2. Review structured results from eval-runner
+3. If scores are unexpected: delegate debugging to eval-runner
+4. If code fix needed: delegate to implementer, then re-run eval
+5. Done when scores match expectations
 ```
 
 ## Quality Gates
