@@ -341,40 +341,4 @@ class TestNonRateLimitErrorsStill500:
         assert resp["status"] == 500
 
 
-# ---------------------------------------------------------------------------
-# GenerateConfig max_retries in bridge config builders
-# ---------------------------------------------------------------------------
 
-
-class TestBridgeGenerateConfigMaxRetries:
-    """Config builders should set max_retries to limit tenacity retries."""
-
-    def test_anthropic_config_sets_max_retries(self) -> None:
-        from inspect_ai.agent._bridge.anthropic_api_impl import (
-            generate_config_from_anthropic,
-        )
-
-        config = generate_config_from_anthropic({"max_tokens": 1024})
-        assert config.max_retries is not None
-        assert config.max_retries <= 5  # reasonable upper bound
-        assert config.max_retries >= 1  # at least one retry
-
-    def test_openai_completions_config_sets_max_retries(self) -> None:
-        from inspect_ai.agent._bridge.completions import (
-            generate_config_from_openai_completions,
-        )
-
-        config = generate_config_from_openai_completions({"model": "gpt-4"})
-        assert config.max_retries is not None
-        assert config.max_retries <= 5
-        assert config.max_retries >= 1
-
-    def test_openai_responses_config_sets_max_retries(self) -> None:
-        from inspect_ai.agent._bridge.responses_impl import (
-            generate_config_from_openai_responses,
-        )
-
-        config = generate_config_from_openai_responses({})
-        assert config.max_retries is not None
-        assert config.max_retries <= 5
-        assert config.max_retries >= 1

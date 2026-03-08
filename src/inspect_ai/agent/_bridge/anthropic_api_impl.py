@@ -199,10 +199,6 @@ def generate_config_from_anthropic(json_data: dict[str, Any]) -> GenerateConfig:
     config.top_k = json_data.get("top_k", None)
     config.top_p = json_data.get("top_p", None)
 
-    # Limit retries so rate-limit errors propagate quickly back to the
-    # proxy (and onward to the CLI) rather than blocking inside tenacity.
-    config.max_retries = 3
-
     thinking = json_data.get("thinking", None)
     if thinking:
         if thinking.get("type", None) == "enabled":

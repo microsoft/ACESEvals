@@ -596,9 +596,6 @@ def generate_config_from_openai_responses(json_data: dict[str, Any]) -> Generate
     config.system_message = json_data.get("instructions", None)
     config.max_tokens = json_data.get("max_output_tokens", None)
 
-    # Limit retries so rate-limit errors propagate quickly back to the
-    # proxy (and onward to the CLI) rather than blocking inside tenacity.
-    config.max_retries = 3
     if "message.output_text.logprobs" in include:
         config.logprobs = True
     config.top_logprobs = json_data.get("top_logprobs", None)

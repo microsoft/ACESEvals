@@ -148,9 +148,6 @@ def generate_config_from_openai_completions(
         "max_completion_tokens", json_data.get("max_tokens", None)
     )
 
-    # Limit retries so rate-limit errors propagate quickly back to the
-    # proxy (and onward to the CLI) rather than blocking inside tenacity.
-    config.max_retries = 3
     config.top_p = json_data.get("top_p", None)
     config.temperature = json_data.get("temperature", None)
     stop = json_data.get("stop", None)
