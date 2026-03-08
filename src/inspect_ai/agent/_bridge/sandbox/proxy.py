@@ -515,6 +515,116 @@ def _http_date() -> str:
     return formatdate(timeval=None, usegmt=True)
 
 
+# ---------- Rate-limit error detection ----------
+
+_RATE_LIMIT_PATTERN = re.compile(
+    r"Error code: (429|529)"
+    r"|too_many_requests"
+    r"|rate_limit"
+    r"|overloaded_error"
+    r"|resource_exhausted",
+    re.IGNORECASE,
+)
+
+
+def _is_rate_limit_error(ex: BaseException) -> bool:
+    """Return True if *ex* represents an upstream rate-limit / overloaded error.
+
+    The bridge model service formats errors as strings such as:
+        Error calling method generate_anthropic: Error code: 429 - {...}
+    This helper checks for known rate-limit indicators in the message.
+    """
+    return _RATE_LIMIT_PATTERN.search(str(ex)) is not None
+
+
+def _rate_limit_error_response(
+    ex: BaseException,
+    *,
+    stream: bool,
+    endpoint: str,
+) -> dict[str, object]:
+    """Build a 429 HTTP response dict suitable for the proxy framework.
+
+    Args:
+        ex: The exception that was caught.
+        stream: Whether the original request asked for streaming.
+        endpoint: One of ``"anthropic"``, ``"openai"``, or ``"google"``.
+    """
+    error_message = str(ex)
+
+    if endpoint == "anthropic":
+        # Anthropic format: top-level {"type": "error", "error": {...}}
+        error_body: dict[str, object] = {
+            "type": "error",
+            "error": {
+                "type": "rate_limit_error",
+                "message": error_message,
+            },
+        }
+        if stream:
+            sse_event: dict[str, object] = {
+                "type": "error",
+                "error": {
+                    "type": "rate_limit_error",
+                    "message": error_message,
+                },
+            }
+            sse_payload = f"event: error\ndata: {json.dumps(sse_event)}\n\n".encode(
+                "utf-8"
+            )
+
+            async def _anthropic_error_stream() -> AsyncIterator[bytes]:
+                yield sse_payload
+
+            return {
+                "status": 429,
+                "body_iter": _anthropic_error_stream(),
+                "headers": {
+                    "Content-Type": "text/event-stream; charset=utf-8",
+                    "Cache-Control": "no-cache",
+                    "Retry-After": "1",
+                },
+                "chunked": True,
+            }
+        return {
+            "status": 429,
+            "body": error_body,
+            "headers": {"Retry-After": "1"},
+        }
+
+    # OpenAI / Google share the same shape
+    openai_body: dict[str, object] = {
+        "error": {
+            "message": error_message,
+            "type": "rate_limit_error",
+            "code": "rate_limit_exceeded",
+        }
+    }
+    if stream:
+        sse_payload_oai = (
+            f"data: {json.dumps({'error': openai_body['error']})}\n\n".encode("utf-8")
+        )
+
+        async def _openai_error_stream() -> AsyncIterator[bytes]:
+            yield sse_payload_oai
+
+        return {
+            "status": 429,
+            "body_iter": _openai_error_stream(),
+            "headers": {
+                "Content-Type": "text/event-stream; charset=utf-8",
+                "Cache-Control": "no-cache",
+                "Retry-After": "1",
+            },
+            "chunked": True,
+        }
+    return {
+        "status": 429,
+        "body": openai_body,
+        "headers": {"Retry-After": "1"},
+    }
+
+
 async def model_proxy_server(
     port: int, call_bridge_model_service_async: Any = None
 ) -> AsyncHTTPServer:
@@ -1258,6 +1368,10 @@ async def model_proxy_server(
 
         except Exception as ex:
             _handle_model_proxy_error(ex)
+            if _is_rate_limit_error(ex):
+                return _rate_limit_error_response(
+                    ex, stream=stream, endpoint="openai"
+                )
             return {
                 "status": 500,
                 "body": {"error": {"message": str(ex), "type": "proxy_error"}},
@@ -1471,6 +1585,10 @@ async def model_proxy_server(
                 return {"status": 200, "body": completion}
         except Exception as ex:
             _handle_model_proxy_error(ex)
+            if _is_rate_limit_error(ex):
+                return _rate_limit_error_response(
+                    ex, stream=stream, endpoint="openai"
+                )
             return {
                 "status": 500,
                 "body": {"error": {"message": str(ex), "type": "proxy_error"}},
@@ -1824,6 +1942,10 @@ async def model_proxy_server(
                 return {"status": 200, "body": completion}
         except Exception as ex:
             _handle_model_proxy_error(ex)
+            if _is_rate_limit_error(ex):
+                return _rate_limit_error_response(
+                    ex, stream=stream, endpoint="anthropic"
+                )
             return {
                 "status": 500,
                 "body": {"error": {"message": str(ex), "type": "proxy_error"}},
@@ -1881,6 +2003,10 @@ async def model_proxy_server(
 
         except Exception as ex:
             _handle_model_proxy_error(ex)
+            if _is_rate_limit_error(ex):
+                return _rate_limit_error_response(
+                    ex, stream=is_streaming, endpoint="google"
+                )
             return {
                 "status": 500,
                 "body": {"error": {"message": str(ex), "type": "proxy_error"}},
