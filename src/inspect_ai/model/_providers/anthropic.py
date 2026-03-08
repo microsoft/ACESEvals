@@ -3091,16 +3091,22 @@ async def message_block_params(
         if thinking_block_param is not None:
             return [thinking_block_param]
         else:
-            # reconstruct reasoning
-            if content.summary is not None:
+            # reconstruct reasoning — for redacted reasoning (e.g. OpenAI
+            # encrypted reasoning tokens), the Fernet-encrypted data lives
+            # in ``content.reasoning`` and the reasoning-item ID in
+            # ``content.signature``.  We always emit a ThinkingBlockParam
+            # so that the encrypted payload round-trips through the CLI
+            # inside the ``signature`` field (the ``thinking`` field
+            # carries the human-readable summary, if any).
+            if content.summary is not None or content.redacted:
                 return [
                     ThinkingBlockParam(
                         type="thinking",
-                        thinking=content.summary,
+                        thinking=content.summary or "",
                         signature=content.reasoning,
                     )
                 ]
-            elif content.redacted and content.signature is not None:
+            elif content.signature is not None:
                 return [
                     RedactedThinkingBlockParam(
                         type="redacted_thinking", data=content.signature
