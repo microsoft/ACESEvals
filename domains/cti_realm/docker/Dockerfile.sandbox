@@ -31,13 +31,11 @@ RUN uv pip install --system --no-cache \
     stix2
 
 # ---------------------------------------------------------------------------
-# Data directories (populated at build time or via volume mount)
-#   Data must be downloaded before building this image. See README.md.
-#   When data is available, uncomment the COPY lines below:
+# Data directories (populated at build time)
+#   Data is downloaded by the setup hook before the image is built.
 # ---------------------------------------------------------------------------
-# COPY data/cti_reports/ /opt/cti_realm/data/cti_reports/
-# COPY docker/kusto_init/ /opt/cti_realm/data/kusto_init/
-# COPY data/sigma_rules.json /opt/cti_realm/data/sigma_rules.json
+COPY data/cti_reports/ /opt/cti_realm/data/cti_reports/
+COPY data/sigma_rules.json /opt/cti_realm/data/sigma_rules.json
 RUN mkdir -p /opt/cti_realm/data/cti_reports /opt/cti_realm/data/kusto_init /opt/cti_realm/tools
 
 # ---------------------------------------------------------------------------

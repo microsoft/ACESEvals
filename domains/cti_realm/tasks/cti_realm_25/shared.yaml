@@ -1,4 +1,4 @@
-# Shared configuration for all cti_realm tasks
+# Shared configuration for all cti_detection tasks
 # This configuration will be merged into all tasks in this directory
 
 dataset: cti_realm_25

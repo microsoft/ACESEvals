@@ -1,0 +1,3 @@
+# Downloaded data (large files, downloaded via setup hook)
+data/
+docker/kusto_init/data/
