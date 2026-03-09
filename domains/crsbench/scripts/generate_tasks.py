@@ -217,17 +217,20 @@ def _derive_group_name(benchmark_id: str) -> str:
     return _derive_project_name(benchmark_id).replace("-", "_")
 
 
-def _write_shared_yaml(group_dir: Path) -> None:
+def _write_shared_yaml(group_dir: Path, *, dataset: str) -> None:
     """Write a shared.yaml for a task group directory.
+
+    Always (re-)writes the file so that the ``dataset`` label is
+    guaranteed to be present.
 
     Args:
         group_dir: The group directory to write shared.yaml into.
+        dataset: Dataset label to include (typically the group name).
     """
     shared_path = group_dir / "shared.yaml"
-    if shared_path.exists():
-        return
 
     shared_content = {
+        "dataset": dataset,
         "sandbox_environment": "default",
         "initial_context": {
             "sanitizer": "address",
@@ -280,7 +283,7 @@ def generate_all_tasks(
 
         group_dir = output_dir / group_name
         group_dir.mkdir(parents=True, exist_ok=True)
-        _write_shared_yaml(group_dir)
+        _write_shared_yaml(group_dir, dataset=group_name)
 
         for harness in meta.harness_files:
             for vuln in harness.vulns:

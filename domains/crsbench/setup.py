@@ -387,7 +387,8 @@ def get_hooks(
 
     Recognized ``-T`` flags (passed as *kwargs*):
 
-    * ``datasets`` — comma-separated dataset/benchmark names to download.
+    * ``dataset`` — comma-separated dataset/benchmark names to download
+      and evaluate.  Also used by ``create_task`` to filter tasks.
     * ``include_ground_truth`` — ``"true"`` / ``"false"`` (default: true).
     * ``force_download`` — ``"true"`` / ``"false"`` (default: false).
 
@@ -399,7 +400,7 @@ def get_hooks(
         List of setup hook instances.
     """
     datasets = _parse_csv(
-        kwargs.get("datasets"),  # type: ignore[arg-type]
+        kwargs.get("dataset"),  # type: ignore[arg-type]
     )
     include_ground_truth = _cli_bool(
         kwargs.get("include_ground_truth"),  # type: ignore[arg-type]

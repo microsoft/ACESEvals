@@ -624,3 +624,50 @@ class TestGenerateAllTasksDatasetFilter:
             benchmarks_root, output_dir, datasets=["nonexistent-benchmark"]
         )
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# _write_shared_yaml Tests
+# ---------------------------------------------------------------------------
+
+
+class TestWriteSharedYaml:
+    """Tests for the _write_shared_yaml helper function."""
+
+    def test_write_shared_yaml_includes_dataset(self, tmp_path: Path) -> None:
+        """Generated shared.yaml contains the full expected structure."""
+        from crsbench.scripts.generate_tasks import _write_shared_yaml
+
+        group_dir = tmp_path / "sanity_mock_c"
+        group_dir.mkdir()
+        _write_shared_yaml(group_dir, dataset="sanity_mock_c")
+
+        shared_path = group_dir / "shared.yaml"
+        assert shared_path.exists()
+        content = yaml.safe_load(shared_path.read_text())
+        assert content == {
+            "dataset": "sanity_mock_c",
+            "sandbox_environment": "default",
+            "initial_context": {
+                "sanitizer": "address",
+                "mode": "bug_fixing",
+            },
+        }
+
+    def test_write_shared_yaml_overwrites_existing(self, tmp_path: Path) -> None:
+        """Calling _write_shared_yaml when shared.yaml exists overwrites it."""
+        from crsbench.scripts.generate_tasks import _write_shared_yaml
+
+        group_dir = tmp_path / "my_group"
+        group_dir.mkdir()
+
+        # Write initial shared.yaml without dataset
+        shared_path = group_dir / "shared.yaml"
+        shared_path.write_text(yaml.dump({"sandbox_environment": "old"}))
+
+        # Overwrite with new content
+        _write_shared_yaml(group_dir, dataset="my_group")
+
+        content = yaml.safe_load(shared_path.read_text())
+        assert content["dataset"] == "my_group"
+        assert content["sandbox_environment"] == "default"

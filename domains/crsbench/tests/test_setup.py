@@ -234,12 +234,12 @@ class TestDownloadBenchmarkDataForceDownload:
 class TestGetHooksKwargs:
     """Tests for get_hooks() with CLI -T kwargs."""
 
-    def test_datasets_csv_parsed(self) -> None:
-        hooks = get_hooks(Path("/unused"), datasets="a,b")
+    def test_dataset_csv_parsed(self) -> None:
+        hooks = get_hooks(Path("/unused"), dataset="a,b")
         assert hooks[0]._datasets == ["a", "b"]
 
-    def test_datasets_single_value(self) -> None:
-        hooks = get_hooks(Path("/unused"), datasets="sanity-mock-c-delta-01")
+    def test_dataset_single_value(self) -> None:
+        hooks = get_hooks(Path("/unused"), dataset="sanity-mock-c-delta-01")
         assert hooks[0]._datasets == ["sanity-mock-c-delta-01"]
 
     def test_include_ground_truth_false(self) -> None:
