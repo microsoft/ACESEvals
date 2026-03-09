@@ -2,7 +2,7 @@
 
 Five strategies:
 - TrajectoryAnalysisStrategy  (submission, trajectory_analysis)
-- CTIToolLLMStrategy          (subtask C0, cti_tool_llm)
+- CTIToolLLMStrategy          (subtask C0, cti_tool_llm)  — thin wrapper around LLMJudgeStrategy
 - TrajectoryJaccardStrategy   (subtask C1, trajectory_jaccard)
 - ToolCallJaccardStrategy     (subtask C2, tool_call_jaccard)
 - F1SigmaStrategy             (subtask C4, f1_sigma_scoring)
@@ -16,13 +16,12 @@ import logging
 import re
 from pathlib import Path
 
-from inspect_ai.model import ChatMessageSystem, ChatMessageUser, get_model
 from inspect_ai.scorer import Score
 
 from saber.scoring.context import ScoringContext
 
 from ._kql import score_kql_development
-from ._parsing import build_few_shot_examples, parse_model_output
+from ._parsing import parse_model_output
 from ._sigma import score_sigma_rule
 
 logger = logging.getLogger("saber.domains.cti_realm.scoring.strategies")
@@ -74,11 +73,11 @@ def _extra_dict(ctx: ScoringContext, key: str) -> dict[str, str]:
 class TrajectoryAnalysisStrategy:
     """Submission-based 5-checkpoint evaluation (C0–C4)."""
 
-    def __init__(self, config_dir: Path) -> None:
-        sigma_path = config_dir / "sigma_rule_quality.json"
-        self._sigma_config: dict[str, object] = (
-            json.loads(sigma_path.read_text()) if sigma_path.exists() else {}
-        )
+    def __init__(self, prompts_dir: Path) -> None:
+        sys_path = prompts_dir / "sigma_quality_system.j2"
+        usr_path = prompts_dir / "sigma_quality_user.j2"
+        self._sigma_system = sys_path.read_text() if sys_path.exists() else ""
+        self._sigma_user_tpl = usr_path.read_text() if usr_path.exists() else ""
 
     async def score(self, ctx: ScoringContext, renderer: object) -> Score:
         expected_techniques = _extra_list(ctx, "expected_techniques")
@@ -127,10 +126,13 @@ class TrajectoryAnalysisStrategy:
             f1 = score_kql_development(predicted, sample_data)
 
         sigma_quality = 0.0
-        if self._sigma_config:
+        if self._sigma_system:
             model_name = _extra_str(ctx, "model", "openai/azure/gpt-5-mini")
             sigma_quality = await score_sigma_rule(
-                predicted, detection_objective, self._sigma_config,
+                predicted,
+                detection_objective,
+                system_prompt=self._sigma_system,
+                user_template=self._sigma_user_tpl,
                 model_name=model_name,
             )
 
@@ -151,117 +153,79 @@ class TrajectoryAnalysisStrategy:
 
 
 # ---------------------------------------------------------------------------
-# 2. CTIToolLLMStrategy (subtask C0)
+# 2. CTIToolLLMStrategy (subtask C0) — thin wrapper around LLMJudgeStrategy
 # ---------------------------------------------------------------------------
+
+# CTI tools that indicate the agent performed threat intelligence research.
+_CTI_TOOLS: frozenset[str] = frozenset({"get_cti_reports_by_tag", "list_cti_report_tags"})
 
 
 class CTIToolLLMStrategy:
-    """Two-phase CTI tool detection + LLM quality assessment."""
+    """Two-phase CTI scorer: gate on tool usage, then delegate to LLMJudgeStrategy.
 
-    def __init__(self, config_dir: Path) -> None:
-        cti_path = config_dir / "cti_threat_alignment.json"
-        self._cti_config: dict[str, object] = (
-            json.loads(cti_path.read_text()) if cti_path.exists() else {}
-        )
+    Phase 1 (cheap): if the agent never called any CTI tools, return 0 immediately.
+    Phase 2 (LLM):   build ``LLMJudgeCriteria`` from the ``DomainCriteria`` fields
+                      in the YAML and delegate to the built-in ``LLMJudgeStrategy``.
+
+    Required ``DomainCriteria`` extra fields (set in the task YAML):
+        model, judge_system_template, judge_user_template
+
+    Optional:
+        response_format (default ``continuous``), steps_per_message
+    """
 
     async def score(self, ctx: ScoringContext, renderer: object) -> Score:
-        cti_tools = ["get_cti_reports_by_tag", "list_cti_report_tags"]
+        from saber.config.models import DomainCriteria, LLMJudgeCriteria, LLMJudgeResponseFormat
+        from saber.scoring.strategies import LLMJudgeStrategy
+        from saber.scoring.templates import TemplateRenderer
 
-        # Phase 1: detect CTI tool calls
-        tags_searched: list[str] = []
-        tools_used: set[str] = set()
-
-        for step in ctx.tool_steps:
-            if step.tool_name in cti_tools:
-                tools_used.add(step.tool_name)
-                if step.tool_name == "get_cti_reports_by_tag":
-                    tag = step.tool_input.get("tag")
-                    if tag:
-                        tags_searched.append(str(tag))
-
-        if not tools_used:
+        # Phase 1: gate — did the agent use any CTI tools?
+        if not any(step.tool_name in _CTI_TOOLS for step in ctx.tool_steps):
             return Score(
                 value=0.0,
                 answer=ctx.submission,
                 explanation="No CTI tools detected",
             )
 
-        # Phase 2: LLM quality assessment
-        model_name = _extra_str(ctx, "model")
-        if not model_name or not self._cti_config:
+        # Phase 2: extract LLM judge fields from DomainCriteria extras
+        extras = ctx.scorer.criteria.model_extra or {} if isinstance(ctx.scorer.criteria, DomainCriteria) else {}
+        model_name = str(extras.get("model", ""))
+        sys_tpl = str(extras.get("judge_system_template", ""))
+        usr_tpl = str(extras.get("judge_user_template", ""))
+
+        if not model_name or not sys_tpl or not usr_tpl:
             return Score(
                 value=0.0,
                 answer=ctx.submission,
-                explanation="Missing model config or CTI config",
+                explanation="Missing model, judge_system_template, or judge_user_template in config",
             )
 
-        # Collect reasoning from steps
-        reasoning_parts: list[str] = []
-        for step in ctx.tool_steps:
-            if step.reasoning:
-                reasoning_parts.append(step.reasoning)
-            if step.assistant_message:
-                reasoning_parts.append(step.assistant_message)
-        agent_reasoning = "\n\n".join(reasoning_parts) if reasoning_parts else "No agent reasoning found."
+        # Build LLMJudgeCriteria from the DomainCriteria extras
+        fmt_str = str(extras.get("response_format", "continuous"))
+        response_format = LLMJudgeResponseFormat(fmt_str)
+        steps_per_message = extras.get("steps_per_message")
 
-        # Get detection description from metadata
-        detection_description = str(ctx.metadata.get("description", ""))
+        llm_criteria = LLMJudgeCriteria(
+            model=model_name,
+            judge_system_template=sys_tpl,
+            judge_user_template=usr_tpl,
+            response_format=response_format,
+            steps_per_message=int(steps_per_message) if steps_per_message is not None else None,
+        )
 
-        def format_cti_example(idx: int, ex: dict[str, object]) -> str:
-            return (
-                f"### Example {idx} ({ex['name']})\n"
-                f"Detection Objective: {ex['detection_objective']}\n"
-                f"CTI Tags Searched: {ex['tags_searched']}\n"
-                f"Agent's Reasoning: {ex['agent_reasoning']}\n\n"
-                f"Critique:\n{ex['critique']}\n\n"
-                f'Score:\n{{"score": {ex["score"]}, "reasoning": "{str(ex["critique"])[:100]}..."}}'
+        # Swap criteria in the ScorerConfig and rebuild context
+        new_scorer = ctx.scorer.model_copy(update={"criteria": llm_criteria})
+        new_ctx = ctx.model_copy(update={"scorer": new_scorer})
+
+        # Delegate to the built-in LLMJudgeStrategy
+        if not isinstance(renderer, TemplateRenderer):
+            return Score(
+                value=0.0,
+                answer=ctx.submission,
+                explanation="CTIToolLLMStrategy requires a TemplateRenderer",
             )
 
-        few_shots_text = build_few_shot_examples(self._cti_config, format_cti_example)
-
-        system_msg = str(self._cti_config.get("system", "You are evaluating CTI threat intelligence research quality."))
-        instruction = str(self._cti_config.get("instruction", ""))
-        template = str(self._cti_config.get("template", ""))
-
-        filled_template = template.format(
-            detection_description=detection_description,
-            tags_searched=", ".join(tags_searched) if tags_searched else "None",
-            agent_reasoning=agent_reasoning,
-        )
-
-        user_msg = (
-            f"{instruction}\n\nHere are examples of the format:\n\n{few_shots_text}\n\n---\n\n"
-            f"Now evaluate:\n\n{filled_template}\n\n"
-            'Output ONLY a JSON object: {"score": <0.0-1.0>, "reasoning": "<brief>"}'
-        )
-
-        model = get_model(model_name)
-        response = await model.generate(
-            input=[
-                ChatMessageSystem(content=system_msg),
-                ChatMessageUser(content=user_msg),
-            ],
-        )
-        response_text = response.completion
-
-        match = re.search(r"\{[\s\S]*\}", response_text)
-        normalized_score = 0.0
-        if match:
-            try:
-                result = json.loads(match.group(0))
-                if "score" in result:
-                    normalized_score = min(max(float(result["score"]), 0.0), 1.0)
-            except (json.JSONDecodeError, ValueError):
-                sm = re.search(r'"?score"?\s*:\s*([0-9.]+)', response_text)
-                if sm:
-                    normalized_score = min(max(float(sm.group(1)), 0.0), 1.0)
-
-        final = normalized_score * ctx.scorer.max_score
-        return Score(
-            value=final,
-            answer=ctx.submission,
-            explanation=f"CTI LLM judge: {normalized_score:.2f} → {final:.2f}",
-        )
+        return await LLMJudgeStrategy().score(new_ctx, renderer)
 
 
 # ---------------------------------------------------------------------------
@@ -373,11 +337,11 @@ class ToolCallJaccardStrategy:
 class F1SigmaStrategy:
     """F1-based KQL validation + LLM Sigma rule quality."""
 
-    def __init__(self, config_dir: Path) -> None:
-        sigma_path = config_dir / "sigma_rule_quality.json"
-        self._sigma_config: dict[str, object] = (
-            json.loads(sigma_path.read_text()) if sigma_path.exists() else {}
-        )
+    def __init__(self, prompts_dir: Path) -> None:
+        sys_path = prompts_dir / "sigma_quality_system.j2"
+        usr_path = prompts_dir / "sigma_quality_user.j2"
+        self._sigma_system = sys_path.read_text() if sys_path.exists() else ""
+        self._sigma_user_tpl = usr_path.read_text() if usr_path.exists() else ""
 
     async def score(self, ctx: ScoringContext, renderer: object) -> Score:
         regex_patterns = _extra_dict(ctx, "regex_patterns")
@@ -471,7 +435,7 @@ class F1SigmaStrategy:
 
         # --- Sigma quality scoring (1.5 weight) ---
         sigma_quality = 0.0
-        if sigma_rule and self._sigma_config:
+        if sigma_rule and self._sigma_system:
             predicted = parse_model_output(ctx.submission)
             if "sigma_rule" not in predicted:
                 predicted["sigma_rule"] = sigma_rule
@@ -479,7 +443,8 @@ class F1SigmaStrategy:
             sigma_quality = await score_sigma_rule(
                 predicted,
                 detection_objective,
-                self._sigma_config,
+                system_prompt=self._sigma_system,
+                user_template=self._sigma_user_tpl,
                 model_name=model_name,
             )
 

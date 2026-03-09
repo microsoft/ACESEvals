@@ -14,11 +14,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cti_realm.scoring._sigma import _DEFAULT_MODEL, score_sigma_rule
 
-SIGMA_CONFIG: dict[str, object] = {
-    "system": "You are a Sigma rule evaluator.",
-    "instruction": "Evaluate this rule.",
-    "template": "Rule:\n{pred_rule}\nContext: {context_type}\n{evaluation_context}",
-    "few_shots": [],
+# Common test prompt values (replaces old SIGMA_CONFIG dict)
+_SYSTEM_PROMPT = "You are a Sigma rule evaluator."
+_USER_TEMPLATE = (
+    "Rule:\n{{ pred_rule }}\nContext: {{ context_type }}\n{{ evaluation_context }}"
+)
+_SIGMA_KWARGS: dict[str, object] = {
+    "system_prompt": _SYSTEM_PROMPT,
+    "user_template": _USER_TEMPLATE,
     "temperature": 0.0,
     "max_tokens": 100,
     "weights": {"syntax": 0.25, "specificity": 0.75},
@@ -31,19 +34,19 @@ class TestScoreSigmaRule:
     @pytest.mark.asyncio
     async def test_missing_sigma_rule_key_returns_zero(self) -> None:
         """Missing 'sigma_rule' key → returns 0.0."""
-        result = await score_sigma_rule({}, "Detect X", SIGMA_CONFIG)
+        result = await score_sigma_rule({}, "Detect X", **_SIGMA_KWARGS)  # type: ignore[arg-type]
         assert result == 0.0
 
     @pytest.mark.asyncio
     async def test_empty_sigma_rule_value_returns_zero(self) -> None:
         """Empty 'sigma_rule' value → returns 0.0."""
-        result = await score_sigma_rule({"sigma_rule": ""}, "Detect X", SIGMA_CONFIG)
+        result = await score_sigma_rule({"sigma_rule": ""}, "Detect X", **_SIGMA_KWARGS)  # type: ignore[arg-type]
         assert result == 0.0
 
     @pytest.mark.asyncio
     async def test_empty_predicted_dict_returns_zero(self) -> None:
         """Empty predicted dict (no sigma_rule key) → returns 0.0."""
-        result = await score_sigma_rule({}, "Detect lateral movement", SIGMA_CONFIG)
+        result = await score_sigma_rule({}, "Detect lateral movement", **_SIGMA_KWARGS)  # type: ignore[arg-type]
         assert result == 0.0
 
     @pytest.mark.asyncio
@@ -60,7 +63,7 @@ class TestScoreSigmaRule:
             result = await score_sigma_rule(
                 {"sigma_rule": "title: Test"},
                 "Detect X",
-                SIGMA_CONFIG,
+                **_SIGMA_KWARGS,  # type: ignore[arg-type]
             )
 
         # 0.25 * 0.8 + 0.75 * 0.9 = 0.875
@@ -79,7 +82,7 @@ class TestScoreSigmaRule:
             result = await score_sigma_rule(
                 {"sigma_rule": "title: Test\ndetection:\n  condition: sel"},
                 "Detect X",
-                SIGMA_CONFIG,
+                **_SIGMA_KWARGS,  # type: ignore[arg-type]
             )
 
         # Regex extracts 0.6 and 0.7 → 0.25*0.6 + 0.75*0.7 = 0.675
@@ -98,7 +101,7 @@ class TestScoreSigmaRule:
             result = await score_sigma_rule(
                 {"sigma_rule": "title: Test"},
                 "Detect X",
-                SIGMA_CONFIG,
+                **_SIGMA_KWARGS,  # type: ignore[arg-type]
             )
 
         # Regex fallback: syntax=0.5, specificity=0.4 → 0.25*0.5 + 0.75*0.4 = 0.425
@@ -115,16 +118,12 @@ class TestScoreSigmaRule:
                 await score_sigma_rule(
                     {"sigma_rule": "title: Test"},
                     "Detect X",
-                    SIGMA_CONFIG,
+                    **_SIGMA_KWARGS,  # type: ignore[arg-type]
                 )
 
     @pytest.mark.asyncio
     async def test_custom_weights_respected(self) -> None:
         """Custom weights in config (syntax=0.5, specificity=0.5) are respected."""
-        custom_config = {
-            **SIGMA_CONFIG,
-            "weights": {"syntax": 0.5, "specificity": 0.5},
-        }
         mock_response = MagicMock()
         mock_response.completion = json.dumps(
             {"syntax_score": 0.8, "specificity": 0.6}
@@ -136,7 +135,11 @@ class TestScoreSigmaRule:
             result = await score_sigma_rule(
                 {"sigma_rule": "title: Test"},
                 "Detect X",
-                custom_config,
+                system_prompt=_SYSTEM_PROMPT,
+                user_template=_USER_TEMPLATE,
+                temperature=0.0,
+                max_tokens=100,
+                weights={"syntax": 0.5, "specificity": 0.5},
             )
 
         # 0.5 * 0.8 + 0.5 * 0.6 = 0.7

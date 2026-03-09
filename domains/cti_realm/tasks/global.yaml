@@ -1,4 +1,8 @@
+domain: cti_realm
+
 global_defaults:
+  default_dataset: cti_realm_25
+
   permanent_environment:
     name: "saber-cti-realm-permanent"
     compose: "compose/databases.compose.yml"

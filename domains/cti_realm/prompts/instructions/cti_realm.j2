@@ -32,26 +32,26 @@ Each tool is called directly - these are NOT Python functions. Use the tool-call
   - Parameters: `tag` (e.g., "apt29", "persistence", "linux")
 
 **MITRE ATT&CK Operations:**
-- **search_mitre_techniques**: Search MITRE ATT&CK techniques
-  - Parameters: `query` (search term like "persistence", "privilege escalation")
+- **search_mitre_techniques**: Search MITRE ATT&CK techniques by tactic name
+  - Parameters: `tactic` (str, default: "") — MITRE tactic name using lowercase-hyphenated format (e.g., "initial-access", "persistence", "privilege-escalation"). Queries a tactic-specific endpoint, not free-text search.
 
 **Sigma Rule Operations:**
-- **search_sigma_rules**: Search Sigma detection rules
-  - Parameters: `query` (keyword), optional: `max_results` (default: 10)
+- **search_sigma_rules**: Search Sigma detection rules by keyword, technique ID, or platform
+  - Parameters: `keyword` (str, default: "") — search keyword, `technique_id` (str, default: "") — MITRE technique ID (e.g., "T1059"), `platform` (str, default: "") — target platform, `limit` (int, default: 5) — max results to return
 
 **Kusto Database Operations:**
 - **list_kusto_tables**: List all available security data tables
-  - Parameters: optional `database` (default: "CTIRealm")
+  - Parameters: none (database is hardcoded to NetDefaultDB)
 - **get_table_schema**: Get schema for a specific table
   - Parameters: `table_name` (e.g., "DeviceProcessEvents")
 - **sample_table_data**: Get sample rows from a table
-  - Parameters: `table_name`, optional: `rows` (default: 5, max: 20)
+  - Parameters: `table_name` (str) — name of the table, `limit` (int, default: 5, max: 20) — number of sample rows to return
 - **execute_kql_query**: Execute KQL queries
-  - Parameters: `database`, `query`, optional: `limit` (default: 100, max: 1000)
+  - Parameters: `query` (str) — KQL query to execute, `limit` (int, default: 10, max: 10) — maximum rows to return
 
 **Output Validation:**
 - **validate_output_json**: Validate your final JSON output before submitting
-  - Parameters: `json_output` (your complete JSON string)
+  - Parameters: `json_data` (str) — your complete JSON output string to validate
 
 ## Environment Details
 

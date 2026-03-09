@@ -40,6 +40,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -124,6 +127,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -209,6 +215,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -293,6 +302,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -378,6 +390,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -460,6 +475,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -540,6 +558,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -621,6 +642,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -702,6 +726,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -783,6 +810,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -865,6 +895,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -947,6 +980,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1030,6 +1066,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1111,6 +1150,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1193,6 +1235,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1277,6 +1322,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1360,6 +1408,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1443,6 +1494,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1525,6 +1579,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1606,6 +1663,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1689,6 +1749,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1771,6 +1834,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1854,6 +1920,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -1936,6 +2005,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2019,6 +2091,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2102,6 +2177,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2182,6 +2260,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2261,6 +2342,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2341,6 +2425,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2423,6 +2510,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2505,6 +2595,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2587,6 +2680,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2669,6 +2765,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2749,6 +2848,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2829,6 +2931,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2911,6 +3016,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -2993,6 +3101,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3075,6 +3186,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3157,6 +3271,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3239,6 +3356,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3322,6 +3442,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3403,6 +3526,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3485,6 +3611,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3567,6 +3696,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3650,6 +3782,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3732,6 +3867,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3814,6 +3952,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3896,6 +4037,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -3978,6 +4122,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4060,6 +4207,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4142,6 +4292,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4225,6 +4378,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4308,6 +4464,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4390,6 +4549,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4472,6 +4634,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4554,6 +4719,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4634,6 +4802,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4715,6 +4886,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4797,6 +4971,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4877,6 +5054,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -4956,6 +5136,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5037,6 +5220,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5119,6 +5305,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5201,6 +5390,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5282,6 +5474,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5363,6 +5558,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5445,6 +5643,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5527,6 +5728,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5609,6 +5813,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5691,6 +5898,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5772,6 +5982,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5853,6 +6066,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -5934,6 +6150,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6015,6 +6234,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6096,6 +6318,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6177,6 +6402,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6258,6 +6486,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6339,6 +6570,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6420,6 +6654,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6501,6 +6738,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6582,6 +6822,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6663,6 +6906,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6744,6 +6990,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6824,6 +7073,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6905,6 +7157,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -6986,6 +7241,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7067,6 +7325,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7148,6 +7409,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7229,6 +7493,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7310,6 +7577,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7409,6 +7679,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7512,6 +7785,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7624,6 +7900,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7735,6 +8014,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7840,6 +8122,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -7937,6 +8222,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -8032,6 +8320,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -8132,6 +8423,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -8237,6 +8531,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -8351,6 +8648,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -8455,6 +8755,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory
@@ -8566,6 +8869,9 @@ tasks:
         weight: 1.0
         title: 'C0: CTI Report Usage'
         description: Evidence of threat intelligence analysis in agent execution
+        judge_system_template: judge/cti_alignment_system.j2
+        judge_user_template: judge/cti_alignment_user.j2
+        response_format: continuous
     trajectory_jaccard:
       c1_threat_context:
         target: trajectory

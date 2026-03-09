@@ -21,7 +21,7 @@ from saber.config.models import DomainCriteria
 from .conftest import _make_ctx, _make_tool_step
 
 if TYPE_CHECKING:
-    pass
+    from saber.scoring.templates import TemplateRenderer
 
 
 # =====================================================================
@@ -34,21 +34,15 @@ class TestTrajectoryAnalysisStrategy:
 
     @pytest.fixture()
     def strategy(self, tmp_path: Path) -> TrajectoryAnalysisStrategy:
-        return TrajectoryAnalysisStrategy(config_dir=tmp_path)
+        return TrajectoryAnalysisStrategy(prompts_dir=tmp_path)
 
     @pytest.fixture()
     def strategy_with_sigma(self, tmp_path: Path) -> TrajectoryAnalysisStrategy:
-        sigma_config = {
-            "system": "You are a judge.",
-            "instruction": "Evaluate this.",
-            "template": "Rule:\n{pred_rule}\nContext: {context_type}\n{evaluation_context}",
-            "few_shots": [],
-            "temperature": 0.0,
-            "max_tokens": 100,
-            "weights": {"syntax": 0.25, "specificity": 0.75},
-        }
-        (tmp_path / "sigma_rule_quality.json").write_text(json.dumps(sigma_config))
-        return TrajectoryAnalysisStrategy(config_dir=tmp_path)
+        (tmp_path / "sigma_quality_system.j2").write_text("You are a judge.")
+        (tmp_path / "sigma_quality_user.j2").write_text(
+            "Rule:\n{{ pred_rule }}\nContext: {{ context_type }}\n{{ evaluation_context }}"
+        )
+        return TrajectoryAnalysisStrategy(prompts_dir=tmp_path)
 
     @pytest.mark.asyncio
     async def test_empty_submission(self, strategy: TrajectoryAnalysisStrategy) -> None:
@@ -172,22 +166,32 @@ class TestTrajectoryAnalysisStrategy:
 
 
 class TestCTIToolLLMStrategy:
-    """Tests for CTI tool detection + LLM quality."""
+    """Tests for CTI tool detection + LLM quality (thin wrapper over LLMJudgeStrategy)."""
 
     @pytest.fixture()
-    def strategy(self, tmp_path: Path) -> CTIToolLLMStrategy:
-        return CTIToolLLMStrategy(config_dir=tmp_path)
+    def strategy(self) -> CTIToolLLMStrategy:
+        return CTIToolLLMStrategy()
 
     @pytest.fixture()
-    def strategy_with_config(self, tmp_path: Path) -> CTIToolLLMStrategy:
-        config = {
-            "system": "You are a CTI evaluator.",
-            "instruction": "Evaluate CTI usage.",
-            "template": "Detection: {detection_description}\nTags: {tags_searched}\nReasoning: {agent_reasoning}",
-            "few_shots": [],
-        }
-        (tmp_path / "cti_threat_alignment.json").write_text(json.dumps(config))
-        return CTIToolLLMStrategy(config_dir=tmp_path)
+    def cti_criteria(self) -> DomainCriteria:
+        """DomainCriteria with complete LLM judge config extras."""
+        return DomainCriteria(
+            model="openai/gpt-4",
+            judge_system_template="judge/cti_alignment_system.j2",
+            judge_user_template="judge/cti_alignment_user.j2",
+            response_format="continuous",
+        )
+
+    @pytest.fixture()
+    def renderer(self) -> "TemplateRenderer":
+        from saber.scoring.templates import TemplateRenderer
+
+        return TemplateRenderer(
+            templates={
+                "judge/cti_alignment_system.j2": "You are a CTI evaluator.",
+                "judge/cti_alignment_user.j2": "Evaluate: {{ question }}",
+            }
+        )
 
     @pytest.mark.asyncio
     async def test_no_cti_tools_returns_zero(self, strategy: CTIToolLLMStrategy) -> None:
@@ -199,7 +203,8 @@ class TestCTIToolLLMStrategy:
         assert "No CTI tools" in result.explanation
 
     @pytest.mark.asyncio
-    async def test_cti_tools_but_no_model_config(self, strategy: CTIToolLLMStrategy) -> None:
+    async def test_cti_tools_but_no_config(self, strategy: CTIToolLLMStrategy) -> None:
+        """DomainCriteria with no model/template extras -> 0."""
         step = _make_tool_step(tool_name="get_cti_reports_by_tag", tool_input={"tag": "apt"})
         ctx = _make_ctx(tool_steps=(step,))
         result = await strategy.score(ctx, None)
@@ -208,96 +213,97 @@ class TestCTIToolLLMStrategy:
         assert "Missing" in result.explanation
 
     @pytest.mark.asyncio
-    async def test_cti_tools_with_model_and_config(
-        self, strategy_with_config: CTIToolLLMStrategy
+    async def test_requires_template_renderer(
+        self,
+        strategy: CTIToolLLMStrategy,
+        cti_criteria: DomainCriteria,
     ) -> None:
+        """If renderer is not a TemplateRenderer, returns 0."""
+        step = _make_tool_step(tool_name="get_cti_reports_by_tag", tool_input={"tag": "apt"})
+        ctx = _make_ctx(tool_steps=(step,), criteria=cti_criteria)
+        result = await strategy.score(ctx, "not_a_renderer")
+        assert result.value == pytest.approx(0.0)
+        assert result.explanation is not None
+        assert "TemplateRenderer" in result.explanation
+
+    @pytest.mark.asyncio
+    async def test_delegates_to_llm_judge_strategy(
+        self,
+        strategy: CTIToolLLMStrategy,
+        cti_criteria: DomainCriteria,
+        renderer: "TemplateRenderer",
+    ) -> None:
+        """Verifies delegation to LLMJudgeStrategy with correct criteria."""
+        from inspect_ai.scorer import Score as InspectScore
+
         step = _make_tool_step(
             tool_name="get_cti_reports_by_tag",
             tool_input={"tag": "lateral_movement"},
             reasoning="Searching for lateral movement CTI reports.",
         )
-        criteria = DomainCriteria(model="openai/gpt-4")
         ctx = _make_ctx(
             tool_steps=(step,),
-            criteria=criteria,
+            criteria=cti_criteria,
             metadata={"description": "Detect lateral movement"},
         )
 
-        mock_response = MagicMock()
-        mock_response.completion = '{"score": 0.85, "reasoning": "Good CTI usage"}'
-        mock_model = AsyncMock()
-        mock_model.generate = AsyncMock(return_value=mock_response)
+        expected_score = InspectScore(value=0.85, answer="", explanation="Good CTI usage")
+        mock_judge = AsyncMock(return_value=expected_score)
 
-        with patch("cti_realm.scoring.strategies.get_model", return_value=mock_model):
-            result = await strategy_with_config.score(ctx, None)
+        with patch("saber.scoring.strategies.LLMJudgeStrategy") as MockClass:
+            MockClass.return_value.score = mock_judge
+            result = await strategy.score(ctx, renderer)
 
-        assert float(str(result.value)) == pytest.approx(0.85)
+        # LLMJudgeStrategy().score() was called once
+        mock_judge.assert_called_once()
+        call_ctx = mock_judge.call_args[0][0]
+
+        # The delegated context should have LLMJudgeCriteria
+        from saber.config.models import LLMJudgeCriteria
+
+        assert isinstance(call_ctx.scorer.criteria, LLMJudgeCriteria)
+        assert call_ctx.scorer.criteria.model == "openai/gpt-4"
+        assert call_ctx.scorer.criteria.system_template == "judge/cti_alignment_system.j2"
+        assert call_ctx.scorer.criteria.user_template == "judge/cti_alignment_user.j2"
+        assert result.value == pytest.approx(0.85)
 
     @pytest.mark.asyncio
     async def test_llm_failure_propagates(
-        self, strategy_with_config: CTIToolLLMStrategy
+        self,
+        strategy: CTIToolLLMStrategy,
+        cti_criteria: DomainCriteria,
+        renderer: "TemplateRenderer",
     ) -> None:
-        step = _make_tool_step(
-            tool_name="list_cti_report_tags",
-        )
-        criteria = DomainCriteria(model="openai/gpt-4")
-        ctx = _make_ctx(tool_steps=(step,), criteria=criteria)
+        step = _make_tool_step(tool_name="list_cti_report_tags")
+        ctx = _make_ctx(tool_steps=(step,), criteria=cti_criteria)
 
-        with patch("cti_realm.scoring.strategies.get_model", side_effect=RuntimeError("API down")):
+        with patch("saber.scoring.strategies.LLMJudgeStrategy") as MockClass:
+            MockClass.return_value.score = AsyncMock(side_effect=RuntimeError("API down"))
             with pytest.raises(RuntimeError, match="API down"):
-                await strategy_with_config.score(ctx, None)
+                await strategy.score(ctx, renderer)
 
     @pytest.mark.asyncio
-    async def test_tags_searched_collected(
-        self, strategy_with_config: CTIToolLLMStrategy
+    async def test_multiple_cti_tools_delegated(
+        self,
+        strategy: CTIToolLLMStrategy,
+        cti_criteria: DomainCriteria,
+        renderer: "TemplateRenderer",
     ) -> None:
+        """Multiple CTI tool steps still pass gate and delegate correctly."""
+        from inspect_ai.scorer import Score as InspectScore
+
         steps = (
-            _make_tool_step(
-                step_number=1,
-                tool_name="get_cti_reports_by_tag",
-                tool_input={"tag": "apt"},
-            ),
-            _make_tool_step(
-                step_number=2,
-                tool_name="get_cti_reports_by_tag",
-                tool_input={"tag": "persistence"},
-            ),
+            _make_tool_step(step_number=1, tool_name="get_cti_reports_by_tag", tool_input={"tag": "apt"}),
+            _make_tool_step(step_number=2, tool_name="get_cti_reports_by_tag", tool_input={"tag": "persistence"}),
         )
-        criteria = DomainCriteria(model="openai/gpt-4")
-        ctx = _make_ctx(tool_steps=steps, criteria=criteria)
+        ctx = _make_ctx(tool_steps=steps, criteria=cti_criteria)
 
-        mock_response = MagicMock()
-        mock_response.completion = '{"score": 0.5, "reasoning": "ok"}'
-        mock_model = AsyncMock()
-        mock_model.generate = AsyncMock(return_value=mock_response)
+        expected_score = InspectScore(value=0.6, answer="", explanation="ok")
+        with patch("saber.scoring.strategies.LLMJudgeStrategy") as MockClass:
+            MockClass.return_value.score = AsyncMock(return_value=expected_score)
+            result = await strategy.score(ctx, renderer)
 
-        with patch("cti_realm.scoring.strategies.get_model", return_value=mock_model):
-            result = await strategy_with_config.score(ctx, None)
-
-        assert float(str(result.value)) > 0.0
-
-    @pytest.mark.asyncio
-    async def test_regex_score_fallback_on_bad_json(
-        self, strategy_with_config: CTIToolLLMStrategy
-    ) -> None:
-        """When JSON parse fails but score regex matches, fallback works."""
-        step = _make_tool_step(
-            tool_name="get_cti_reports_by_tag",
-            tool_input={"tag": "apt"},
-        )
-        criteria = DomainCriteria(model="openai/gpt-4")
-        ctx = _make_ctx(tool_steps=(step,), criteria=criteria)
-
-        mock_response = MagicMock()
-        # JSON is malformed but regex can find score: 0.7
-        mock_response.completion = '{broken json "score": 0.7 trailing garbage}'
-        mock_model = AsyncMock()
-        mock_model.generate = AsyncMock(return_value=mock_response)
-
-        with patch("cti_realm.scoring.strategies.get_model", return_value=mock_model):
-            result = await strategy_with_config.score(ctx, None)
-
-        assert float(str(result.value)) == pytest.approx(0.7)
+        assert result.value == pytest.approx(0.6)
 
 
 # =====================================================================
@@ -531,21 +537,15 @@ class TestF1SigmaStrategy:
 
     @pytest.fixture()
     def strategy(self, tmp_path: Path) -> F1SigmaStrategy:
-        return F1SigmaStrategy(config_dir=tmp_path)
+        return F1SigmaStrategy(prompts_dir=tmp_path)
 
     @pytest.fixture()
     def strategy_with_sigma(self, tmp_path: Path) -> F1SigmaStrategy:
-        sigma_config = {
-            "system": "You are a judge.",
-            "instruction": "Evaluate Sigma rule quality.",
-            "template": "Rule:\n{pred_rule}\nContext: {context_type}\n{evaluation_context}",
-            "few_shots": [],
-            "temperature": 0.0,
-            "max_tokens": 100,
-            "weights": {"syntax": 0.25, "specificity": 0.75},
-        }
-        (tmp_path / "sigma_rule_quality.json").write_text(json.dumps(sigma_config))
-        return F1SigmaStrategy(config_dir=tmp_path)
+        (tmp_path / "sigma_quality_system.j2").write_text("You are a judge.")
+        (tmp_path / "sigma_quality_user.j2").write_text(
+            "Rule:\n{{ pred_rule }}\nContext: {{ context_type }}\n{{ evaluation_context }}"
+        )
+        return F1SigmaStrategy(prompts_dir=tmp_path)
 
     @pytest.mark.asyncio
     async def test_no_patterns_no_sigma(self, strategy: F1SigmaStrategy) -> None:

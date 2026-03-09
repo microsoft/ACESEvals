@@ -40,11 +40,11 @@ def get_strategies(
     Returns:
         Mapping of strategy name to strategy instance.
     """
-    config_dir = domain_root / "tasks" / "cti_detection"
+    prompts_dir = domain_root / "prompts" / "judge"
     return {
-        "trajectory_analysis": TrajectoryAnalysisStrategy(config_dir),
-        "cti_tool_llm": CTIToolLLMStrategy(config_dir),
+        "trajectory_analysis": TrajectoryAnalysisStrategy(prompts_dir),
+        "cti_tool_llm": CTIToolLLMStrategy(),
         "trajectory_jaccard": TrajectoryJaccardStrategy(),
         "tool_call_jaccard": ToolCallJaccardStrategy(),
-        "f1_sigma_scoring": F1SigmaStrategy(config_dir),
+        "f1_sigma_scoring": F1SigmaStrategy(prompts_dir),
     }

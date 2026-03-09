@@ -3,6 +3,7 @@ services:
     image: saber/cti_realm/sandbox:latest
     x-local: true
     working_dir: /workspace
+    command: "tail -f /dev/null"
     init: true
     environment:
       - PYTHONPATH=/workspace
@@ -14,13 +15,17 @@ services:
       - MAX_QUERY_ROWS=10000
     networks:
       - cti-realm-database
-    restart: "no"
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     deploy:
       resources:
         limits:
-          memory: 512m
-          cpus: '0.5'
-          pids: 512
+          cpus: "2.0"
+          memory: 2G
+          pids: 256
 
 networks:
   cti-realm-database:

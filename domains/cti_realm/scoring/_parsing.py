@@ -5,33 +5,10 @@ Ported from server/scoring/parsing_utils.py — no SABER server dependencies.
 
 import json
 import re
-from collections.abc import Callable
 
 from saber.logging import get_logger
 
 logger = get_logger("domains.cti_realm.scoring.parsing")
-
-FewShotFormatter = Callable[[int, dict[str, object]], str]
-
-
-def build_few_shot_examples(
-    config: dict[str, object],
-    formatter: FewShotFormatter,
-) -> str:
-    """Build few-shot text from config using *formatter(idx, example)*.
-
-    Args:
-        config: Config dict with optional ``few_shots`` list.
-        formatter: Function ``(index, example_dict) -> str``.
-
-    Returns:
-        Formatted few-shot text, or empty string if no shots.
-    """
-    shots = config.get("few_shots", [])
-    if not shots:
-        return ""
-    parts = [formatter(i + 1, ex) for i, ex in enumerate(shots)]  # type: ignore[arg-type]
-    return "\n\n---\n\n".join(parts)
 
 
 def extract_fields_with_regex(output: str) -> dict[str, object]:

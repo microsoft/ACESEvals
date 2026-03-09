@@ -1,0 +1,20 @@
+Now evaluate:
+
+DETECTION OBJECTIVE:
+{{ question }}
+
+CTI TAGS SEARCHED BY AGENT:
+{%- set tag_steps = episode.steps | selectattr("tool_name", "equalto", "get_cti_reports_by_tag") | list %}
+{% if tag_steps %}{% for step in tag_steps %}{{ step.tool_input.tag | default("unknown") }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}None{% endif %}
+
+AGENT'S REASONING ABOUT CTI REPORTS (excerpt from messages):
+{% for step in episode.steps %}
+{% if step.reasoning %}{{ step.reasoning }}
+{% endif %}
+{% if step.assistant_message %}{{ step.assistant_message }}
+{% endif %}
+{% endfor %}
+
+Evaluate: Did the agent find relevant CTI reports? Did they explain WHY the reports relate to the detection objective? Provide your critique and score.
+
+Output ONLY a JSON object: {"score": <0.0-1.0>, "reasoning": "<brief>"}

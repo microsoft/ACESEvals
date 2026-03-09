@@ -28,7 +28,7 @@ services:
       kusto-emulator:
         condition: service_healthy
     volumes:
-      - ./docker/kusto_init:/app
+      - ../docker/kusto_init:/app
     working_dir: /app
     command: bash -c "python init_kusto.py && python load_data.py"
     networks:
@@ -47,7 +47,7 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./docker/mitre_service:/app
+      - ../docker/mitre_service:/app
     working_dir: /app
     command: ["python", "mitre_api.py"]
     healthcheck:

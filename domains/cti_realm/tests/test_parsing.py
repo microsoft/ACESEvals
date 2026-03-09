@@ -7,48 +7,10 @@ import json
 import pytest
 
 from cti_realm.scoring._parsing import (
-    build_few_shot_examples,
     extract_fields_with_regex,
     extract_sigma_scores_from_text,
     parse_model_output,
 )
-
-
-# =====================================================================
-# build_few_shot_examples
-# =====================================================================
-
-
-class TestBuildFewShotExamples:
-    """Tests for build_few_shot_examples."""
-
-    def test_empty_config(self) -> None:
-        result = build_few_shot_examples({}, lambda i, ex: f"shot {i}")
-        assert result == ""
-
-    def test_no_few_shots_key(self) -> None:
-        result = build_few_shot_examples({"other": "val"}, lambda i, ex: f"shot {i}")
-        assert result == ""
-
-    def test_empty_few_shots_list(self) -> None:
-        result = build_few_shot_examples({"few_shots": []}, lambda i, ex: f"shot {i}")
-        assert result == ""
-
-    def test_single_shot(self) -> None:
-        config: dict[str, object] = {"few_shots": [{"name": "example1"}]}
-        result = build_few_shot_examples(config, lambda i, ex: f"Shot {i}: {ex['name']}")
-        assert result == "Shot 1: example1"
-
-    def test_multiple_shots_separator(self) -> None:
-        config: dict[str, object] = {"few_shots": [{"n": "a"}, {"n": "b"}, {"n": "c"}]}
-        result = build_few_shot_examples(config, lambda i, ex: f"{i}-{ex['n']}")
-        assert result == "1-a\n\n---\n\n2-b\n\n---\n\n3-c"
-
-    def test_formatter_receives_one_based_index(self) -> None:
-        indices: list[int] = []
-        config: dict[str, object] = {"few_shots": [{"x": 1}, {"x": 2}]}
-        build_few_shot_examples(config, lambda i, ex: (indices.append(i), "")[1])
-        assert indices == [1, 2]
 
 
 # =====================================================================

@@ -1,7 +1,19 @@
-# Shared configuration for all cti_detection tasks
+# Shared configuration for all cti_realm tasks
 # This configuration will be merged into all tasks in this directory
 
+dataset: cti_realm_75
+
 sandbox_environment: "default"
+
+scoring_aggregation:
+  max:
+    scores:
+    - submission
+    - - c0_cti_analysis
+      - c1_threat_context
+      - c2_data_exploration
+      - c3_query_execution
+      - c4_detection_quality
 
 initial_context:
   kusto_connection:

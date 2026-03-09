@@ -1,0 +1,83 @@
+You are evaluating whether an AI agent's threat intelligence research is relevant to the detection objective and whether they clearly explained the connection between selected CTI reports and the detection task.
+
+AVAILABLE CTI TAG CATEGORIES (for reference):
+- apt (APT groups and threat actors)
+- persistence (persistence mechanisms)  
+- execution (execution techniques)
+- privilege escalation (privilege escalation methods)
+- credential access (credential theft)
+- discovery (system/network discovery)
+- lateral movement (moving through networks)
+- collection (data collection)
+- linux (Linux-specific threats)
+- cloud (cloud platform threats)
+- kubernetes/container (container threats)
+
+TASK: Evaluate the quality and relevance of the agent's threat intelligence research.
+
+Consider these aspects:
+1. Did the agent search for tags that match the detection objective?
+2. Did they identify specific CTI reports or threat intelligence?
+3. Did they explain WHY the reports are relevant to the detection task?
+
+Provide a score between 0.0 and 1.0 based on how well the agent performed CTI research and explained their reasoning. Study the examples below to understand the scoring approach.
+
+Here are examples of the format:
+
+### Example 1 (Excellent Research with Clear Reasoning)
+Detection Objective: Detect suspicious scheduled task creation for persistence on Linux systems.
+CTI Tags Searched: persistence, linux, execution
+Agent's Reasoning: I searched for 'persistence' and 'linux' tags and found a CTI report titled 'APT28 Linux Persistence via Cron' which is highly relevant because it describes exactly how adversaries use cron jobs (T1053.003) to maintain persistence on compromised Linux systems. The report details malicious cron entries that execute payloads, which aligns perfectly with our detection objective of finding suspicious scheduled tasks.
+
+Critique:
+Tags: Highly relevant - 'persistence' and 'linux' directly match the objective.
+CTI Report Selection: Excellent - found specific report about Linux cron persistence.
+Reasoning Quality: Outstanding - agent explicitly explained WHY the APT28 report is relevant (describes cron-based persistence), mentioned the specific MITRE technique, and connected it directly to the detection goal.
+
+Score:
+{"score": 1.0, "reasoning": "Tags: Highly relevant - 'persistence' and 'linux' directly match the objective.\nCTI Report Selection: Excellent..."}
+
+---
+
+### Example 2 (Good Research with Solid Reasoning)
+Detection Objective: Detect Kubernetes pod privilege escalation attempts.
+CTI Tags Searched: kubernetes, privilege escalation
+Agent's Reasoning: Found reports on container breakout techniques under 'kubernetes' tag. These reports describe how attackers exploit misconfigured pods to gain elevated privileges, which is relevant to detecting privilege escalation in K8s environments.
+
+Critique:
+Tags: Directly relevant.
+CTI Report Selection: Good - found container breakout reports.
+Reasoning Quality: Good - explained that reports cover privilege escalation via pod exploitation, though could be more specific about techniques.
+
+Score:
+{"score": 0.8, "reasoning": "Tags: Directly relevant.\nCTI Report Selection: Good - found container breakout reports.\nReasoning Qual..."}
+
+---
+
+### Example 3 (Adequate Research but Weak Reasoning)
+Detection Objective: Detect credential dumping from Azure Key Vault.
+CTI Tags Searched: cloud, credential access
+Agent's Reasoning: I found some cloud-related threat reports. These cover various cloud attacks.
+
+Critique:
+Tags: Adequate - 'credential access' is good, though 'cloud' is generic.
+CTI Report Selection: Found reports but didn't specify which ones or their titles.
+Reasoning Quality: Very weak - didn't explain HOW the reports relate to Key Vault credential dumping. No mention of specific techniques or connection to the objective.
+
+Score:
+{"score": 0.5, "reasoning": "Tags: Adequate - 'credential access' is good, though 'cloud' is generic.\nCTI Report Selection: Found rep..."}
+
+---
+
+### Example 4 (Poor Research - No Report Analysis)
+Detection Objective: Detect lateral movement via SSH in Linux environments.
+CTI Tags Searched: apt, persistence
+Agent's Reasoning: Checking APT group reports for relevant threats.
+
+Critique:
+Tags: Mismatched - searching for APT groups and persistence when objective is lateral movement.
+CTI Report Selection: No evidence of actually retrieving or analyzing specific reports.
+Reasoning Quality: No explanation of report relevance - just mentioned checking reports without explaining connection to SSH lateral movement.
+
+Score:
+{"score": 0.2, "reasoning": "Tags: Mismatched - searching for APT groups and persistence when objective is lateral movement.\nCTI Repo..."}
