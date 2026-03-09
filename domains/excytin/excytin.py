@@ -15,6 +15,31 @@ from inspect_ai import task
 # External SABER is installed as a package, so import from saber.inspect_ai
 from saber.inspect_ai import create_domain_task
 
+# ---------------------------------------------------------------------------
+# Monkey-patch: enable adaptive thinking + output_config for Anthropic models
+# ---------------------------------------------------------------------------
+# inspect_ai hardcodes thinking={"type": "enabled", ...} but we need
+# {"type": "adaptive"} and output_config={"effort": "high"}.
+# This patch overrides completion_config() so that when --reasoning-tokens
+# is passed, the API request uses adaptive thinking mode.
+# ---------------------------------------------------------------------------
+from inspect_ai.model._providers.anthropic import AnthropicAPI  # noqa: E402
+
+_original_completion_config = AnthropicAPI.completion_config
+
+
+def _patched_completion_config(self, config):  # type: ignore[override]
+    params, headers, betas = _original_completion_config(self, config)
+    # Switch from "enabled" → "adaptive" thinking mode (no budget_tokens needed)
+    if "thinking" in params:
+        params["thinking"] = {"type": "adaptive"}
+    # Set output effort to high (default for Anthropic, but explicit)
+    params["output_config"] = {"effort": "high"}
+    return params, headers, betas
+
+
+AnthropicAPI.completion_config = _patched_completion_config  # type: ignore[assignment]
+
 # Get the workspace root (parent of domains/)
 # This file is at: domains/excytin/excytin.py
 # We need: /path/to/workspace/domains (the domains directory itself)
