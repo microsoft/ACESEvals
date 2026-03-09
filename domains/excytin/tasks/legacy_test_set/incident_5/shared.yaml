@@ -1,4 +1,7 @@
 # Shared configuration for all incident_5 tasks
+dataset: legacy_test_set
+
+\ndataset: legacy_test_set
 # This configuration will be merged into the initial_context of all tasks in this directory
 
 initial_context:

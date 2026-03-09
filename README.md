@@ -77,12 +77,16 @@ cp .env.template .env
 # List available domains and tasks
 uv run inspect list tasks
 
-# Evaluate with default react agent
+# Evaluate with default react agent (uses the domain's default dataset)
 uv run inspect eval domains/excytin --model openai/azure/gpt-4.1
 
-# Filter to specific tasks
+# Select a specific dataset
 uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
-  -T task_filter="incident_5*"
+  -T dataset=legacy_test_set
+
+# Further filter within a dataset
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T dataset=latest_test_set -T task_filter="incident_5*"
 
 # Use a different agent
 uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
@@ -104,30 +108,44 @@ Cybersecurity incident response with database forensics and SQL analysis across 
 | `legacy_test_set` | 589 | O1-preview questions — paper comparison only |
 | `legacy_train_set` | 418 | O1-preview questions — paper comparison only |
 
+**Default dataset:** `latest_test_set` — running without `-T dataset` automatically selects this set.
+
 > **Cold start:** Contact the team for the excytin data files. You need `csv_files/` and `sql_files/` at `domains/excytin/data/` before running.
 
 ```bash
-# Latest test set (recommended)
-uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
-  -T task_filter="incident_*_latest_test_set_*"
+# Latest test set (default — no flag needed)
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1
 
-# Specific incident
+# Specific dataset
 uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
-  -T task_filter="incident_5_latest_test_set_*"
+  -T dataset=legacy_test_set
+
+# Dataset + task filter for a specific incident
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
+  -T dataset=latest_test_set -T task_filter="incident_5*"
 
 # Quick test (limit samples)
-uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 \
-  -T task_filter="incident_*_latest_test_set_*" --limit 10
+uv run inspect eval domains/excytin --model openai/azure/gpt-4.1 --limit 10
 ```
 
 ### CTI Realm — Cyber Threat Intelligence
 
 Threat intelligence analysis and detection rule development with KQL, MITRE ATT&CK mapping, and Sigma rules — 100 detection scenarios.
 
+| Dataset | Count | Description |
+|---------|-------|-------------|
+| `cti_realm_25` | 25 | Core detection scenarios — **default** |
+| `cti_realm_75` | 75 | Extended detection set |
+
 ```bash
+# Default dataset (cti_realm_25)
 uv run inspect eval domains/cti_realm --model openai/azure/gpt-4.1
 
-# Filter to specific detection type
+# Full 75-task set
+uv run inspect eval domains/cti_realm --model openai/azure/gpt-4.1 \
+  -T dataset=cti_realm_75
+
+# Dataset + task filter
 uv run inspect eval domains/cti_realm --model openai/azure/gpt-4.1 \
   -T task_filter="linux_*"
 ```
@@ -137,8 +155,15 @@ uv run inspect eval domains/cti_realm --model openai/azure/gpt-4.1 \
 Vulnerability patching benchmark — agent receives vulnerable source code and crash-triggering proof-of-vulnerability inputs, must write patches. Data is automatically downloaded from HuggingFace on first run.
 
 ```bash
+# All benchmarks
 uv run inspect eval domains/crsbench --model openai/azure/gpt-4.1
+
+# Download and run a specific benchmark only
+uv run inspect eval domains/crsbench --model openai/azure/gpt-4.1 \
+  -T dataset=afc-curl-delta-01
 ```
+
+> `-T dataset` also scopes the HuggingFace download — only the selected benchmark's data is fetched.
 
 ### CyBench — Security Challenges
 
@@ -316,11 +341,14 @@ All parameters are passed via `inspect eval -T key=value`:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `task_filter` | None | Glob or comma-separated task name filter |
+| `dataset` | From `global.yaml` | Select a named task group (preferred over `task_filter` for known sets) |
+| `task_filter` | None | Glob or comma-separated task name filter (applied after `dataset`) |
 | `agent` | `"react"` | Agent: `react`, `copilot`, `claude_code` |
 | `rebuild` | None | `"true"` = all images, `"name1,name2"` = specific images |
 | `run_preflight` | `false` | Validate compose files before evaluation |
 | `keep_permanent` | `false` | Keep permanent Docker services alive after eval |
+
+> **`dataset` vs `task_filter`:** Each domain defines a `default_dataset` in `global.yaml` — running without `-T dataset` uses that default. Use `-T dataset` to switch between known task groups (e.g., `latest_test_set` vs `legacy_test_set`). Use `-T task_filter` only when you need to narrow down to specific tasks by name pattern. Both can be combined: dataset filters first, then task_filter narrows further.
 
 ### Docker Parameters
 

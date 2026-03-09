@@ -1,3 +1,5 @@
+dataset: latest_test_set
+
 initial_context:
   database_connection:
     hostname: incident-55-db

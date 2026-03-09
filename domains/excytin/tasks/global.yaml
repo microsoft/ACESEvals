@@ -1,6 +1,8 @@
 domain: excytin
 
 global_defaults:
+  default_dataset: latest_test_set
+
   permanent_environment:
     name: "excytin-databases"
     compose: "compose/all_incidents.compose.yml"

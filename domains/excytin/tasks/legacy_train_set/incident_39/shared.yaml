@@ -1,3 +1,5 @@
+dataset: legacy_train_set
+
 initial_context:
   database_connection:
     hostname: incident-39-db
