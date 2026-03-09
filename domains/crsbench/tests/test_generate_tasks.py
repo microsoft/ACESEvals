@@ -554,3 +554,73 @@ class TestLoadBenchmarkMeta:
 
         with pytest.raises(yaml.scanner.ScannerError):
             load_benchmark_meta(bench)
+
+
+# ---------------------------------------------------------------------------
+# generate_all_tasks with datasets filter
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateAllTasksDatasetFilter:
+    """Tests for generate_all_tasks() with the datasets filter parameter."""
+
+    def test_datasets_none_processes_all(
+        self,
+        benchmarks_root: Path,
+        tmp_path: Path,
+    ) -> None:
+        """datasets=None processes all benchmarks (current default behavior)."""
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        output_dir = tmp_path / "out_all"
+        result = generate_all_tasks(benchmarks_root, output_dir, datasets=None)
+        # Should find tasks for both benchmark fixtures
+        task_files = [f for f in result if f.name != "shared.yaml"]
+        assert len(task_files) >= 2
+
+    def test_datasets_filters_to_matching(
+        self,
+        benchmarks_root: Path,
+        tmp_path: Path,
+    ) -> None:
+        """Only benchmarks whose names are in datasets list are processed."""
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        output_dir = tmp_path / "out_filtered"
+        result = generate_all_tasks(
+            benchmarks_root,
+            output_dir,
+            datasets=["sanity-mock-c-delta-01"],
+        )
+        # Only benchmarks matching sanity-mock-c-delta-01 processed
+        task_files = [f for f in result if f.name != "shared.yaml"]
+        assert len(task_files) == 1
+        assert "sanity_mock_c" in task_files[0].parent.name
+
+    def test_datasets_empty_list_generates_nothing(
+        self,
+        benchmarks_root: Path,
+        tmp_path: Path,
+    ) -> None:
+        """An empty datasets list generates no tasks."""
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        output_dir = tmp_path / "out_empty"
+        result = generate_all_tasks(
+            benchmarks_root, output_dir, datasets=[]
+        )
+        assert result == []
+
+    def test_datasets_nonexistent_name_generates_nothing(
+        self,
+        benchmarks_root: Path,
+        tmp_path: Path,
+    ) -> None:
+        """A datasets list with no matching benchmarks generates nothing."""
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        output_dir = tmp_path / "out_no_match"
+        result = generate_all_tasks(
+            benchmarks_root, output_dir, datasets=["nonexistent-benchmark"]
+        )
+        assert result == []

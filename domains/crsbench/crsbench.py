@@ -11,6 +11,17 @@ from inspect_ai import Task, task
 
 from saber.task import create_task
 
+_GIT_INIT_SETUP = """\
+#!/usr/bin/env bash
+set -euo pipefail
+cd /workspace/source
+git init -b main
+git config user.email "sandbox@saber"
+git config user.name "sandbox"
+git add -A
+git commit -m "initial" --quiet
+"""
+
 
 @task
 def crsbench(**kwargs: str | None) -> Task:
@@ -31,4 +42,11 @@ def crsbench(**kwargs: str | None) -> Task:
     Returns:
         Fully configured inspect_ai Task.
     """
-    return create_task(**kwargs)
+    result = create_task(**kwargs)
+    # Inject git init setup into every sample so agents can use `git diff`
+    # to generate patches instead of manually crafting unified diffs.
+    # Unconditionally overwrite — git init must always run, even if YAML
+    # defines a setup script via a future TaskConfig.setup field.
+    for sample in result.dataset:
+        sample.setup = _GIT_INIT_SETUP
+    return result

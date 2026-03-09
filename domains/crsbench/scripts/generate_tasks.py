@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import sys
 from pathlib import Path
 
@@ -93,7 +94,9 @@ def generate_bugfix_task(
         A dict representing a single task entry, suitable for YAML serialization.
     """
     benchmark_id = benchmark_path.name
-    task_id = f"{benchmark_id}__{harness.name}__{vuln.vuln_keyword}__bugfix".replace("-", "_")
+    # Sanitize task ID: only alphanumeric, underscore, hyphen allowed
+    raw_id = f"{benchmark_id}__{harness.name}__{vuln.vuln_keyword}__bugfix"
+    task_id = re.sub(r"[^a-zA-Z0-9_-]", "_", raw_id).replace("-", "_")
 
     project = _derive_project_name(benchmark_id)
 
@@ -237,6 +240,7 @@ def _write_shared_yaml(group_dir: Path) -> None:
 def generate_all_tasks(
     benchmarks_dir: Path,
     output_dir: Path,
+    datasets: list[str] | None = None,
 ) -> list[Path]:
     """Generate task YAMLs for all benchmarks in a directory.
 
@@ -247,6 +251,8 @@ def generate_all_tasks(
     Args:
         benchmarks_dir: Root directory containing benchmark subdirectories.
         output_dir: Target directory for generated task YAMLs.
+        datasets: Optional list of benchmark directory names to process.
+            When None, all benchmarks are processed.
 
     Returns:
         List of paths to generated YAML files.
@@ -258,6 +264,10 @@ def generate_all_tasks(
         p.parent.parent
         for p in benchmarks_dir.rglob(".aixcc/meta.yaml")
     )
+
+    if datasets is not None:
+        dataset_set = set(datasets)
+        benchmark_paths = [p for p in benchmark_paths if p.name in dataset_set]
 
     if not benchmark_paths:
         logger.warning("No benchmarks found in %s", benchmarks_dir)

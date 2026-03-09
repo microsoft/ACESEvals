@@ -37,7 +37,7 @@ class CRSBenchHarness(BaseModel):
 
     name: str
     path: str
-    vulns: tuple[CRSBenchVuln, ...]
+    vulns: tuple[CRSBenchVuln, ...] = ()
 
 
 class CRSBenchDeltaMode(BaseModel):

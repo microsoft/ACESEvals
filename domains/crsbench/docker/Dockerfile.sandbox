@@ -1,10 +1,12 @@
 # SABER Sandbox for CRSBench Domain
-# Extends the minimal SABER sandbox base with vulnerability research tooling
+# Extends the minimal SABER sandbox base with vulnerability research tooling.
+# Supports both C/C++ and Java benchmarks (AIxCC base-builder + base-builder-jvm).
 FROM saber/sandbox:latest
 
 # Switch to root to install packages
 USER root
 
+# ── C/C++ toolchain ──────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     clang llvm lld \
     libclang-rt-19-dev libfuzzer-19-dev \
@@ -14,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl wget \
     binutils elfutils \
     patch diffutils \
-    file \
+    file zip unzip \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,6 +30,37 @@ RUN CLANG_VER=$(clang --version | grep -oP 'clang version \K[0-9]+') && \
         ln -s linux "${RT_LIB}/${TRIPLE}"; \
     fi
 
+# ── Java toolchain (JVM benchmarks) ─────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-jdk \
+    ant \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Maven (matches AIxCC base-builder-jvm)
+ARG MAVEN_VERSION=3.9.5
+RUN curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+    | tar xz -C /opt && \
+    ln -s "/opt/apache-maven-${MAVEN_VERSION}/bin/mvn" /usr/local/bin/mvn
+ENV MVN=/usr/local/bin/mvn
+
+# Install Gradle
+ARG GRADLE_VERSION=8.5
+RUN curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+    -o /tmp/gradle.zip && \
+    unzip -q /tmp/gradle.zip -d /opt && \
+    ln -s "/opt/gradle-${GRADLE_VERSION}/bin/gradle" /usr/local/bin/gradle && \
+    rm /tmp/gradle.zip
+
+# Install Jazzer (Java fuzzing engine, required by JVM benchmarks)
+ARG JAZZER_VERSION=0.22.1
+RUN mkdir -p /opt/jazzer && \
+    curl -fsSL "https://github.com/CodeIntelligenceTesting/jazzer/releases/download/v${JAZZER_VERSION}/jazzer-linux.tar.gz" \
+    | tar xz -C /opt/jazzer && \
+    ln -s /opt/jazzer/jazzer_driver /usr/local/bin/jazzer_driver && \
+    ln -s /opt/jazzer/jazzer_agent_deploy.jar /usr/local/lib/jazzer_agent_deploy.jar
+ENV JAZZER_API_PATH=/opt/jazzer/jazzer_standalone_deploy.jar
+ENV JVM_LD_LIBRARY_PATH=/usr/lib/jvm/default-java/lib/server
+
 # AIxCC-compatible build environment variables
 # These match what ghcr.io/aixcc-finals/base-builder provides
 ENV CC=clang \
@@ -36,7 +69,8 @@ ENV CC=clang \
     CXXFLAGS="-fsanitize=address -fno-omit-frame-pointer -g" \
     SRC=/workspace/source \
     OUT=/workspace/build \
-    LIB_FUZZING_ENGINE=/usr/lib/llvm-19/lib/libFuzzer.a
+    LIB_FUZZING_ENGINE=/usr/lib/llvm-19/lib/libFuzzer.a \
+    JAVA_HOME=/usr/lib/jvm/default-java
 
 # Workspace structure
 RUN mkdir -p /workspace/source /workspace/build /workspace/povs \

@@ -9,7 +9,17 @@ from unittest.mock import MagicMock, patch
 
 from saber.hooks import SetupHook
 
-from crsbench.setup import DownloadBenchmarkData, download_benchmarks, get_hooks, _parse_csv, _cli_bool, _sanitize_staged_dir
+from crsbench.setup import (
+    DownloadBenchmarkData,
+    _cli_bool,
+    _parse_csv,
+    _sanitize_staged_dir,
+    clean_task_dirs,
+    download_benchmarks,
+    extract_all_tarballs,
+    extract_benchmark_tarballs,
+    get_hooks,
+)
 
 
 def _ensure_huggingface_hub_mock() -> MagicMock:
@@ -67,7 +77,10 @@ class TestDownloadBenchmarkData:
         hook = DownloadBenchmarkData()
         with (
             patch("crsbench.setup.download_benchmarks") as mock_dl,
+            patch("crsbench.setup.extract_all_tarballs"),
             patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs", return_value=0),
+            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
         ):
             hook.run(tmp_path)
             mock_dl.assert_called_once_with(
@@ -77,14 +90,17 @@ class TestDownloadBenchmarkData:
             )
 
     def test_run_passes_config(self, tmp_path: Path) -> None:
-        """run() forwards include_ground_truth and benchmarks."""
+        """run() forwards include_ground_truth and datasets (as benchmarks kwarg)."""
         hook = DownloadBenchmarkData(
             include_ground_truth=False,
-            benchmarks=["afc-curl-delta-01"],
+            datasets=["afc-curl-delta-01"],
         )
         with (
             patch("crsbench.setup.download_benchmarks") as mock_dl,
+            patch("crsbench.setup.extract_all_tarballs"),
             patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs", return_value=0),
+            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
         ):
             hook.run(tmp_path)
             mock_dl.assert_called_once_with(
@@ -218,13 +234,13 @@ class TestDownloadBenchmarkDataForceDownload:
 class TestGetHooksKwargs:
     """Tests for get_hooks() with CLI -T kwargs."""
 
-    def test_benchmarks_csv_parsed(self) -> None:
-        hooks = get_hooks(Path("/unused"), benchmarks="a,b")
-        assert hooks[0]._benchmarks == ["a", "b"]
+    def test_datasets_csv_parsed(self) -> None:
+        hooks = get_hooks(Path("/unused"), datasets="a,b")
+        assert hooks[0]._datasets == ["a", "b"]
 
-    def test_benchmarks_single_value(self) -> None:
-        hooks = get_hooks(Path("/unused"), benchmarks="sanity-mock-c-delta-01")
-        assert hooks[0]._benchmarks == ["sanity-mock-c-delta-01"]
+    def test_datasets_single_value(self) -> None:
+        hooks = get_hooks(Path("/unused"), datasets="sanity-mock-c-delta-01")
+        assert hooks[0]._datasets == ["sanity-mock-c-delta-01"]
 
     def test_include_ground_truth_false(self) -> None:
         hooks = get_hooks(Path("/unused"), include_ground_truth="false")
@@ -251,7 +267,7 @@ class TestGetHooksKwargs:
 
     def test_no_kwargs_uses_defaults(self) -> None:
         hooks = get_hooks(Path("/unused"))
-        assert hooks[0]._benchmarks is None
+        assert hooks[0]._datasets is None
         assert hooks[0]._include_ground_truth is True
         assert hooks[0]._force_download is False
 
@@ -407,3 +423,403 @@ class TestSanitizeStagedDir:
         assert not (tmp_path / "mock.c.bak").exists()
         assert not (tmp_path / "mock.c~").exists()
         assert not git_dir.exists()
+
+
+def _create_tarball(tar_path: Path, files: dict[str, str]) -> None:
+    """Helper: create a .tar.gz with the given filename→content mapping."""
+    import io
+    import tarfile
+
+    with tarfile.open(tar_path, "w:gz") as tf:
+        for name, content in files.items():
+            data = content.encode()
+            info = tarfile.TarInfo(name=name)
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+
+
+class TestExtractBenchmarkTarballs:
+    """Tests for extract_benchmark_tarballs."""
+
+    def test_extracts_benchmark_tarball(self, tmp_path: Path) -> None:
+        """benchmark.tar.gz contents are extracted into benchmark_dir."""
+        bm = tmp_path / "bench-01"
+        bm.mkdir()
+        _create_tarball(bm / "benchmark.tar.gz", {
+            "project.yaml": "name: bench",
+            "build.sh": "#!/bin/bash\nexit 0",
+        })
+        _create_tarball(bm / "ground-truth.tar.gz", {
+            ".aixcc/meta.yaml": "id: bench-01",
+        })
+
+        extract_benchmark_tarballs(bm)
+
+        assert (bm / "project.yaml").exists()
+        assert (bm / "build.sh").read_text() == "#!/bin/bash\nexit 0"
+        assert (bm / ".aixcc" / "meta.yaml").read_text() == "id: bench-01"
+
+    def test_idempotent_skips_if_already_extracted(self, tmp_path: Path) -> None:
+        """Skips extraction when .aixcc/meta.yaml already exists."""
+        bm = tmp_path / "bench-01"
+        bm.mkdir()
+        (bm / ".aixcc").mkdir()
+        (bm / ".aixcc" / "meta.yaml").write_text("already here")
+
+        # Even with tarballs present, extraction is skipped
+        _create_tarball(bm / "benchmark.tar.gz", {"project.yaml": "new"})
+        _create_tarball(bm / "ground-truth.tar.gz", {
+            ".aixcc/meta.yaml": "overwrite attempt",
+        })
+
+        extract_benchmark_tarballs(bm)
+
+        # Original content preserved — extraction was skipped
+        assert (bm / ".aixcc" / "meta.yaml").read_text() == "already here"
+        assert not (bm / "project.yaml").exists()
+
+    def test_missing_tarballs_no_error(self, tmp_path: Path) -> None:
+        """Missing tarballs are logged as warnings, not errors."""
+        bm = tmp_path / "bench-empty"
+        bm.mkdir()
+
+        # Should not raise
+        extract_benchmark_tarballs(bm)
+
+    def test_missing_one_tarball(self, tmp_path: Path) -> None:
+        """Only benchmark.tar.gz present — extracts it, warns about missing ground-truth."""
+        bm = tmp_path / "bench-partial"
+        bm.mkdir()
+        _create_tarball(bm / "benchmark.tar.gz", {
+            "project.yaml": "name: partial",
+        })
+
+        extract_benchmark_tarballs(bm)
+
+        assert (bm / "project.yaml").exists()
+        assert not (bm / ".aixcc").exists()
+
+    def test_extracts_nested_paths(self, tmp_path: Path) -> None:
+        """Tarball entries with nested paths create subdirectories."""
+        bm = tmp_path / "bench-nested"
+        bm.mkdir()
+        _create_tarball(bm / "benchmark.tar.gz", {
+            "pkgs/lib.tar.gz": "fake-nested-tarball",
+            "fuzz/harness.c": "int main(){}",
+        })
+        _create_tarball(bm / "ground-truth.tar.gz", {
+            ".aixcc/meta.yaml": "id: nested",
+            ".aixcc/ref.diff": "--- a/x\n+++ b/x",
+        })
+
+        extract_benchmark_tarballs(bm)
+
+        assert (bm / "pkgs" / "lib.tar.gz").exists()
+        assert (bm / "fuzz" / "harness.c").read_text() == "int main(){}"
+        assert (bm / ".aixcc" / "ref.diff").exists()
+
+
+class TestExtractAllTarballs:
+    """Tests for extract_all_tarballs."""
+
+    def test_processes_all_subdirectories(self, tmp_path: Path) -> None:
+        """Iterates subdirectories and extracts tarballs in each."""
+        for name in ("bench-a", "bench-b"):
+            d = tmp_path / name
+            d.mkdir()
+            _create_tarball(d / "benchmark.tar.gz", {
+                "project.yaml": f"name: {name}",
+            })
+            _create_tarball(d / "ground-truth.tar.gz", {
+                ".aixcc/meta.yaml": f"id: {name}",
+            })
+
+        extract_all_tarballs(tmp_path)
+
+        for name in ("bench-a", "bench-b"):
+            assert (tmp_path / name / "project.yaml").exists()
+            assert (tmp_path / name / ".aixcc" / "meta.yaml").exists()
+
+    def test_skips_non_directories(self, tmp_path: Path) -> None:
+        """Files at the top level are silently skipped."""
+        (tmp_path / "README.md").write_text("info")
+        bm = tmp_path / "bench-only"
+        bm.mkdir()
+        _create_tarball(bm / "benchmark.tar.gz", {"project.yaml": "ok"})
+        _create_tarball(bm / "ground-truth.tar.gz", {
+            ".aixcc/meta.yaml": "id: only",
+        })
+
+        extract_all_tarballs(tmp_path)
+
+        assert (bm / "project.yaml").exists()
+
+    def test_empty_dir_no_error(self, tmp_path: Path) -> None:
+        """Empty benchmarks directory doesn't cause errors."""
+        extract_all_tarballs(tmp_path)
+
+
+class TestDownloadBenchmarkDataShouldRunWithDatasets:
+    """Tests for should_run() with specific datasets requested."""
+
+    def test_should_run_false_when_all_datasets_staged(
+        self, tmp_path: Path
+    ) -> None:
+        """Returns False when all requested datasets have meta.yaml and staged content."""
+        benchmarks = tmp_path / "data" / "benchmarks"
+        for name in ("ds-a", "ds-b"):
+            d = benchmarks / name
+            (d / ".aixcc").mkdir(parents=True)
+            (d / ".aixcc" / "meta.yaml").write_text("id: " + name)
+            staged = d / "staged"
+            staged.mkdir()
+            (staged / "main.c").write_text("int main(){}")
+
+        hook = DownloadBenchmarkData(datasets=["ds-a", "ds-b"])
+        assert hook.should_run(tmp_path) is False
+
+    def test_should_run_true_when_some_datasets_missing_staging(
+        self, tmp_path: Path
+    ) -> None:
+        """Returns True when any requested dataset lacks staged content."""
+        benchmarks = tmp_path / "data" / "benchmarks"
+        # ds-a is fully staged
+        d = benchmarks / "ds-a"
+        (d / ".aixcc").mkdir(parents=True)
+        (d / ".aixcc" / "meta.yaml").write_text("id: ds-a")
+        staged = d / "staged"
+        staged.mkdir()
+        (staged / "main.c").write_text("int main(){}")
+        # ds-b has no staged directory
+        d2 = benchmarks / "ds-b"
+        (d2 / ".aixcc").mkdir(parents=True)
+        (d2 / ".aixcc" / "meta.yaml").write_text("id: ds-b")
+
+        hook = DownloadBenchmarkData(datasets=["ds-a", "ds-b"])
+        assert hook.should_run(tmp_path) is True
+
+    def test_should_run_true_when_dataset_missing_meta(
+        self, tmp_path: Path
+    ) -> None:
+        """Returns True when any requested dataset lacks meta.yaml."""
+        benchmarks = tmp_path / "data" / "benchmarks"
+        benchmarks.mkdir(parents=True)
+        # ds-a directory exists but no .aixcc/meta.yaml
+        (benchmarks / "ds-a").mkdir()
+
+        hook = DownloadBenchmarkData(datasets=["ds-a"])
+        assert hook.should_run(tmp_path) is True
+
+    def test_should_run_true_when_staged_dir_empty(
+        self, tmp_path: Path
+    ) -> None:
+        """Returns True when staged dir exists but is empty."""
+        benchmarks = tmp_path / "data" / "benchmarks"
+        d = benchmarks / "ds-a"
+        (d / ".aixcc").mkdir(parents=True)
+        (d / ".aixcc" / "meta.yaml").write_text("id: ds-a")
+        (d / "staged").mkdir()  # empty staged dir
+
+        hook = DownloadBenchmarkData(datasets=["ds-a"])
+        assert hook.should_run(tmp_path) is True
+
+
+class TestCleanTaskDirs:
+    """Tests for the clean_task_dirs helper."""
+
+    def test_removes_subdirectories(self, tmp_path: Path) -> None:
+        """Removes generated task subdirectories."""
+        (tmp_path / "sanity_mock_c").mkdir()
+        (tmp_path / "afc_curl").mkdir()
+        (tmp_path / "global.yaml").write_text("global: true")
+        (tmp_path / ".gitignore").write_text("*.pyc")
+
+        removed = clean_task_dirs(tmp_path)
+
+        assert removed == 2
+        assert not (tmp_path / "sanity_mock_c").exists()
+        assert not (tmp_path / "afc_curl").exists()
+
+    def test_preserves_global_yaml_and_gitignore(self, tmp_path: Path) -> None:
+        """global.yaml and .gitignore are not removed."""
+        (tmp_path / "global.yaml").write_text("global: true")
+        (tmp_path / ".gitignore").write_text("*.pyc")
+        (tmp_path / "some_dir").mkdir()
+
+        clean_task_dirs(tmp_path)
+
+        assert (tmp_path / "global.yaml").exists()
+        assert (tmp_path / ".gitignore").exists()
+
+    def test_handles_empty_dir(self, tmp_path: Path) -> None:
+        """No error on empty directory."""
+        removed = clean_task_dirs(tmp_path)
+        assert removed == 0
+
+    def test_handles_nonexistent_dir(self, tmp_path: Path) -> None:
+        """No error when directory does not exist."""
+        removed = clean_task_dirs(tmp_path / "nonexistent")
+        assert removed == 0
+
+
+class TestDownloadBenchmarkDataRunCallsExtract:
+    """Verify run() calls extract_all_tarballs between download and stage."""
+
+    def test_run_calls_extract_between_download_and_stage(
+        self, tmp_path: Path
+    ) -> None:
+        """run() calls extract_all_tarballs after download, before stage."""
+        call_order: list[str] = []
+
+        hook = DownloadBenchmarkData()
+        with (
+            patch(
+                "crsbench.setup.download_benchmarks",
+                side_effect=lambda *a, **kw: call_order.append("download"),
+            ),
+            patch(
+                "crsbench.setup.extract_all_tarballs",
+                side_effect=lambda *a, **kw: call_order.append("extract"),
+            ),
+            patch(
+                "crsbench.setup.stage_all_benchmarks",
+                side_effect=lambda *a, **kw: call_order.append("stage"),
+            ),
+            patch(
+                "crsbench.setup.clean_task_dirs",
+                side_effect=lambda *a, **kw: (call_order.append("clean"), 0)[1],
+            ),
+            patch(
+                "crsbench.scripts.generate_tasks.generate_all_tasks",
+                side_effect=lambda *a, **kw: (call_order.append("generate"), [])[1],
+            ),
+        ):
+            hook.run(tmp_path)
+
+        assert call_order == ["download", "extract", "stage", "clean", "generate"]
+
+
+class TestDownloadBenchmarkDataRunGeneratesTasks:
+    """Verify run() calls clean_task_dirs and generate_all_tasks after staging."""
+
+    def test_run_calls_clean_and_generate(self, tmp_path: Path) -> None:
+        """run() calls clean_task_dirs then generate_all_tasks."""
+        hook = DownloadBenchmarkData()
+        with (
+            patch("crsbench.setup.download_benchmarks"),
+            patch("crsbench.setup.extract_all_tarballs"),
+            patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs", return_value=3) as mock_clean,
+            patch(
+                "crsbench.scripts.generate_tasks.generate_all_tasks",
+                return_value=[Path("a.yaml"), Path("b.yaml")],
+            ) as mock_gen,
+        ):
+            hook.run(tmp_path)
+
+            mock_clean.assert_called_once_with(tmp_path / "tasks")
+            mock_gen.assert_called_once_with(
+                tmp_path / "data" / "benchmarks",
+                tmp_path / "tasks",
+                datasets=None,
+            )
+
+    def test_run_passes_datasets_to_generate(self, tmp_path: Path) -> None:
+        """run() forwards datasets filter to generate_all_tasks."""
+        hook = DownloadBenchmarkData(datasets=["ds-a", "ds-b"])
+        with (
+            patch("crsbench.setup.download_benchmarks"),
+            patch("crsbench.setup.extract_all_tarballs"),
+            patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs") as mock_clean,
+            patch(
+                "crsbench.scripts.generate_tasks.generate_all_tasks",
+                return_value=[],
+            ) as mock_gen,
+        ):
+            hook.run(tmp_path)
+
+            mock_clean.assert_not_called()
+            mock_gen.assert_called_once_with(
+                tmp_path / "data" / "benchmarks",
+                tmp_path / "tasks",
+                datasets=["ds-a", "ds-b"],
+            )
+
+    def test_call_order_download_extract_stage_clean_generate(
+        self, tmp_path: Path
+    ) -> None:
+        """Full call order: download → extract → stage → clean → generate."""
+        call_order: list[str] = []
+
+        hook = DownloadBenchmarkData()
+        with (
+            patch(
+                "crsbench.setup.download_benchmarks",
+                side_effect=lambda *a, **kw: call_order.append("download"),
+            ),
+            patch(
+                "crsbench.setup.extract_all_tarballs",
+                side_effect=lambda *a, **kw: call_order.append("extract"),
+            ),
+            patch(
+                "crsbench.setup.stage_all_benchmarks",
+                side_effect=lambda *a, **kw: call_order.append("stage"),
+            ),
+            patch(
+                "crsbench.setup.clean_task_dirs",
+                side_effect=lambda *a, **kw: (call_order.append("clean"), 0)[1],
+            ),
+            patch(
+                "crsbench.scripts.generate_tasks.generate_all_tasks",
+                side_effect=lambda *a, **kw: (call_order.append("generate"), [])[1],
+            ),
+        ):
+            hook.run(tmp_path)
+
+        assert call_order == ["download", "extract", "stage", "clean", "generate"]
+
+    def test_run_skips_clean_when_datasets_specified(self, tmp_path: Path) -> None:
+        """run() skips clean_task_dirs when specific datasets are requested."""
+        hook = DownloadBenchmarkData(datasets=["ds-a"])
+        with (
+            patch("crsbench.setup.download_benchmarks"),
+            patch("crsbench.setup.extract_all_tarballs"),
+            patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs") as mock_clean,
+            patch(
+                "crsbench.scripts.generate_tasks.generate_all_tasks",
+                return_value=[],
+            ),
+        ):
+            hook.run(tmp_path)
+            mock_clean.assert_not_called()
+
+    def test_call_order_with_datasets_skips_clean(self, tmp_path: Path) -> None:
+        """With specific datasets: download -> extract -> stage -> generate (no clean)."""
+        call_order: list[str] = []
+
+        hook = DownloadBenchmarkData(datasets=["ds-a"])
+        with (
+            patch(
+                "crsbench.setup.download_benchmarks",
+                side_effect=lambda *a, **kw: call_order.append("download"),
+            ),
+            patch(
+                "crsbench.setup.extract_all_tarballs",
+                side_effect=lambda *a, **kw: call_order.append("extract"),
+            ),
+            patch(
+                "crsbench.setup.stage_all_benchmarks",
+                side_effect=lambda *a, **kw: call_order.append("stage"),
+            ),
+            patch("crsbench.setup.clean_task_dirs") as mock_clean,
+            patch(
+                "crsbench.scripts.generate_tasks.generate_all_tasks",
+                side_effect=lambda *a, **kw: (call_order.append("generate"), [])[1],
+            ),
+        ):
+            hook.run(tmp_path)
+
+        assert call_order == ["download", "extract", "stage", "generate"]
+        mock_clean.assert_not_called()

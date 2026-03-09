@@ -1,5 +1,5 @@
 # CRSBench per-sample sandbox — managed by inspect_ai DockerSandboxEnvironment
-# Provides a vulnerability research workstation with clang, ASAN, gdb, and build tools.
+# Provides a vulnerability research workstation with C/C++ and Java tooling.
 
 services:
   default:
@@ -17,6 +17,8 @@ services:
       - OUT=/workspace/build
       - LIB_FUZZING_ENGINE=/usr/lib/llvm-19/lib/libFuzzer.a
       - ASAN_OPTIONS=detect_leaks=0:abort_on_error=1
+      - JAVA_HOME=/usr/lib/jvm/default-java
+      - MVN=/usr/local/bin/mvn
     networks:
       - sandbox-net
     healthcheck:
@@ -28,9 +30,9 @@ services:
       resources:
         limits:
           cpus: "2.0"
-          # ASAN instrumentation needs extra memory beyond the 2G default
-          memory: 4G
-          pids: 256
+          # ASAN + JVM builds need substantial memory
+          memory: 8G
+          pids: 512
 
 networks:
   sandbox-net:

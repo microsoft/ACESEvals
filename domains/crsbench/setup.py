@@ -7,6 +7,7 @@ data from HuggingFace if not already present locally.
 from __future__ import annotations
 
 import shutil
+import tarfile
 from pathlib import Path
 
 from saber.hooks import SetupHook
@@ -98,8 +99,8 @@ class DownloadBenchmarkData:
     Args:
         include_ground_truth: Download ``.aixcc/`` ground truth data.
             Defaults to True.
-        benchmarks: Optional list of specific benchmark names to download.
-            Defaults to None (all benchmarks).
+        datasets: Optional list of specific benchmark/dataset names to download.
+            Defaults to None (all datasets).
         force_download: When True, always run the download even if data
             already exists locally. Defaults to False.
     """
@@ -108,11 +109,11 @@ class DownloadBenchmarkData:
         self,
         *,
         include_ground_truth: bool = True,
-        benchmarks: list[str] | None = None,
+        datasets: list[str] | None = None,
         force_download: bool = False,
     ) -> None:
         self._include_ground_truth = include_ground_truth
-        self._benchmarks = benchmarks
+        self._datasets = datasets
         self._force_download = force_download
 
     @property
@@ -127,17 +128,115 @@ class DownloadBenchmarkData:
         data_dir = domain_root / _BENCHMARK_SUBDIR
         if not data_dir.exists():
             return True
+        if self._datasets is not None:
+            for name in self._datasets:
+                ds_dir = data_dir / name
+                meta = ds_dir / ".aixcc" / "meta.yaml"
+                staged = ds_dir / "staged"
+                if not meta.exists() or not staged.exists() or not any(staged.iterdir()):
+                    return True
+            return False
         return not any(data_dir.iterdir())
 
     def run(self, domain_root: Path) -> None:
-        """Download benchmark data from HuggingFace and stage it."""
+        """Download benchmark data from HuggingFace, stage it, and generate task YAMLs."""
         output_dir = domain_root / _BENCHMARK_SUBDIR
         download_benchmarks(
             output_dir,
             include_ground_truth=self._include_ground_truth,
-            benchmarks=self._benchmarks,
+            benchmarks=self._datasets,
         )
+        extract_all_tarballs(output_dir)
         stage_all_benchmarks(output_dir)
+
+        # Generate task YAMLs
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        tasks_dir = domain_root / "tasks"
+        if self._datasets is None:
+            removed = clean_task_dirs(tasks_dir)
+            if removed:
+                logger.info("Cleaned %d old task group directories", removed)
+
+        generated = generate_all_tasks(output_dir, tasks_dir, datasets=self._datasets)
+        logger.info("Generated %d task YAML files", len(generated))
+
+
+def clean_task_dirs(tasks_dir: Path) -> int:
+    """Remove generated task subdirectories, preserving global.yaml and .gitignore.
+
+    Args:
+        tasks_dir: Path to the tasks directory.
+
+    Returns:
+        Count of removed directories.
+    """
+    if not tasks_dir.exists():
+        return 0
+
+    removed = 0
+    for child in sorted(tasks_dir.iterdir()):
+        if child.is_dir():
+            shutil.rmtree(child)
+            removed += 1
+    return removed
+
+
+# ---------------------------------------------------------------------------
+# Tarball extraction
+# ---------------------------------------------------------------------------
+
+_TARBALL_NAMES: tuple[str, ...] = ("benchmark.tar.gz", "ground-truth.tar.gz")
+"""Tarballs downloaded by ``snapshot_download`` that must be extracted."""
+
+
+def extract_benchmark_tarballs(benchmark_dir: Path) -> None:
+    """Extract downloaded tarballs into *benchmark_dir*.
+
+    Extracts ``benchmark.tar.gz`` and ``ground-truth.tar.gz`` so that
+    ``stage_benchmark()`` can find ``pkgs/``, ``.aixcc/``, etc.
+
+    The operation is **idempotent**: if ``.aixcc/meta.yaml`` already
+    exists the function returns immediately.
+
+    Args:
+        benchmark_dir: Path to a single benchmark directory containing
+            the downloaded tarballs.
+    """
+    marker = benchmark_dir / ".aixcc" / "meta.yaml"
+    if marker.exists():
+        logger.info(
+            "Tarballs already extracted (marker exists): %s",
+            benchmark_dir.name,
+        )
+        return
+
+    for name in _TARBALL_NAMES:
+        tarball = benchmark_dir / name
+        if not tarball.exists():
+            logger.warning(
+                "Tarball %s not found in %s — skipping",
+                name,
+                benchmark_dir.name,
+            )
+            continue
+        logger.info("Extracting %s in %s", name, benchmark_dir.name)
+        with tarfile.open(tarball, "r:gz") as tf:
+            tf.extractall(path=benchmark_dir)  # noqa: S202
+
+
+def extract_all_tarballs(benchmarks_dir: Path) -> None:
+    """Extract tarballs for every benchmark subdirectory.
+
+    Iterates over subdirectories of *benchmarks_dir* and calls
+    :func:`extract_benchmark_tarballs` on each.
+
+    Args:
+        benchmarks_dir: Root directory containing benchmark subdirectories.
+    """
+    for child in sorted(benchmarks_dir.iterdir()):
+        if child.is_dir():
+            extract_benchmark_tarballs(child)
 
 
 def stage_benchmark(benchmark_dir: Path) -> None:
@@ -153,8 +252,6 @@ def stage_benchmark(benchmark_dir: Path) -> None:
         benchmark_dir: Path to a benchmark directory (e.g.
             ``data/benchmarks/sanity-mock-c-delta-01``).
     """
-    import tarfile
-
     staged = benchmark_dir / "staged"
     if staged.exists() and any(staged.iterdir()):
         logger.info("Already staged: %s", benchmark_dir.name)
@@ -165,9 +262,9 @@ def stage_benchmark(benchmark_dir: Path) -> None:
     # Extract all tarballs in pkgs/
     pkgs_dir = benchmark_dir / "pkgs"
     if pkgs_dir.exists():
-        for tarball in sorted(pkgs_dir.glob("*.tar.gz")):
-            logger.info("Extracting %s", tarball.name)
-            with tarfile.open(tarball, "r:gz") as tf:
+        for tarball_path in sorted(pkgs_dir.glob("*.tar.gz")):
+            logger.info("Extracting %s", tarball_path.name)
+            with tarfile.open(tarball_path, "r:gz") as tf:
                 tf.extractall(path=staged)  # noqa: S202
 
     # Copy build.sh and test.sh from ground truth if present
@@ -290,7 +387,7 @@ def get_hooks(
 
     Recognized ``-T`` flags (passed as *kwargs*):
 
-    * ``benchmarks`` — comma-separated benchmark names to download.
+    * ``datasets`` — comma-separated dataset/benchmark names to download.
     * ``include_ground_truth`` — ``"true"`` / ``"false"`` (default: true).
     * ``force_download`` — ``"true"`` / ``"false"`` (default: false).
 
@@ -301,8 +398,8 @@ def get_hooks(
     Returns:
         List of setup hook instances.
     """
-    benchmarks = _parse_csv(
-        kwargs.get("benchmarks"),  # type: ignore[arg-type]
+    datasets = _parse_csv(
+        kwargs.get("datasets"),  # type: ignore[arg-type]
     )
     include_ground_truth = _cli_bool(
         kwargs.get("include_ground_truth"),  # type: ignore[arg-type]
@@ -314,7 +411,7 @@ def get_hooks(
     )
     return [
         DownloadBenchmarkData(
-            benchmarks=benchmarks,
+            datasets=datasets,
             include_ground_truth=include_ground_truth,
             force_download=force_download,
         )

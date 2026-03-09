@@ -16,4 +16,3 @@ global_defaults:
       timeout: 300
     submit_patch:
       timeout: 60
-    submit: {}
