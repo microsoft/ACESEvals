@@ -55,14 +55,14 @@ manipulation that pollute AI agent context windows.
 # Basic evaluation (all tasks)
 uv run inspect eval domains/<domain> --model <model> --display plain
 
-# Common model formats:
+# Common model formats (we own these endpoints):
 #   openai/azure/gpt-4.1        (Azure OpenAI)
 #   openai/azure/gpt-5.2        (Azure OpenAI)
-#   openai/gpt-4o               (OpenAI direct)
-#   anthropic/claude-sonnet-4-20250514 (Anthropic)
 
 # Run a single sample for quick iteration
 uv run inspect eval domains/<domain> --model <model> --display plain --limit 1
+
+# --limit <> is the BEST way to keep your evals small and contained for testing
 
 # Filter to specific tasks
 uv run inspect eval domains/<domain> --model <model> --display plain -T task_filter="sanity_*"
@@ -71,6 +71,20 @@ uv run inspect eval domains/<domain> --model <model> --display plain -T task_fil
 # Multiple task patterns (comma-separated)
 uv run inspect eval domains/<domain> --model <model> --display plain -T task_filter="sanity_*,advanced_*"
 ```
+
+## 3.1 Permanent Environments
+
+It is generally recommended if you expect to do multiround eval analysis to use "-T keep_permanent=true" in
+your uv run inspect command. This keeps long to spin up resources like databases around for ease of use
+on following evals.
+
+If you do this, use
+
+```bash
+uv run saber teardown -y
+```
+
+To teardown any assets when you are finished
 
 ## 4. Key `-T` Parameters
 
