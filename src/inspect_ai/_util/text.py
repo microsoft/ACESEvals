@@ -44,9 +44,35 @@ def strip_numeric_punctuation(s: str) -> str:
     return stripped
 
 
+TRUNCATION_MARKER = "\n... [truncated] ...\n"
+_TRUNCATION_MARKER_BYTES = TRUNCATION_MARKER.encode("utf-8")
+
+
 class TruncatedOutput(NamedTuple):
     output: str
     original_bytes: int
+
+
+def _adjust_utf8_boundary_left(data: bytes, pos: int) -> int:
+    """Walk backward from pos while byte is a UTF-8 continuation byte (0x80-0xBF).
+
+    Returns the adjusted position at a valid character boundary.
+    Used to avoid cutting a multi-byte character when slicing data[:pos].
+    """
+    while pos > 0 and pos < len(data) and (data[pos] & 0xC0) == 0x80:
+        pos -= 1
+    return pos
+
+
+def _adjust_utf8_boundary_right(data: bytes, pos: int) -> int:
+    """Walk forward from pos while byte is a UTF-8 continuation byte (0x80-0xBF).
+
+    Returns the adjusted position at a valid character boundary.
+    Used to avoid starting a slice at a continuation byte in data[pos:].
+    """
+    while pos < len(data) and (data[pos] & 0xC0) == 0x80:
+        pos += 1
+    return pos
 
 
 def truncate_string_to_bytes(input: str, max_bytes: int) -> TruncatedOutput | None:
@@ -88,45 +114,91 @@ def truncate_string_to_bytes(input: str, max_bytes: int) -> TruncatedOutput | No
 
 
 def truncate_str(input: str, max_bytes: int) -> TruncatedOutput | None:
-    """Truncate ASCII string with middle truncation, taking half chars from front and half from back."""
+    """Truncate ASCII string with middle truncation and truncation marker.
+
+    When max_bytes >= marker length, inserts a truncation marker between
+    front and back portions. When max_bytes < marker length, falls back
+    to simple front-only truncation.
+    """
     # If input fits within limit, no truncation needed
     if len(input) <= max_bytes:
         return None
 
-    # If max_bytes is 0, truncate to empty string
-    if max_bytes == 0:
+    # If max_bytes <= 0, truncate to empty string
+    if max_bytes <= 0:
         return TruncatedOutput("", len(input))
 
-    # Split chars in half (same as bytes for ASCII)
-    half_chars = max_bytes // 2
-    start_portion = input[:half_chars]
-    end_portion = input[-(max_bytes - half_chars) :]
+    marker_len = len(TRUNCATION_MARKER)
 
-    # Combine portions
-    result = start_portion + end_portion
+    if max_bytes < marker_len:
+        # Front-only truncation (marker doesn't fit)
+        return TruncatedOutput(input[:max_bytes], len(input))
+
+    # Middle truncation with marker
+    available = max_bytes - marker_len
+    half = available // 2
+    end_count = available - half
+    start_portion = input[:half]
+    end_portion = input[-end_count:] if end_count > 0 else ""
+    result = start_portion + TRUNCATION_MARKER + end_portion
 
     return TruncatedOutput(result, len(input))
 
 
 def truncate_bytes(input: bytes, max_bytes: int) -> TruncatedOutput | None:
-    """Truncate bytes with middle truncation, taking half bytes from front and half from back."""
+    """Truncate bytes with middle truncation, marker, and UTF-8 boundary safety.
+
+    When max_bytes >= marker length, inserts a truncation marker between
+    front and back portions. When max_bytes < marker length, falls back
+    to simple front-only truncation. UTF-8 boundaries are adjusted to
+    avoid splitting multi-byte characters.
+    """
     # If input fits within limit, no truncation needed
     if len(input) <= max_bytes:
         return None
 
-    # If max_bytes is 0, truncate to empty string
-    if max_bytes == 0:
+    # If max_bytes <= 0, truncate to empty string
+    if max_bytes <= 0:
         return TruncatedOutput("", len(input))
 
-    # Split bytes in half
-    half_bytes = max_bytes // 2
-    start_portion = input[:half_bytes]
-    end_portion = input[-(max_bytes - half_bytes) :]
+    marker_bytes = _TRUNCATION_MARKER_BYTES
+    marker_len = len(marker_bytes)
 
-    # Combine portions
-    result_bytes = start_portion + end_portion
+    if max_bytes < marker_len:
+        # Front-only truncation with UTF-8 boundary safety
+        adjusted_pos = _adjust_utf8_boundary_left(input, max_bytes)
+        result_bytes = input[:adjusted_pos]
+        return TruncatedOutput(
+            result_bytes.decode("utf-8", errors="ignore"), len(input)
+        )
 
-    return TruncatedOutput(result_bytes.decode("utf-8", errors="replace"), len(input))
+    # Middle truncation with marker and UTF-8 boundary safety
+    available = max_bytes - marker_len
+    half = available // 2
+    remainder = available - half
+
+    # Adjust start boundary (don't cut a multi-byte char)
+    start_end = _adjust_utf8_boundary_left(input, half)
+
+    # Adjust end boundary (don't start in middle of a multi-byte char)
+    end_start_raw = len(input) - remainder
+    end_start = _adjust_utf8_boundary_right(input, end_start_raw)
+
+    # If UTF-8 adjustments consumed all content, fall back to front-only
+    if start_end == 0 and end_start >= len(input):
+        adjusted_pos = _adjust_utf8_boundary_left(input, max_bytes)
+        result_bytes = input[:adjusted_pos]
+        return TruncatedOutput(
+            result_bytes.decode("utf-8", errors="ignore"), len(input)
+        )
+
+    start_portion = input[:start_end]
+    end_portion = input[end_start:]
+    result_bytes = start_portion + marker_bytes + end_portion
+
+    return TruncatedOutput(
+        result_bytes.decode("utf-8", errors="ignore"), len(input)
+    )
 
 
 def str_to_float(s: str) -> float:

@@ -16,6 +16,7 @@ from anyio import ClosedResourceError, create_task_group, open_process
 from anyio.abc import ByteReceiveStream, Process
 
 from inspect_ai._util._async import tg_collect
+from inspect_ai._util.text import _adjust_utf8_boundary_right
 from inspect_ai._util.trace import trace_action
 
 from ._concurrency import concurrency as concurrency_manager
@@ -304,16 +305,27 @@ class CircularByteBuffer:
         self._chunks.append(data)
         self._total_bytes += len(data)
 
+        truncated = False
+
         # Discard oldest chunks until under limit
         while self._total_bytes > self._max_bytes and len(self._chunks) > 1:
             removed = self._chunks.popleft()
             self._total_bytes -= len(removed)
+            truncated = True
 
         # If single chunk still over limit, truncate from front
         if self._total_bytes > self._max_bytes and self._chunks:
             excess = self._total_bytes - self._max_bytes
             self._chunks[0] = self._chunks[0][excess:]
             self._total_bytes = self._max_bytes
+            truncated = True
+
+        # UTF-8 safety: skip past any leading continuation bytes
+        if truncated and self._chunks and self._chunks[0]:
+            adjusted = _adjust_utf8_boundary_right(self._chunks[0], 0)
+            if adjusted > 0:
+                self._chunks[0] = self._chunks[0][adjusted:]
+                self._total_bytes -= adjusted
 
     def getvalue(self) -> bytes:
         return b"".join(self._chunks)
