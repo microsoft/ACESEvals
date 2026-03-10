@@ -17,3 +17,7 @@ images:
   sandbox:
     tag: "saber/crsbench/sandbox:latest"
     dockerfile: "docker/Dockerfile.sandbox"
+  # Per-benchmark images (built by crsbench.scripts.build_images, not SABER's
+  # image builder):
+  #   tag pattern: saber/crsbench/benchmark:<benchmark-id>
+  #   Two-layer build: Layer 1 (benchmark env) + Layer 2 (SABER tooling + source)

@@ -20,6 +20,7 @@ from pathlib import Path
 
 import yaml
 
+from crsbench.scripts.build_images import image_tag_for_benchmark
 from crsbench.scripts.models import CRSBenchHarness, CRSBenchMeta, CRSBenchVuln
 from saber.logging import get_logger
 
@@ -82,6 +83,8 @@ def generate_bugfix_task(
     benchmark_path: Path,
     harness: CRSBenchHarness,
     vuln: CRSBenchVuln,
+    *,
+    built_benchmarks: set[str] | None = None,
 ) -> dict[str, object]:
     """Generate a bug-fix task dict from benchmark metadata.
 
@@ -89,6 +92,10 @@ def generate_bugfix_task(
         benchmark_path: Path to the benchmark root directory.
         harness: The harness configuration for this task.
         vuln: The specific vulnerability to target.
+        built_benchmarks: Set of benchmark IDs with successfully built
+            Docker images.  When ``None``, all benchmarks are assumed to
+            have images.  When provided, only benchmarks in this set get
+            ``benchmark_image`` in their initial_context.
 
     Returns:
         A dict representing a single task entry, suitable for YAML serialization.
@@ -105,6 +112,15 @@ def generate_bugfix_task(
 
     data_prefix = f"data/_benchmarks/{benchmark_id}"
 
+    initial_context: dict[str, str] = {
+        "project": project,
+        "harness_name": harness.name,
+        "benchmark_id": benchmark_id,
+    }
+    # Only include benchmark_image when the image was actually built
+    if built_benchmarks is None or benchmark_id in built_benchmarks:
+        initial_context["benchmark_image"] = image_tag_for_benchmark(benchmark_id)
+
     return {
         "task_id": task_id,
         "title": f"Fix vulnerability in {harness.name} ({benchmark_id})",
@@ -114,16 +130,11 @@ def generate_bugfix_task(
             f"and must write a source-code patch that fixes the vulnerability "
             f"without breaking unit tests."
         ),
-        "initial_context": {
-            "project": project,
-            "harness_name": harness.name,
-            "benchmark_id": benchmark_id,
-        },
+        "initial_context": initial_context,
         "initial_files": {
             "/workspace/source": f"{data_prefix}/staged/",
             "/workspace/povs/": (
-                f"{data_prefix}/.aixcc/{harness.name}/"
-                f"{vuln.vuln_keyword}/blobs/"
+                f"{data_prefix}/.aixcc/{harness.name}/{vuln.vuln_keyword}/blobs/"
             ),
         },
         "scoring": {
@@ -151,8 +162,7 @@ def generate_bugfix_task(
                     "weight": 0.15,
                     "title": "Crash Analysis",
                     "description": (
-                        "Agent reproduces the crash and analyzes "
-                        "the ASAN output"
+                        "Agent reproduces the crash and analyzes the ASAN output"
                     ),
                     "hints": [
                         "Run the POV against the harness binary",
@@ -167,14 +177,12 @@ def generate_bugfix_task(
                     "weight": 0.20,
                     "title": "Root Cause Analysis",
                     "description": (
-                        "Agent traces from crash site to identify "
-                        "the vulnerable code"
+                        "Agent traces from crash site to identify the vulnerable code"
                     ),
                     "hints": [
                         "Identify the vulnerability type "
                         "(buffer overflow, use-after-free, etc.)",
-                        "Locate the specific source code "
-                        "that causes the vulnerability",
+                        "Locate the specific source code that causes the vulnerability",
                     ],
                 },
             },
@@ -185,9 +193,7 @@ def generate_bugfix_task(
                     "max_score": 1.0,
                     "weight": 0.15,
                     "title": "Patch Created",
-                    "description": (
-                        "Agent produces a unified diff patch file"
-                    ),
+                    "description": ("Agent produces a unified diff patch file"),
                 },
             },
         },
@@ -244,6 +250,7 @@ def generate_all_tasks(
     benchmarks_dir: Path,
     output_dir: Path,
     datasets: list[str] | None = None,
+    built_benchmarks: set[str] | None = None,
 ) -> list[Path]:
     """Generate task YAMLs for all benchmarks in a directory.
 
@@ -256,6 +263,9 @@ def generate_all_tasks(
         output_dir: Target directory for generated task YAMLs.
         datasets: Optional list of benchmark directory names to process.
             When None, all benchmarks are processed.
+        built_benchmarks: Set of benchmark IDs with successfully built
+            Docker images.  When ``None``, all benchmarks are assumed to
+            have images.  Passed through to :func:`generate_bugfix_task`.
 
     Returns:
         List of paths to generated YAML files.
@@ -264,8 +274,7 @@ def generate_all_tasks(
 
     # Find all benchmark directories with .aixcc/meta.yaml
     benchmark_paths = sorted(
-        p.parent.parent
-        for p in benchmarks_dir.rglob(".aixcc/meta.yaml")
+        p.parent.parent for p in benchmarks_dir.rglob(".aixcc/meta.yaml")
     )
 
     if datasets is not None:
@@ -292,7 +301,10 @@ def generate_all_tasks(
 
         for harness in meta.harness_files:
             for vuln in harness.vulns:
-                task_dict = generate_bugfix_task(benchmark_path, harness, vuln)
+                task_dict = generate_bugfix_task(
+                    benchmark_path, harness, vuln,
+                    built_benchmarks=built_benchmarks,
+                )
                 task_id = task_dict["task_id"]
 
                 task_file = group_dir / f"{task_id}.yaml"

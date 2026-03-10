@@ -14,12 +14,13 @@ from saber.task import create_task
 _GIT_INIT_SETUP = """\
 #!/usr/bin/env bash
 set -euo pipefail
+mkdir -p /workspace/source
 cd /workspace/source
 git init -b main
 git config user.email "sandbox@saber"
 git config user.name "sandbox"
 git add -A
-git commit -m "initial" --quiet
+git commit --allow-empty -m "initial" --quiet
 """
 
 

@@ -3,7 +3,7 @@
 
 services:
   default:
-    image: saber/crsbench/sandbox:latest
+    image: ${SAMPLE_METADATA_BENCHMARK_IMAGE}
     x-local: true
     working_dir: /workspace
     command: "tail -f /dev/null"

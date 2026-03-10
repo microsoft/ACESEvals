@@ -479,11 +479,7 @@ class TestGenerateAllTasks:
         output_dir = tmp_path / "output_multi"
         generate_all_tasks(multi_harness_dir.parent, output_dir)
 
-        yaml_files = [
-            f
-            for f in output_dir.rglob("*.yaml")
-            if f.name != "shared.yaml"
-        ]
+        yaml_files = [f for f in output_dir.rglob("*.yaml") if f.name != "shared.yaml"]
         # multi_harness has 2 harnesses with 1+2 vulns = 3 task files
         assert len(yaml_files) == 3
 
@@ -606,9 +602,7 @@ class TestGenerateAllTasksDatasetFilter:
         from crsbench.scripts.generate_tasks import generate_all_tasks
 
         output_dir = tmp_path / "out_empty"
-        result = generate_all_tasks(
-            benchmarks_root, output_dir, datasets=[]
-        )
+        result = generate_all_tasks(benchmarks_root, output_dir, datasets=[])
         assert result == []
 
     def test_datasets_nonexistent_name_generates_nothing(
@@ -671,3 +665,58 @@ class TestWriteSharedYaml:
         content = yaml.safe_load(shared_path.read_text())
         assert content["dataset"] == "my_group"
         assert content["sandbox_environment"] == "default"
+
+
+# ---------------------------------------------------------------------------
+# 2.2 — generate_bugfix_task pre-built image support
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateBugfixTaskPrebuilt:
+    """Tests for generate_bugfix_task with pre-built image support."""
+
+    def test_initial_files_includes_source_for_fallback(
+        self, benchmark_dir: Path
+    ) -> None:
+        from crsbench.scripts.generate_tasks import (
+            generate_bugfix_task,
+            load_benchmark_meta,
+        )
+
+        meta = load_benchmark_meta(benchmark_dir)
+        harness = meta.harness_files[0]
+        vuln = harness.vulns[0]
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
+        initial_files = task["initial_files"]
+        assert "/workspace/source" in initial_files
+        assert "/workspace/povs/" in initial_files
+
+    def test_initial_context_has_benchmark_image(self, benchmark_dir: Path) -> None:
+        from crsbench.scripts.generate_tasks import (
+            generate_bugfix_task,
+            load_benchmark_meta,
+        )
+
+        meta = load_benchmark_meta(benchmark_dir)
+        harness = meta.harness_files[0]
+        vuln = harness.vulns[0]
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
+        ctx = task["initial_context"]
+        expected_tag = f"saber/crsbench/benchmark:{benchmark_dir.name}"
+        assert ctx["benchmark_image"] == expected_tag
+
+    def test_initial_context_preserves_existing_keys(self, benchmark_dir: Path) -> None:
+        from crsbench.scripts.generate_tasks import (
+            generate_bugfix_task,
+            load_benchmark_meta,
+        )
+
+        meta = load_benchmark_meta(benchmark_dir)
+        harness = meta.harness_files[0]
+        vuln = harness.vulns[0]
+        task = generate_bugfix_task(benchmark_dir, harness, vuln)
+        ctx = task["initial_context"]
+        assert "project" in ctx
+        assert "harness_name" in ctx
+        assert "benchmark_id" in ctx
+        assert "benchmark_image" in ctx

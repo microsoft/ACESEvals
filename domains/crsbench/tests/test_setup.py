@@ -13,6 +13,7 @@ from saber.hooks import SetupHook
 
 from crsbench.setup import (
     DownloadBenchmarkData,
+    _build_images_sync,
     _cli_bool,
     _expand_group,
     _parse_csv,
@@ -23,6 +24,18 @@ from crsbench.setup import (
     extract_benchmark_tarballs,
     get_hooks,
 )
+
+
+def _mock_build_summary(
+    built: int = 0, skipped: int = 0, failed: int = 0
+) -> MagicMock:
+    """Create a mock ImageBuildSummary with the given counts."""
+    summary = MagicMock()
+    summary.built = built
+    summary.skipped = skipped
+    summary.failed = failed
+    summary.results = []
+    return summary
 
 
 def _ensure_huggingface_hub_mock() -> MagicMock:
@@ -61,7 +74,7 @@ class TestDownloadBenchmarkData:
         assert hook.should_run(tmp_path) is True
 
     def test_should_not_run_when_fully_staged(self, tmp_path: Path) -> None:
-        """Returns False when benchmarks have meta.yaml and staged content."""
+        """Returns False when benchmarks have meta.yaml, staged content, and tasks."""
         benchmarks = tmp_path / "data" / "_benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
@@ -69,6 +82,12 @@ class TestDownloadBenchmarkData:
         staged = bm / "staged"
         staged.mkdir()
         (staged / "main.c").write_text("int main(){}")
+        # Task YAMLs must also exist (with benchmark_image for image-build detection)
+        tasks = tmp_path / "tasks"
+        tasks.mkdir()
+        (tasks / "benchmark_001__bugfix.yaml").write_text(
+            "tasks:\n- initial_context:\n    benchmark_image: saber/crsbench/benchmark:benchmark_001\n"
+        )
         hook = DownloadBenchmarkData()
         assert hook.should_run(tmp_path) is False
 
@@ -100,6 +119,55 @@ class TestDownloadBenchmarkData:
         hook = DownloadBenchmarkData()
         assert hook.should_run(tmp_path) is True
 
+    def test_should_run_true_when_force_build(self, tmp_path: Path) -> None:
+        """Returns True when force_build is set even if everything is staged."""
+        benchmarks = tmp_path / "data" / "_benchmarks"
+        bm = benchmarks / "benchmark_001"
+        (bm / ".aixcc").mkdir(parents=True)
+        (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
+        staged = bm / "staged"
+        staged.mkdir()
+        (staged / "main.c").write_text("int main(){}")
+        tasks = tmp_path / "tasks"
+        tasks.mkdir()
+        (tasks / "benchmark_001.yaml").write_text(
+            "tasks:\n- initial_context:\n    benchmark_image: saber/crsbench/benchmark:benchmark_001\n"
+        )
+        hook = DownloadBenchmarkData(force_build=True)
+        assert hook.should_run(tmp_path) is True
+
+    def test_should_run_true_when_rebuild_images(self, tmp_path: Path) -> None:
+        """Returns True when rebuild_images is set."""
+        benchmarks = tmp_path / "data" / "_benchmarks"
+        bm = benchmarks / "benchmark_001"
+        (bm / ".aixcc").mkdir(parents=True)
+        (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
+        staged = bm / "staged"
+        staged.mkdir()
+        (staged / "main.c").write_text("int main(){}")
+        tasks = tmp_path / "tasks"
+        tasks.mkdir()
+        (tasks / "benchmark_001.yaml").write_text(
+            "tasks:\n- initial_context:\n    benchmark_image: saber/crsbench/benchmark:benchmark_001\n"
+        )
+        hook = DownloadBenchmarkData(rebuild_images="afc-curl")
+        assert hook.should_run(tmp_path) is True
+
+    def test_should_run_true_when_yamls_missing_benchmark_image(self, tmp_path: Path) -> None:
+        """Returns True when task YAMLs exist but lack benchmark_image."""
+        benchmarks = tmp_path / "data" / "_benchmarks"
+        bm = benchmarks / "benchmark_001"
+        (bm / ".aixcc").mkdir(parents=True)
+        (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
+        staged = bm / "staged"
+        staged.mkdir()
+        (staged / "main.c").write_text("int main(){}")
+        tasks = tmp_path / "tasks"
+        tasks.mkdir()
+        (tasks / "benchmark_001.yaml").write_text("tasks: []")
+        hook = DownloadBenchmarkData()
+        assert hook.should_run(tmp_path) is True
+
     def test_run_calls_download_default(self, tmp_path: Path) -> None:
         """run() delegates to download_benchmarks() with defaults."""
         hook = DownloadBenchmarkData()
@@ -107,6 +175,7 @@ class TestDownloadBenchmarkData:
             patch("crsbench.setup.download_benchmarks") as mock_dl,
             patch("crsbench.setup.extract_all_tarballs"),
             patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
             patch("crsbench.setup.clean_task_dirs", return_value=0),
             patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
         ):
@@ -127,6 +196,7 @@ class TestDownloadBenchmarkData:
             patch("crsbench.setup.download_benchmarks") as mock_dl,
             patch("crsbench.setup.extract_all_tarballs"),
             patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
             patch("crsbench.setup.clean_task_dirs", return_value=0),
             patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
         ):
@@ -258,6 +328,12 @@ class TestDownloadBenchmarkDataForceDownload:
         staged = bm / "staged"
         staged.mkdir()
         (staged / "main.c").write_text("int main(){}")
+        # Task YAMLs must also exist (with benchmark_image)
+        tasks = tmp_path / "tasks"
+        tasks.mkdir()
+        (tasks / "some_benchmark__bugfix.yaml").write_text(
+            "tasks:\n- initial_context:\n    benchmark_image: saber/crsbench/benchmark:some_benchmark\n"
+        )
 
         hook = DownloadBenchmarkData(force_download=False)
         assert hook.should_run(tmp_path) is False
@@ -305,9 +381,13 @@ class TestGetHooksKwargs:
 
 
 def _make_benchmark_dirs(benchmarks: Path, names: list[str]) -> None:
-    """Create minimal benchmark subdirectories."""
+    """Create minimal benchmark subdirectories with a marker tarball."""
     for name in names:
-        (benchmarks / name).mkdir(parents=True, exist_ok=True)
+        d = benchmarks / name
+        d.mkdir(parents=True, exist_ok=True)
+        # _is_benchmark_dir requires benchmark.tar.gz or .aixcc/ to exist
+        if not name.startswith("."):
+            (d / "benchmark.tar.gz").touch()
 
 
 class TestExpandGroup:
@@ -338,6 +418,15 @@ class TestExpandGroup:
 
     def test_skips_dot_dirs(self, tmp_path: Path) -> None:
         _make_benchmark_dirs(tmp_path, [".cache", "afc-curl-delta-01"])
+        result = _expand_group("competition", tmp_path)
+        assert result == ["afc-curl-delta-01"]
+
+    def test_skips_non_benchmark_dirs(self, tmp_path: Path) -> None:
+        """Directories without tarballs or .aixcc/ (like index/) are excluded."""
+        _make_benchmark_dirs(tmp_path, ["afc-curl-delta-01"])
+        # Create a non-benchmark directory (no tarball, no .aixcc)
+        (tmp_path / "index").mkdir()
+        (tmp_path / "index" / "benchmarks.jsonl").write_text("{}")
         result = _expand_group("competition", tmp_path)
         assert result == ["afc-curl-delta-01"]
 
@@ -661,7 +750,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
     def test_should_run_false_when_all_datasets_staged(
         self, tmp_path: Path
     ) -> None:
-        """Returns False when all requested datasets have meta.yaml and staged content."""
+        """Returns False when all requested datasets have meta.yaml, staged content, and tasks."""
         benchmarks = tmp_path / "data" / "_benchmarks"
         for name in ("ds-a", "ds-b"):
             d = benchmarks / name
@@ -670,6 +759,12 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
             staged = d / "staged"
             staged.mkdir()
             (staged / "main.c").write_text("int main(){}")
+        # Task YAMLs must also exist (with benchmark_image)
+        tasks = tmp_path / "tasks"
+        tasks.mkdir()
+        (tasks / "ds-a__bugfix.yaml").write_text(
+            "tasks:\n- initial_context:\n    benchmark_image: saber/crsbench/benchmark:ds-a\n"
+        )
 
         hook = DownloadBenchmarkData(datasets=["ds-a", "ds-b"])
         assert hook.should_run(tmp_path) is False
@@ -782,6 +877,10 @@ class TestDownloadBenchmarkDataRunCallsExtract:
                 side_effect=lambda *a, **kw: call_order.append("stage"),
             ),
             patch(
+                "crsbench.setup._build_images_sync",
+                side_effect=lambda *a, **kw: (call_order.append("build"), _mock_build_summary())[1],
+            ),
+            patch(
                 "crsbench.setup.clean_task_dirs",
                 side_effect=lambda *a, **kw: (call_order.append("clean"), 0)[1],
             ),
@@ -792,7 +891,7 @@ class TestDownloadBenchmarkDataRunCallsExtract:
         ):
             hook.run(tmp_path)
 
-        assert call_order == ["download", "extract", "stage", "clean", "generate"]
+        assert call_order == ["download", "extract", "stage", "build", "clean", "generate"]
 
 
 class TestDownloadBenchmarkDataRunGeneratesTasks:
@@ -805,6 +904,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
             patch("crsbench.setup.download_benchmarks"),
             patch("crsbench.setup.extract_all_tarballs"),
             patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
             patch("crsbench.setup.clean_task_dirs", return_value=3) as mock_clean,
             patch(
                 "crsbench.scripts.generate_tasks.generate_all_tasks",
@@ -818,6 +918,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
                 tmp_path / "data" / "_benchmarks",
                 tmp_path / "tasks",
                 datasets=None,
+                built_benchmarks=None,
             )
 
     def test_run_passes_datasets_to_generate(self, tmp_path: Path) -> None:
@@ -827,6 +928,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
             patch("crsbench.setup.download_benchmarks"),
             patch("crsbench.setup.extract_all_tarballs"),
             patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
             patch("crsbench.setup.clean_task_dirs") as mock_clean,
             patch(
                 "crsbench.scripts.generate_tasks.generate_all_tasks",
@@ -840,12 +942,13 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
                 tmp_path / "data" / "_benchmarks",
                 tmp_path / "tasks",
                 datasets=["ds-a", "ds-b"],
+                built_benchmarks=None,
             )
 
-    def test_call_order_download_extract_stage_clean_generate(
+    def test_call_order_download_extract_stage_build_clean_generate(
         self, tmp_path: Path
     ) -> None:
-        """Full call order: download → extract → stage → clean → generate."""
+        """Full call order: download → extract → stage → build → clean → generate."""
         call_order: list[str] = []
 
         hook = DownloadBenchmarkData()
@@ -863,6 +966,10 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
                 side_effect=lambda *a, **kw: call_order.append("stage"),
             ),
             patch(
+                "crsbench.setup._build_images_sync",
+                side_effect=lambda *a, **kw: (call_order.append("build"), _mock_build_summary())[1],
+            ),
+            patch(
                 "crsbench.setup.clean_task_dirs",
                 side_effect=lambda *a, **kw: (call_order.append("clean"), 0)[1],
             ),
@@ -873,7 +980,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
         ):
             hook.run(tmp_path)
 
-        assert call_order == ["download", "extract", "stage", "clean", "generate"]
+        assert call_order == ["download", "extract", "stage", "build", "clean", "generate"]
 
     def test_run_skips_clean_when_datasets_specified(self, tmp_path: Path) -> None:
         """run() skips clean_task_dirs when specific datasets are requested."""
@@ -882,6 +989,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
             patch("crsbench.setup.download_benchmarks"),
             patch("crsbench.setup.extract_all_tarballs"),
             patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
             patch("crsbench.setup.clean_task_dirs") as mock_clean,
             patch(
                 "crsbench.scripts.generate_tasks.generate_all_tasks",
@@ -892,7 +1000,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
             mock_clean.assert_not_called()
 
     def test_call_order_with_datasets_skips_clean(self, tmp_path: Path) -> None:
-        """With specific datasets: download -> extract -> stage -> generate (no clean)."""
+        """With specific datasets: download -> extract -> stage -> build -> generate (no clean)."""
         call_order: list[str] = []
 
         hook = DownloadBenchmarkData(datasets=["ds-a"])
@@ -909,6 +1017,10 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
                 "crsbench.setup.stage_all_benchmarks",
                 side_effect=lambda *a, **kw: call_order.append("stage"),
             ),
+            patch(
+                "crsbench.setup._build_images_sync",
+                side_effect=lambda *a, **kw: (call_order.append("build"), _mock_build_summary())[1],
+            ),
             patch("crsbench.setup.clean_task_dirs") as mock_clean,
             patch(
                 "crsbench.scripts.generate_tasks.generate_all_tasks",
@@ -917,5 +1029,147 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
         ):
             hook.run(tmp_path)
 
-        assert call_order == ["download", "extract", "stage", "generate"]
+        assert call_order == ["download", "extract", "stage", "build", "generate"]
         mock_clean.assert_not_called()
+
+
+class TestGetHooksImageBuildKwargs:
+    """Tests for get_hooks() with image-build kwargs."""
+
+    def test_force_build_true(self) -> None:
+        hooks = get_hooks(Path("/unused"), force_build="true")
+        assert hooks[0]._force_build is True
+
+    def test_force_build_default_false(self) -> None:
+        hooks = get_hooks(Path("/unused"))
+        assert hooks[0]._force_build is False
+
+    def test_rebuild_images_prefix(self) -> None:
+        hooks = get_hooks(Path("/unused"), rebuild_images="afc-curl")
+        assert hooks[0]._rebuild_images == "afc-curl"
+
+    def test_rebuild_images_default_none(self) -> None:
+        hooks = get_hooks(Path("/unused"))
+        assert hooks[0]._rebuild_images is None
+
+
+class TestRunCallsBuildImages:
+    """Tests for DownloadBenchmarkData.run() image build step."""
+
+    def test_run_calls_build_images_sync(self, tmp_path: Path) -> None:
+        hook = DownloadBenchmarkData()
+        with (
+            patch("crsbench.setup.download_benchmarks"),
+            patch("crsbench.setup.extract_all_tarballs"),
+            patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs", return_value=0),
+            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()) as mock_build,
+        ):
+            hook.run(tmp_path)
+            mock_build.assert_called_once()
+
+    def test_run_passes_force_build(self, tmp_path: Path) -> None:
+        hook = DownloadBenchmarkData(force_build=True)
+        with (
+            patch("crsbench.setup.download_benchmarks"),
+            patch("crsbench.setup.extract_all_tarballs"),
+            patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs", return_value=0),
+            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()) as mock_build,
+        ):
+            hook.run(tmp_path)
+            mock_build.assert_called_once()
+            _, call_kwargs = mock_build.call_args
+            assert call_kwargs["force"] is True
+
+    def test_run_passes_rebuild_prefix(self, tmp_path: Path) -> None:
+        hook = DownloadBenchmarkData(rebuild_images="afc-curl")
+        with (
+            patch("crsbench.setup.download_benchmarks"),
+            patch("crsbench.setup.extract_all_tarballs"),
+            patch("crsbench.setup.stage_all_benchmarks"),
+            patch("crsbench.setup.clean_task_dirs", return_value=0),
+            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
+            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()) as mock_build,
+        ):
+            hook.run(tmp_path)
+            mock_build.assert_called_once()
+            _, call_kwargs = mock_build.call_args
+            assert call_kwargs["rebuild_prefix"] == "afc-curl"
+
+
+class TestBuildImagesSync:
+    """Tests for _build_images_sync() wrapper."""
+
+    def test_calls_build_all_benchmark_images(self, tmp_path: Path) -> None:
+        """Verifies the async function is called with correct args."""
+        from crsbench.scripts.build_images import ImageBuildSummary
+
+        mock_summary = ImageBuildSummary(
+            total=2,
+            built=2,
+            skipped=0,
+            failed=0,
+            results=(),
+        )
+        with patch(
+            "crsbench.scripts.build_images.build_all_benchmark_images",
+            return_value=mock_summary,
+        ):
+            _build_images_sync(
+                tmp_path,
+                datasets=["bench-a"],
+                force=True,
+                rebuild_prefix="bench",
+            )
+
+    def test_prints_summary(self, tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+        from crsbench.scripts.build_images import ImageBuildSummary
+
+        mock_summary = ImageBuildSummary(
+            total=3,
+            built=1,
+            skipped=1,
+            failed=1,
+            results=(),
+        )
+        with patch(
+            "crsbench.scripts.build_images.build_all_benchmark_images",
+            return_value=mock_summary,
+        ):
+            _build_images_sync(tmp_path)
+        captured = capsys.readouterr()
+        assert "1 built" in captured.out
+        assert "1 skipped" in captured.out
+        assert "1 failed" in captured.out
+
+    def test_logs_warnings_for_failures(self, tmp_path: Path) -> None:
+        from crsbench.scripts.build_images import ImageBuildResult, ImageBuildSummary
+
+        failed_result = ImageBuildResult(
+            benchmark_id="fail-bench",
+            image_tag="t:fail",
+            success=False,
+            skipped=False,
+            error_message="docker build failed",
+        )
+        mock_summary = ImageBuildSummary(
+            total=1,
+            built=0,
+            skipped=0,
+            failed=1,
+            results=(failed_result,),
+        )
+        with (
+            patch(
+                "crsbench.scripts.build_images.build_all_benchmark_images",
+                return_value=mock_summary,
+            ),
+            patch("crsbench.setup.logger") as mock_logger,
+        ):
+            _build_images_sync(tmp_path)
+            mock_logger.warning.assert_called_once()
+            warning_args = mock_logger.warning.call_args
+            assert "fail-bench" in str(warning_args)
