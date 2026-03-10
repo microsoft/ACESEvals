@@ -6,7 +6,7 @@ task YAML files following the SABER CRSBench domain schema.
 Usage::
 
     python -m crsbench.scripts.generate_tasks \\
-        --benchmarks-dir data/benchmarks \\
+        --benchmarks-dir _data/benchmarks \\
         --output-dir tasks/generated
 """
 
@@ -103,7 +103,7 @@ def generate_bugfix_task(
     # Use the first POV's sanitizer for the description
     sanitizer = vuln.povs[0].sanitizer if vuln.povs else "address"
 
-    data_prefix = f"data/benchmarks/{benchmark_id}"
+    data_prefix = f"_data/benchmarks/{benchmark_id}"
 
     return {
         "task_id": task_id,

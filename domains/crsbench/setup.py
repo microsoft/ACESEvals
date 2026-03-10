@@ -15,7 +15,7 @@ from saber.logging import get_logger
 
 logger = get_logger("domains.crsbench.setup")
 
-_BENCHMARK_SUBDIR = "data/benchmarks"
+_BENCHMARK_SUBDIR = "_data/benchmarks"
 REPO_ID = "sslab-gatech/crsbench-dataset"
 
 # File patterns removed from staged directories to prevent information
@@ -92,7 +92,7 @@ class DownloadBenchmarkData:
     """Setup hook that downloads CRSBench data if not present.
 
     Satisfies the ``saber.hooks.SetupHook`` protocol. The hook checks
-    whether ``<domain_root>/data/benchmarks/`` exists and is non-empty.
+    whether ``<domain_root>/_data/benchmarks/`` exists and is non-empty.
     If so, the hook is skipped. Otherwise, it calls
     ``download_benchmarks()`` to fetch data from HuggingFace.
 
@@ -122,21 +122,19 @@ class DownloadBenchmarkData:
         return "download_benchmark_data"
 
     def should_run(self, domain_root: Path) -> bool:
-        """Return True if benchmark data is missing, empty, or force_download is set."""
+        """Return True if benchmark data is missing, unstaged, or force_download is set."""
         if self._force_download:
             return True
         data_dir = domain_root / _BENCHMARK_SUBDIR
         if not data_dir.exists():
             return True
         if self._datasets is not None:
-            for name in self._datasets:
-                ds_dir = data_dir / name
-                meta = ds_dir / ".aixcc" / "meta.yaml"
-                staged = ds_dir / "staged"
-                if not meta.exists() or not staged.exists() or not any(staged.iterdir()):
-                    return True
-            return False
-        return not any(data_dir.iterdir())
+            dirs = [data_dir / name for name in self._datasets]
+        else:
+            dirs = [d for d in sorted(data_dir.iterdir()) if d.is_dir() and not d.name.startswith(".")]
+        if not dirs:
+            return True
+        return any(not _is_benchmark_ready(d) for d in dirs)
 
     def run(self, domain_root: Path) -> None:
         """Download benchmark data from HuggingFace, stage it, and generate task YAMLs."""
@@ -146,8 +144,8 @@ class DownloadBenchmarkData:
             include_ground_truth=self._include_ground_truth,
             benchmarks=self._datasets,
         )
-        extract_all_tarballs(output_dir)
-        stage_all_benchmarks(output_dir)
+        extract_all_tarballs(output_dir, datasets=self._datasets)
+        stage_all_benchmarks(output_dir, datasets=self._datasets)
 
         # Generate task YAMLs
         from crsbench.scripts.generate_tasks import generate_all_tasks
@@ -160,6 +158,23 @@ class DownloadBenchmarkData:
 
         generated = generate_all_tasks(output_dir, tasks_dir, datasets=self._datasets)
         logger.info("Generated %d task YAML files", len(generated))
+
+
+def _is_benchmark_ready(benchmark_dir: Path) -> bool:
+    """Check if a single benchmark directory is fully staged.
+
+    A benchmark is ready when it has both ``.aixcc/meta.yaml`` and a
+    non-empty ``staged/`` directory.
+
+    Args:
+        benchmark_dir: Path to a benchmark directory.
+
+    Returns:
+        True if the benchmark is extracted and staged.
+    """
+    meta = benchmark_dir / ".aixcc" / "meta.yaml"
+    staged = benchmark_dir / "staged"
+    return meta.exists() and staged.exists() and any(staged.iterdir())
 
 
 def clean_task_dirs(tasks_dir: Path) -> int:
@@ -225,18 +240,28 @@ def extract_benchmark_tarballs(benchmark_dir: Path) -> None:
             tf.extractall(path=benchmark_dir)  # noqa: S202
 
 
-def extract_all_tarballs(benchmarks_dir: Path) -> None:
-    """Extract tarballs for every benchmark subdirectory.
+def extract_all_tarballs(
+    benchmarks_dir: Path,
+    *,
+    datasets: list[str] | None = None,
+) -> None:
+    """Extract tarballs for benchmark subdirectories.
 
     Iterates over subdirectories of *benchmarks_dir* and calls
-    :func:`extract_benchmark_tarballs` on each.
+    :func:`extract_benchmark_tarballs` on each.  When *datasets* is
+    provided, only those named directories are processed.
 
     Args:
         benchmarks_dir: Root directory containing benchmark subdirectories.
+        datasets: Optional list of benchmark names to process.  When None,
+            all non-dot subdirectories are processed.
     """
-    for child in sorted(benchmarks_dir.iterdir()):
-        if child.is_dir():
-            extract_benchmark_tarballs(child)
+    if datasets is not None:
+        dirs = [benchmarks_dir / name for name in datasets if (benchmarks_dir / name).is_dir()]
+    else:
+        dirs = [d for d in sorted(benchmarks_dir.iterdir()) if d.is_dir() and not d.name.startswith(".")]
+    for child in dirs:
+        extract_benchmark_tarballs(child)
 
 
 def stage_benchmark(benchmark_dir: Path) -> None:
@@ -250,7 +275,7 @@ def stage_benchmark(benchmark_dir: Path) -> None:
 
     Args:
         benchmark_dir: Path to a benchmark directory (e.g.
-            ``data/benchmarks/sanity-mock-c-delta-01``).
+            ``_data/benchmarks/sanity-mock-c-delta-01``).
     """
     staged = benchmark_dir / "staged"
     if staged.exists() and any(staged.iterdir()):
@@ -324,17 +349,28 @@ def _sanitize_staged_dir(staged: Path) -> None:
                 logger.info("Removed artifact %s", artifact)
 
 
-def stage_all_benchmarks(benchmarks_dir: Path) -> None:
-    """Stage all benchmarks in a directory.
+def stage_all_benchmarks(
+    benchmarks_dir: Path,
+    *,
+    datasets: list[str] | None = None,
+) -> None:
+    """Stage benchmarks in a directory.
 
     Iterates over subdirectories of *benchmarks_dir* that contain an
-    ``.aixcc/`` directory and stages each one.
+    ``.aixcc/`` directory and stages each one.  When *datasets* is
+    provided, only those named directories are processed.
 
     Args:
         benchmarks_dir: Root directory containing benchmark subdirectories.
+        datasets: Optional list of benchmark names to process.  When None,
+            all non-dot subdirectories are processed.
     """
-    for child in sorted(benchmarks_dir.iterdir()):
-        if child.is_dir() and (child / ".aixcc").is_dir():
+    if datasets is not None:
+        dirs = [benchmarks_dir / name for name in datasets if (benchmarks_dir / name).is_dir()]
+    else:
+        dirs = [d for d in sorted(benchmarks_dir.iterdir()) if d.is_dir() and not d.name.startswith(".")]
+    for child in dirs:
+        if (child / ".aixcc").is_dir():
             stage_benchmark(child)
 
 
@@ -378,42 +414,32 @@ def _cli_bool(value: str | bool | None, default: bool = False) -> bool:
 
 def get_hooks(
     domain_root: Path,  # noqa: ARG001
-    **kwargs: object,
+    *,
+    datasets: str | list[str] | None = None,
+    include_ground_truth: str | bool | None = None,
+    force_download: str | bool | None = None,
 ) -> list[SetupHook]:
     """Return CRSBench setup hooks for auto-discovery.
 
     Called by ``saber.task._discover_setup_hooks()`` when it finds this
     module's ``get_hooks`` function.
 
-    Recognized ``-T`` flags (passed as *kwargs*):
-
-    * ``dataset`` — comma-separated dataset/benchmark names to download
-      and evaluate.  Also used by ``create_task`` to filter tasks.
-    * ``include_ground_truth`` — ``"true"`` / ``"false"`` (default: true).
-    * ``force_download`` — ``"true"`` / ``"false"`` (default: false).
 
     Args:
         domain_root: Path to the domain root directory.
-        **kwargs: Additional keyword arguments from CLI ``-T`` flags.
+        datasets: Comma-separated dataset/benchmark names to download,
+            or ``None`` for all.
+        include_ground_truth: ``"true"`` / ``"false"`` (default: true).
+        force_download: ``"true"`` / ``"false"`` (default: false).
 
     Returns:
         List of setup hook instances.
     """
-    datasets = _parse_csv(
-        kwargs.get("dataset"),  # type: ignore[arg-type]
-    )
-    include_ground_truth = _cli_bool(
-        kwargs.get("include_ground_truth"),  # type: ignore[arg-type]
-        default=True,
-    )
-    force_download = _cli_bool(
-        kwargs.get("force_download"),  # type: ignore[arg-type]
-        default=False,
-    )
+
     return [
         DownloadBenchmarkData(
-            datasets=datasets,
-            include_ground_truth=include_ground_truth,
-            force_download=force_download,
+            datasets=_parse_csv(datasets),
+            include_ground_truth=_cli_bool(include_ground_truth, default=True),
+            force_download=_cli_bool(force_download, default=False),
         )
     ]
