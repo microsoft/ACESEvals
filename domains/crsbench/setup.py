@@ -15,8 +15,24 @@ from saber.logging import get_logger
 
 logger = get_logger("domains.crsbench.setup")
 
-_BENCHMARK_SUBDIR = "_data/benchmarks"
+_BENCHMARK_SUBDIR = "data/_benchmarks"
 REPO_ID = "sslab-gatech/crsbench-dataset"
+
+# Named dataset groups.  Values are either ``None`` (meaning "all
+# benchmarks") or a callable ``(list[str]) -> list[str]`` that filters
+# a list of benchmark directory names.
+_DATASET_GROUPS: dict[str, str] = {
+    "all": "*",
+    "competition": "!sanity-*",
+    "sanity": "sanity-*",
+}
+"""Predefined dataset groups for ``-T dataset=<group>``.
+
+Each value is a simple pattern string:
+- ``"*"`` — match all benchmarks
+- ``"prefix-*"`` — match benchmarks starting with *prefix-*
+- ``"!prefix-*"`` — match all benchmarks **except** those starting with *prefix-*
+"""
 
 # File patterns removed from staged directories to prevent information
 # leakage (patch artifacts, version-control history, editor backups).
@@ -92,7 +108,7 @@ class DownloadBenchmarkData:
     """Setup hook that downloads CRSBench data if not present.
 
     Satisfies the ``saber.hooks.SetupHook`` protocol. The hook checks
-    whether ``<domain_root>/_data/benchmarks/`` exists and is non-empty.
+    whether ``<domain_root>/data/_benchmarks/`` exists and is non-empty.
     If so, the hook is skipped. Otherwise, it calls
     ``download_benchmarks()`` to fetch data from HuggingFace.
 
@@ -121,6 +137,23 @@ class DownloadBenchmarkData:
         """Human-readable hook name."""
         return "download_benchmark_data"
 
+    def _resolve_datasets(self, data_dir: Path) -> list[str] | None:
+        """Expand named dataset groups into concrete benchmark names.
+
+        If ``self._datasets`` contains a single entry that matches a key
+        in :data:`_DATASET_GROUPS`, it is expanded using the directory
+        listing of *data_dir*.  Otherwise the original list is returned
+        unchanged.
+
+        Returns:
+            Resolved list of benchmark names, or ``None`` (meaning *all*).
+        """
+        if self._datasets is None:
+            return None
+        if len(self._datasets) == 1 and self._datasets[0] in _DATASET_GROUPS:
+            return _expand_group(self._datasets[0], data_dir)
+        return self._datasets
+
     def should_run(self, domain_root: Path) -> bool:
         """Return True if benchmark data is missing, unstaged, or force_download is set."""
         if self._force_download:
@@ -128,8 +161,9 @@ class DownloadBenchmarkData:
         data_dir = domain_root / _BENCHMARK_SUBDIR
         if not data_dir.exists():
             return True
-        if self._datasets is not None:
-            dirs = [data_dir / name for name in self._datasets]
+        resolved = self._resolve_datasets(data_dir)
+        if resolved is not None:
+            dirs = [data_dir / name for name in resolved]
         else:
             dirs = [d for d in sorted(data_dir.iterdir()) if d.is_dir() and not d.name.startswith(".")]
         if not dirs:
@@ -139,24 +173,25 @@ class DownloadBenchmarkData:
     def run(self, domain_root: Path) -> None:
         """Download benchmark data from HuggingFace, stage it, and generate task YAMLs."""
         output_dir = domain_root / _BENCHMARK_SUBDIR
+        resolved = self._resolve_datasets(output_dir)
         download_benchmarks(
             output_dir,
             include_ground_truth=self._include_ground_truth,
-            benchmarks=self._datasets,
+            benchmarks=resolved,
         )
-        extract_all_tarballs(output_dir, datasets=self._datasets)
-        stage_all_benchmarks(output_dir, datasets=self._datasets)
+        extract_all_tarballs(output_dir, datasets=resolved)
+        stage_all_benchmarks(output_dir, datasets=resolved)
 
         # Generate task YAMLs
         from crsbench.scripts.generate_tasks import generate_all_tasks
 
         tasks_dir = domain_root / "tasks"
-        if self._datasets is None:
+        if resolved is None:
             removed = clean_task_dirs(tasks_dir)
             if removed:
                 logger.info("Cleaned %d old task group directories", removed)
 
-        generated = generate_all_tasks(output_dir, tasks_dir, datasets=self._datasets)
+        generated = generate_all_tasks(output_dir, tasks_dir, datasets=resolved)
         logger.info("Generated %d task YAML files", len(generated))
 
 
@@ -275,7 +310,7 @@ def stage_benchmark(benchmark_dir: Path) -> None:
 
     Args:
         benchmark_dir: Path to a benchmark directory (e.g.
-            ``_data/benchmarks/sanity-mock-c-delta-01``).
+            ``data/_benchmarks/sanity-mock-c-delta-01``).
     """
     staged = benchmark_dir / "staged"
     if staged.exists() and any(staged.iterdir()):
@@ -374,6 +409,36 @@ def stage_all_benchmarks(
             stage_benchmark(child)
 
 
+def _expand_group(group_name: str, benchmarks_dir: Path) -> list[str] | None:
+    """Expand a named dataset group into benchmark directory names.
+
+    Args:
+        group_name: Key in :data:`_DATASET_GROUPS`.
+        benchmarks_dir: Root directory containing benchmark subdirectories.
+
+    Returns:
+        Filtered list of benchmark names, or ``None`` if the group
+        resolves to *all* benchmarks.
+    """
+    pattern = _DATASET_GROUPS[group_name]
+    if pattern == "*":
+        return None
+
+    all_dirs = sorted(
+        d.name for d in benchmarks_dir.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+    )
+
+    if pattern.startswith("!"):
+        # Exclusion pattern: "!sanity-*" → keep everything NOT matching
+        prefix = pattern[1:].removesuffix("*")
+        return [name for name in all_dirs if not name.startswith(prefix)]
+
+    # Inclusion pattern: "sanity-*" → keep only matching
+    prefix = pattern.removesuffix("*")
+    return [name for name in all_dirs if name.startswith(prefix)]
+
+
 def _parse_csv(value: str | list[str] | None) -> list[str] | None:
     """Parse a comma-separated string into a list.
 
@@ -415,7 +480,7 @@ def _cli_bool(value: str | bool | None, default: bool = False) -> bool:
 def get_hooks(
     domain_root: Path,  # noqa: ARG001
     *,
-    datasets: str | list[str] | None = None,
+    dataset: str | list[str] | None = None,
     include_ground_truth: str | bool | None = None,
     force_download: str | bool | None = None,
 ) -> list[SetupHook]:
@@ -424,10 +489,17 @@ def get_hooks(
     Called by ``saber.task._discover_setup_hooks()`` when it finds this
     module's ``get_hooks`` function.
 
+    Recognized ``-T`` flags:
+
+    * ``dataset`` — comma-separated dataset/benchmark names, or a named
+      group: ``all`` (everything), ``competition`` (non-sanity),
+      ``sanity`` (sanity only).  Defaults to all.
+    * ``include_ground_truth`` — ``"true"`` / ``"false"`` (default: true).
+    * ``force_download`` — ``"true"`` / ``"false"`` (default: false).
 
     Args:
         domain_root: Path to the domain root directory.
-        datasets: Comma-separated dataset/benchmark names to download,
+        dataset: Comma-separated dataset/benchmark names to download,
             or ``None`` for all.
         include_ground_truth: ``"true"`` / ``"false"`` (default: true).
         force_download: ``"true"`` / ``"false"`` (default: false).
@@ -435,10 +507,9 @@ def get_hooks(
     Returns:
         List of setup hook instances.
     """
-
     return [
         DownloadBenchmarkData(
-            datasets=_parse_csv(datasets),
+            datasets=_parse_csv(dataset),
             include_ground_truth=_cli_bool(include_ground_truth, default=True),
             force_download=_cli_bool(force_download, default=False),
         )

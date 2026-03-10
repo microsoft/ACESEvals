@@ -6,7 +6,7 @@ task YAML files following the SABER CRSBench domain schema.
 Usage::
 
     python -m crsbench.scripts.generate_tasks \\
-        --benchmarks-dir _data/benchmarks \\
+        --benchmarks-dir data/_benchmarks \\
         --output-dir tasks/generated
 """
 
@@ -103,7 +103,7 @@ def generate_bugfix_task(
     # Use the first POV's sanitizer for the description
     sanitizer = vuln.povs[0].sanitizer if vuln.povs else "address"
 
-    data_prefix = f"_data/benchmarks/{benchmark_id}"
+    data_prefix = f"data/_benchmarks/{benchmark_id}"
 
     return {
         "task_id": task_id,
@@ -281,9 +281,14 @@ def generate_all_tasks(
         benchmark_id = benchmark_path.name
         group_name = _derive_group_name(benchmark_id)
 
+        # Classify into dataset groups matching _DATASET_GROUPS in setup.py
+        dataset_label = (
+            "sanity" if benchmark_id.startswith("sanity-") else "competition"
+        )
+
         group_dir = output_dir / group_name
         group_dir.mkdir(parents=True, exist_ok=True)
-        _write_shared_yaml(group_dir, dataset=group_name)
+        _write_shared_yaml(group_dir, dataset=dataset_label)
 
         for harness in meta.harness_files:
             for vuln in harness.vulns:

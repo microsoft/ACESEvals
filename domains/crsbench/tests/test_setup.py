@@ -14,6 +14,7 @@ from saber.hooks import SetupHook
 from crsbench.setup import (
     DownloadBenchmarkData,
     _cli_bool,
+    _expand_group,
     _parse_csv,
     _sanitize_staged_dir,
     clean_task_dirs,
@@ -55,13 +56,13 @@ class TestDownloadBenchmarkData:
         assert hook.should_run(tmp_path) is True
 
     def test_should_run_when_dir_empty(self, tmp_path: Path) -> None:
-        (tmp_path / "_data" / "benchmarks").mkdir(parents=True)
+        (tmp_path / "data" / "_benchmarks").mkdir(parents=True)
         hook = DownloadBenchmarkData()
         assert hook.should_run(tmp_path) is True
 
     def test_should_not_run_when_fully_staged(self, tmp_path: Path) -> None:
         """Returns False when benchmarks have meta.yaml and staged content."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -73,7 +74,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_when_data_present_but_not_staged(self, tmp_path: Path) -> None:
         """Returns True when benchmarks exist but are not staged."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -83,7 +84,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_when_staged_dir_empty_unfiltered(self, tmp_path: Path) -> None:
         """Returns True when staged dir exists but is empty (no filter)."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -93,7 +94,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_when_only_non_benchmark_dirs(self, tmp_path: Path) -> None:
         """Returns True when dir has content but no benchmark subdirectories."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         benchmarks.mkdir(parents=True)
         (benchmarks / "README.md").write_text("info")
         hook = DownloadBenchmarkData()
@@ -111,7 +112,7 @@ class TestDownloadBenchmarkData:
         ):
             hook.run(tmp_path)
             mock_dl.assert_called_once_with(
-                tmp_path / "_data" / "benchmarks",
+                tmp_path / "data" / "_benchmarks",
                 include_ground_truth=True,
                 benchmarks=None,
             )
@@ -131,7 +132,7 @@ class TestDownloadBenchmarkData:
         ):
             hook.run(tmp_path)
             mock_dl.assert_called_once_with(
-                tmp_path / "_data" / "benchmarks",
+                tmp_path / "data" / "_benchmarks",
                 include_ground_truth=False,
                 benchmarks=["afc-curl-delta-01"],
             )
@@ -239,7 +240,7 @@ class TestDownloadBenchmarkDataForceDownload:
         self, tmp_path: Path
     ) -> None:
         """force_download=True overrides the data-exists guard."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         benchmarks.mkdir(parents=True)
         (benchmarks / "some_benchmark").mkdir()
 
@@ -250,7 +251,7 @@ class TestDownloadBenchmarkDataForceDownload:
         self, tmp_path: Path
     ) -> None:
         """force_download=False (default) still checks staging status."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         bm = benchmarks / "some_benchmark"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: some_benchmark")
@@ -301,6 +302,70 @@ class TestGetHooksKwargs:
         assert hooks[0]._datasets is None
         assert hooks[0]._include_ground_truth is True
         assert hooks[0]._force_download is False
+
+
+def _make_benchmark_dirs(benchmarks: Path, names: list[str]) -> None:
+    """Create minimal benchmark subdirectories."""
+    for name in names:
+        (benchmarks / name).mkdir(parents=True, exist_ok=True)
+
+
+class TestExpandGroup:
+    """Tests for _expand_group() named dataset group expansion."""
+
+    def test_all_returns_none(self, tmp_path: Path) -> None:
+        _make_benchmark_dirs(tmp_path, ["afc-curl-delta-01", "sanity-mock-c-delta-01"])
+        assert _expand_group("all", tmp_path) is None
+
+    def test_competition_excludes_sanity(self, tmp_path: Path) -> None:
+        _make_benchmark_dirs(tmp_path, [
+            "afc-curl-delta-01",
+            "atlanta-batik-delta-01",
+            "sanity-mock-c-delta-01",
+            "sanity-itoa-delta-01",
+        ])
+        result = _expand_group("competition", tmp_path)
+        assert result == ["afc-curl-delta-01", "atlanta-batik-delta-01"]
+
+    def test_sanity_only_sanity(self, tmp_path: Path) -> None:
+        _make_benchmark_dirs(tmp_path, [
+            "afc-curl-delta-01",
+            "sanity-mock-c-delta-01",
+            "sanity-itoa-delta-01",
+        ])
+        result = _expand_group("sanity", tmp_path)
+        assert result == ["sanity-itoa-delta-01", "sanity-mock-c-delta-01"]
+
+    def test_skips_dot_dirs(self, tmp_path: Path) -> None:
+        _make_benchmark_dirs(tmp_path, [".cache", "afc-curl-delta-01"])
+        result = _expand_group("competition", tmp_path)
+        assert result == ["afc-curl-delta-01"]
+
+
+class TestResolveDatasets:
+    """Tests for DownloadBenchmarkData._resolve_datasets()."""
+
+    def test_none_returns_none(self, tmp_path: Path) -> None:
+        hook = DownloadBenchmarkData()
+        assert hook._resolve_datasets(tmp_path) is None
+
+    def test_explicit_names_unchanged(self, tmp_path: Path) -> None:
+        hook = DownloadBenchmarkData(datasets=["afc-curl-delta-01"])
+        assert hook._resolve_datasets(tmp_path) == ["afc-curl-delta-01"]
+
+    def test_competition_group_expands(self, tmp_path: Path) -> None:
+        _make_benchmark_dirs(tmp_path, [
+            "afc-curl-delta-01",
+            "sanity-mock-c-delta-01",
+        ])
+        hook = DownloadBenchmarkData(datasets=["competition"])
+        result = hook._resolve_datasets(tmp_path)
+        assert result == ["afc-curl-delta-01"]
+
+    def test_multi_item_list_not_treated_as_group(self, tmp_path: Path) -> None:
+        """A list with >1 item is never treated as a group name."""
+        hook = DownloadBenchmarkData(datasets=["competition", "other"])
+        assert hook._resolve_datasets(tmp_path) == ["competition", "other"]
 
 
 class TestParseCsv:
@@ -597,7 +662,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns False when all requested datasets have meta.yaml and staged content."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         for name in ("ds-a", "ds-b"):
             d = benchmarks / name
             (d / ".aixcc").mkdir(parents=True)
@@ -613,7 +678,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns True when any requested dataset lacks staged content."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         # ds-a is fully staged
         d = benchmarks / "ds-a"
         (d / ".aixcc").mkdir(parents=True)
@@ -633,7 +698,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns True when any requested dataset lacks meta.yaml."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         benchmarks.mkdir(parents=True)
         # ds-a directory exists but no .aixcc/meta.yaml
         (benchmarks / "ds-a").mkdir()
@@ -645,7 +710,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns True when staged dir exists but is empty."""
-        benchmarks = tmp_path / "_data" / "benchmarks"
+        benchmarks = tmp_path / "data" / "_benchmarks"
         d = benchmarks / "ds-a"
         (d / ".aixcc").mkdir(parents=True)
         (d / ".aixcc" / "meta.yaml").write_text("id: ds-a")
@@ -750,7 +815,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
 
             mock_clean.assert_called_once_with(tmp_path / "tasks")
             mock_gen.assert_called_once_with(
-                tmp_path / "_data" / "benchmarks",
+                tmp_path / "data" / "_benchmarks",
                 tmp_path / "tasks",
                 datasets=None,
             )
@@ -772,7 +837,7 @@ class TestDownloadBenchmarkDataRunGeneratesTasks:
 
             mock_clean.assert_not_called()
             mock_gen.assert_called_once_with(
-                tmp_path / "_data" / "benchmarks",
+                tmp_path / "data" / "_benchmarks",
                 tmp_path / "tasks",
                 datasets=["ds-a", "ds-b"],
             )
