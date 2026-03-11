@@ -16,7 +16,25 @@ _GIT_INIT_SETUP = """\
 set -euo pipefail
 mkdir -p /workspace/source
 cd /workspace/source
-git init -b main
+
+# Remove nested .git directories so subdirectories (e.g. mock-c/, curl/)
+# are tracked as regular files instead of being treated as embedded
+# submodules.  Harmless no-op when none exist.
+find . -mindepth 2 -name .git -exec rm -rf {} + 2>/dev/null || true
+
+# Ignore build artifacts so they never pollute git diff output.
+cat > .gitignore <<'IGNORE'
+*.o
+*.a
+*.so
+*.class
+*.jar
+*.pyc
+__pycache__/
+IGNORE
+
+git init
+git checkout -b main 2>/dev/null || true
 git config user.email "sandbox@saber"
 git config user.name "sandbox"
 git add -A
@@ -32,13 +50,13 @@ def crsbench(**kwargs: str | None) -> Task:
     vulnerable source code, crash-triggering POVs, and must write a
     source-code patch that fixes the crash without breaking functionality.
 
-    Downloads benchmark data from HuggingFace on first run if not already
-    present locally (via auto-discovered setup hooks).
+    Setup hooks (data download, image build, task generation) are
+    auto-discovered via ``get_hooks()`` in ``setup.py``.
 
     Args:
         **kwargs: Keyword arguments forwarded to ``create_task``
             (e.g., task_filter, agent, rebuild, run_preflight,
-            keep_permanent, persona_file).
+            keep_permanent, persona_file, dataset, build, rebuild_images).
 
     Returns:
         Fully configured inspect_ai Task.

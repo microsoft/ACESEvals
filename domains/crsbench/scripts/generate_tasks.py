@@ -85,6 +85,7 @@ def generate_bugfix_task(
     vuln: CRSBenchVuln,
     *,
     built_benchmarks: set[str] | None = None,
+    dataset: str = "competition",
 ) -> dict[str, object]:
     """Generate a bug-fix task dict from benchmark metadata.
 
@@ -96,14 +97,16 @@ def generate_bugfix_task(
             Docker images.  When ``None``, all benchmarks are assumed to
             have images.  When provided, only benchmarks in this set get
             ``benchmark_image`` in their initial_context.
+        dataset: Dataset name for task filtering (default: ``"competition"``).
 
     Returns:
         A dict representing a single task entry, suitable for YAML serialization.
     """
     benchmark_id = benchmark_path.name
     # Sanitize task ID: only alphanumeric, underscore, hyphen allowed
-    raw_id = f"{benchmark_id}__{harness.name}__{vuln.vuln_keyword}__bugfix"
-    task_id = re.sub(r"[^a-zA-Z0-9_-]", "_", raw_id).replace("-", "_")
+    safe_harness = re.sub(r"[^a-zA-Z0-9_-]", "_", harness.name)
+    safe_vuln = re.sub(r"[^a-zA-Z0-9_-]", "_", vuln.vuln_keyword)
+    task_id = f"{benchmark_id}__{safe_harness}__{safe_vuln}__bugfix".replace("-", "_")
 
     project = _derive_project_name(benchmark_id)
 
@@ -123,6 +126,7 @@ def generate_bugfix_task(
 
     return {
         "task_id": task_id,
+        "dataset": dataset,
         "title": f"Fix vulnerability in {harness.name} ({benchmark_id})",
         "description": (
             f"A {sanitizer}-detected vulnerability has been found in "
@@ -132,7 +136,6 @@ def generate_bugfix_task(
         ),
         "initial_context": initial_context,
         "initial_files": {
-            "/workspace/source": f"{data_prefix}/staged/",
             "/workspace/povs/": (
                 f"{data_prefix}/.aixcc/{harness.name}/{vuln.vuln_keyword}/blobs/"
             ),
@@ -143,11 +146,11 @@ def generate_bugfix_task(
                     "target": "submission",
                     "max_score": 1.0,
                     "source_dir": "/workspace/source",
-                    "build_script": "/workspace/source/build.sh",
+                    "build_script": "/workspace/build.sh",
                     "harness_name": harness.name,
                     "harness_path": f"/workspace/build/{harness.name}",
                     "pov_dir": "/workspace/povs",
-                    "test_script": "/workspace/source/test.sh",
+                    "test_script": "/workspace/test.sh",
                     "patch_dir": "/submit/patches",
                 },
             },
@@ -223,7 +226,7 @@ def _derive_group_name(benchmark_id: str) -> str:
     return _derive_project_name(benchmark_id).replace("-", "_")
 
 
-def _write_shared_yaml(group_dir: Path, *, dataset: str) -> None:
+def _write_shared_yaml(group_dir: Path, *, dataset: str = "competition") -> None:
     """Write a shared.yaml for a task group directory.
 
     Always (re-)writes the file so that the ``dataset`` label is
@@ -235,7 +238,7 @@ def _write_shared_yaml(group_dir: Path, *, dataset: str) -> None:
     """
     shared_path = group_dir / "shared.yaml"
 
-    shared_content = {
+    shared_content: dict[str, object] = {
         "dataset": dataset,
         "sandbox_environment": "default",
         "initial_context": {
@@ -251,6 +254,7 @@ def generate_all_tasks(
     output_dir: Path,
     datasets: list[str] | None = None,
     built_benchmarks: set[str] | None = None,
+    dataset: str = "competition",
 ) -> list[Path]:
     """Generate task YAMLs for all benchmarks in a directory.
 
@@ -266,6 +270,8 @@ def generate_all_tasks(
         built_benchmarks: Set of benchmark IDs with successfully built
             Docker images.  When ``None``, all benchmarks are assumed to
             have images.  Passed through to :func:`generate_bugfix_task`.
+        dataset: Dataset name to include in generated tasks/shared configs
+            (default: ``"competition"``).
 
     Returns:
         List of paths to generated YAML files.
@@ -288,22 +294,36 @@ def generate_all_tasks(
     for benchmark_path in benchmark_paths:
         meta = load_benchmark_meta(benchmark_path)
         benchmark_id = benchmark_path.name
-        group_name = _derive_group_name(benchmark_id)
 
-        # Classify into dataset groups matching _DATASET_GROUPS in setup.py
-        dataset_label = (
-            "sanity" if benchmark_id.startswith("sanity-") else "competition"
-        )
+        # Skip benchmarks without a built Docker image — tasks would fail
+        # at container startup because the compose file can't resolve the
+        # SAMPLE_METADATA_BENCHMARK_IMAGE env var.
+        if built_benchmarks is not None and benchmark_id not in built_benchmarks:
+            logger.debug(
+                "Skipping %s — no Docker image available", benchmark_id,
+            )
+            # Remove stale task YAMLs from previous runs so they don't get
+            # picked up by the task loader.
+            group_name = _derive_group_name(benchmark_id)
+            stale_dir = output_dir / group_name
+            if stale_dir.is_dir():
+                for stale in stale_dir.glob(f"{benchmark_id.replace('-', '_')}*.yaml"):
+                    stale.unlink()
+                    logger.debug("Removed stale task %s", stale.name)
+            continue
+
+        group_name = _derive_group_name(benchmark_id)
 
         group_dir = output_dir / group_name
         group_dir.mkdir(parents=True, exist_ok=True)
-        _write_shared_yaml(group_dir, dataset=dataset_label)
+        _write_shared_yaml(group_dir, dataset=dataset)
 
-        for harness in meta.harness_files:
+        for harness in meta.harnesses_with_vulns:
             for vuln in harness.vulns:
                 task_dict = generate_bugfix_task(
                     benchmark_path, harness, vuln,
                     built_benchmarks=built_benchmarks,
+                    dataset=dataset,
                 )
                 task_id = task_dict["task_id"]
 

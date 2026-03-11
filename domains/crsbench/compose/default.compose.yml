@@ -1,5 +1,9 @@
 # CRSBench per-sample sandbox — managed by inspect_ai DockerSandboxEnvironment
-# Provides a vulnerability research workstation with C/C++ and Java tooling.
+# Each sample uses a pre-built Docker image that contains the benchmark's
+# source code, dependencies, and SABER tooling. The image tag comes from
+# the task YAML's initial_context.benchmark_image, promoted to top-level
+# sample metadata by the converter, and exposed here via inspect_ai's
+# SAMPLE_METADATA_* env var interpolation.
 
 services:
   default:
@@ -15,10 +19,7 @@ services:
       - CXXFLAGS=-fsanitize=address -fno-omit-frame-pointer -g
       - SRC=/workspace/source
       - OUT=/workspace/build
-      - LIB_FUZZING_ENGINE=/usr/lib/llvm-19/lib/libFuzzer.a
       - ASAN_OPTIONS=detect_leaks=0:abort_on_error=1
-      - JAVA_HOME=/usr/lib/jvm/default-java
-      - MVN=/usr/local/bin/mvn
     networks:
       - sandbox-net
     healthcheck:

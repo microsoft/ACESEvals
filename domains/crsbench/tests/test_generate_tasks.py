@@ -44,6 +44,9 @@ SAMPLE_META_YAML: dict[str, object] = {
             ],
         },
     ],
+    "patch_exclude_list": ["build.sh", "Makefile"],
+    "project": "sanity-mock-c",
+    "language": "c",
 }
 
 
@@ -100,6 +103,9 @@ SAMPLE_META_MULTI_HARNESS: dict[str, object] = {
             ],
         },
     ],
+    "patch_exclude_list": ["build.sh"],
+    "project": "sanity-mock-c",
+    "language": "c",
 }
 
 
@@ -196,6 +202,8 @@ class TestCRSBenchModels:
         )
         assert vuln.vuln_keyword == "cpv_0"
         assert vuln.povs[0].sanitizer == "address"
+        assert vuln.sanitizer == "address"
+        assert len(vuln.povs) == 1
 
     def test_vuln_model_frozen(self) -> None:
         """CRSBenchVuln is immutable."""
@@ -247,6 +255,7 @@ class TestCRSBenchModels:
         assert meta.delta_mode.base_commit == "aaa111"
         assert len(meta.harness_files) == 1
         assert meta.harness_files[0].name == "fuzz_target"
+        assert len(meta.harnesses_with_vulns) == 1
 
     def test_meta_model_multi_harness(self) -> None:
         """CRSBenchMeta handles multiple harnesses."""
@@ -273,6 +282,7 @@ class TestCRSBenchModels:
         raw = yaml.safe_load(meta_path.read_text())
         meta = CRSBenchMeta(**raw)
         assert meta.patch_exclude_list == ("build.sh", "Makefile")
+        assert len(meta.harnesses_with_vulns) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -325,14 +335,12 @@ class TestGenerateBugfixTask:
         assert ctx["benchmark_id"] == "sanity-mock-c-delta-01"
 
     def test_initial_files(self, benchmark_dir: Path) -> None:
-        """Initial files reference correct data paths."""
+        """Initial files reference correct POV blob paths."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
         harness, vuln = self._make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         files = task["initial_files"]
-        assert "/workspace/source" in files
-        assert "sanity-mock-c-delta-01/staged/" in files["/workspace/source"]
         assert "/workspace/povs/" in files
         assert "cpv_0/blobs/" in files["/workspace/povs/"]
         assert not any("build" in key for key in files), (
@@ -531,6 +539,7 @@ class TestLoadBenchmarkMeta:
         meta = load_benchmark_meta(benchmark_dir)
         assert meta.patch_exclude_list == ("build.sh", "Makefile")
         assert len(meta.harness_files) == 1
+        assert len(meta.harnesses_with_vulns) >= 1
 
     def test_raises_on_missing_meta(self, tmp_path: Path) -> None:
         """Raises FileNotFoundError when meta.yaml is missing."""

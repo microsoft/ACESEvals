@@ -34,6 +34,15 @@ class TestGitInitSetupConstant:
     def test_changes_to_workspace_source(self) -> None:
         assert "cd /workspace/source" in _GIT_INIT_SETUP
 
+    def test_removes_nested_git_dirs(self) -> None:
+        """Nested .git dirs must be removed to avoid submodule treatment."""
+        assert "find . -mindepth 2 -name .git" in _GIT_INIT_SETUP
+
+    def test_gitignore_for_build_artifacts(self) -> None:
+        """A .gitignore must suppress build artifacts from git diff."""
+        assert "*.o" in _GIT_INIT_SETUP
+        assert ".gitignore" in _GIT_INIT_SETUP
+
     def test_initialises_git_repo(self) -> None:
         assert "git init" in _GIT_INIT_SETUP
 

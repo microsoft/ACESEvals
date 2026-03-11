@@ -1,7 +1,7 @@
 """CRSBench patch verification scoring strategy.
 
 Verifies agent-submitted patches by:
-1. Finding ``.diff`` patch file(s) in ``patch_dir`` via ``sandbox().exec()``
+1. Finding patch file(s) in ``patch_dir`` via ``sandbox().exec()``
 2. Applying the patch to source (``patch -p1``)
 3. Rebuilding with AddressSanitizer (``build_script`` or fallback ``make``)
 4. Running ALL ground-truth POVs against the patched binary (should NOT crash)
@@ -69,32 +69,47 @@ class CRSBenchPatchVerifyStrategy:
 
         sbx = sandbox()
 
-        # Step 1: Find patch file
+        # Step 1: Find patch files
+        # Accept any file in the patch directory.  When multiple files exist,
+        # each is normalised and applied independently so agents that split
+        # fixes across files (e.g. one per source file) get scored correctly.
+        # Files are sorted alphabetically for deterministic ordering.
         find_result = await sbx.exec(
-            ["find", patch_dir, "-name", "*.diff", "-type", "f"],
+            ["find", patch_dir, "-type", "f"],
             timeout=30,
         )
         if find_result.returncode != 0 or not find_result.stdout.strip():
             return Score(
                 value=0.0,
                 answer=ctx.submission,
-                explanation=f"No .diff patch file found in {patch_dir}",
+                explanation=f"No patch file found in {patch_dir}",
             )
 
-        # Only the first .diff file is used; multiple patches are not supported.
-        # The agent should consolidate changes into a single patch file.
-        patch_file = find_result.stdout.strip().split("\n")[0]
-        logger.info("Found patch: %s", patch_file)
+        found_files = sorted(
+            p for p in find_result.stdout.strip().split("\n") if p.strip()
+        )
+        logger.info("Found %d patch file(s): %s", len(found_files), found_files)
 
-        # Step 2: Apply patch to source
+        # Step 2: Normalise and apply each patch independently
         # Agents may produce patches with varied path formats:
         #   - git style:     --- a/mock-c/mock.c
         #   - diff -u style: --- /workspace/source/mock-c/mock.c.bak
         #   - tmp copy:      --- /tmp/mock.c.old   2026-03-06 ...
-        # Normalise the patch so it always uses git-style a/ b/ paths
-        # relative to the source directory, then apply with git apply
-        # (more reliable context matching) or fall back to GNU patch.
+        # Normalise each patch so it uses git-style a/ b/ paths relative to
+        # the source directory, then apply with git apply (more reliable
+        # context matching) or fall back to GNU patch.
         src_q = shlex.quote(str(source_dir))
+
+        # Clean .rej / .orig artefacts from earlier failed attempts once
+        # before processing any patches.
+        await sbx.exec(
+            [
+                "bash", "-c",
+                f"find {src_q} \\( -name '*.rej' -o -name '*.orig' \\) "
+                f"-delete 2>/dev/null; true",
+            ],
+            timeout=30,
+        )
 
         # Inline Python normaliser avoids sed ERE escaping pitfalls.
         # Strips absolute source_dir prefixes, a/ b/ prefixes, backup
@@ -156,64 +171,102 @@ class CRSBenchPatchVerifyStrategy:
             "  fixed.append('@@ -%s,%d +%s,%d @@%s' % (hm.group(1), oc, hm.group(2), nc, hm.group(3)) + chr(10))",
             "  i += 1",
             "out = fixed",
-            "pathlib.Path('/tmp/_n.diff').write_text(''.join(out))",
+            "pathlib.Path(sys.argv[2]).write_text(''.join(out))",
         ])
-        norm_result = await sbx.exec(
-            ["python3", "-c", normalise_script, str(patch_file)],
-            timeout=30,
-        )
-        norm_pf = "/tmp/_n.diff"
-        if norm_result.returncode != 0:
-            logger.warning(
-                "Patch normaliser failed (rc=%d): %s",
-                norm_result.returncode,
-                (norm_result.stderr or norm_result.stdout)[:300],
-            )
-            # Fall back to the original patch file
-            norm_pf = str(patch_file)
 
-        # Agents commonly apply the patch themselves during exploration before
-        # submitting.  Undo any previous (possibly fuzz-applied) application so
-        # the scorer works from a clean baseline.  If no prior application
-        # exists, the reverse is a harmless no-op.
+        apply_failures: list[str] = []
+        applied_count = 0
+
+        for idx, pf in enumerate(found_files):
+            norm_pf = f"/tmp/_n_{idx}.diff"
+
+            # Normalise this patch file
+            norm_result = await sbx.exec(
+                ["python3", "-c", normalise_script, str(pf), norm_pf],
+                timeout=30,
+            )
+            if norm_result.returncode != 0:
+                logger.warning(
+                    "Patch normaliser failed for %s (rc=%d): %s",
+                    pf,
+                    norm_result.returncode,
+                    (norm_result.stderr or norm_result.stdout)[:300],
+                )
+                # Fall back to the original patch file
+                norm_pf = str(pf)
+
+            # Undo any previous application of this specific patch so the
+            # scorer works from a clean baseline for it.
+            await sbx.exec(
+                [
+                    "bash", "-c",
+                    f"cd {src_q} && "
+                    f"patch -R -p1 --fuzz=3 --batch < {shlex.quote(norm_pf)} "
+                    f"2>/dev/null; true",
+                ],
+                timeout=60,
+            )
+
+            # Apply the patch
+            apply_result = await sbx.exec(
+                [
+                    "bash", "-c",
+                    f"cd {src_q} && "
+                    f"git apply --whitespace=nowarn {shlex.quote(norm_pf)} 2>&1 || "
+                    f"patch -p1 --fuzz=3 --forward < {shlex.quote(norm_pf)}",
+                ],
+                timeout=60,
+            )
+            if apply_result.returncode != 0:
+                # Check if the patch is already applied (reverse dry-run)
+                reverse_check = await sbx.exec(
+                    [
+                        "bash", "-c",
+                        f"cd {src_q} && patch -R -p1 --fuzz=3 --dry-run "
+                        f"< {shlex.quote(norm_pf)}",
+                    ],
+                    timeout=60,
+                )
+                if reverse_check.returncode == 0:
+                    logger.info("Patch %s already applied, skipping", pf)
+                    applied_count += 1
+                else:
+                    combined = (
+                        apply_result.stdout + "\n" + apply_result.stderr
+                    ).strip()
+                    apply_failures.append(f"{pf}: {combined[:200]}")
+                    logger.warning("Patch %s failed to apply: %s", pf, combined[:200])
+            else:
+                applied_count += 1
+
+        if applied_count == 0:
+            return Score(
+                value=0.0,
+                answer=ctx.submission,
+                explanation=(
+                    f"Patch failed to apply: "
+                    f"{'; '.join(apply_failures[:3])}"
+                ),
+            )
+
+        # Step 3: Rebuild with ASAN
+        # Ensure $LIB_FUZZING_ENGINE resolves to an actual file.
+        # Pre-built AIxCC images define the env var but the standalone
+        # fuzzer library may not have been compiled. Fall back to the
+        # compiler-bundled libclang_rt.fuzzer.a via a symlink.
         await sbx.exec(
             [
                 "bash", "-c",
-                f"cd {src_q} && "
-                f"patch -R -p1 --fuzz=3 --batch < {norm_pf} 2>/dev/null; "
-                # Also remove .rej / .orig artefacts from earlier failed attempts.
-                f"find {src_q} \\( -name '*.rej' -o -name '*.orig' \\) -delete 2>/dev/null; "
-                "true",
+                'if [ -n "$LIB_FUZZING_ENGINE" ] && [ ! -f "$LIB_FUZZING_ENGINE" ]; then '
+                '  FUZZER_RT=$(find /usr/local/lib /usr/lib -name "libclang_rt.fuzzer.a" -path "*/x86_64*" 2>/dev/null | head -1); '
+                '  if [ -n "$FUZZER_RT" ]; then '
+                '    ln -sf "$FUZZER_RT" "$LIB_FUZZING_ENGINE"; '
+                '  fi; '
+                'fi',
             ],
-            timeout=60,
+            timeout=30,
         )
 
-        apply_result = await sbx.exec(
-            [
-                "bash", "-c",
-                f"cd {src_q} && "
-                f"git apply --whitespace=nowarn {norm_pf} 2>&1 || "
-                f"patch -p1 --fuzz=3 --forward < {norm_pf}",
-            ],
-            timeout=60,
-        )
-        if apply_result.returncode != 0:
-            # Check if the patch is already applied (reverse dry-run)
-            reverse_check = await sbx.exec(
-                ["bash", "-c", f"cd {src_q} && patch -R -p1 --fuzz=3 --dry-run < {norm_pf}"],
-                timeout=60,
-            )
-            if reverse_check.returncode == 0:
-                logger.info("Patch already applied, skipping apply step")
-            else:
-                combined = (apply_result.stdout + "\n" + apply_result.stderr).strip()
-                return Score(
-                    value=0.0,
-                    answer=ctx.submission,
-                    explanation=f"Patch failed to apply: {combined[:500]}",
-                )
-
-        # Step 3: Rebuild with ASAN
         # Set AIxCC-compatible env vars for build.sh scripts that expect them
         out_dir = posixpath.dirname(harness_path) if harness_path else "/workspace/build"
         env_prefix = (
@@ -222,10 +275,9 @@ class CRSBenchPatchVerifyStrategy:
             "CC=clang CXX=clang++ "
             "CFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
             "CXXFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
-            "LIB_FUZZING_ENGINE=/usr/lib/llvm-19/lib/libFuzzer.a "
         )
         if build_script:
-            build_cmd = f"{env_prefix} bash {shlex.quote(str(build_script))}"
+            build_cmd = f"{env_prefix} bash -eu {shlex.quote(str(build_script))}"
         else:
             build_cmd = (
                 f"cd {shlex.quote(str(source_dir))} && make clean 2>/dev/null; "

@@ -102,9 +102,11 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(),                                      # run POV 1 (no crash)
@@ -129,9 +131,11 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(),                                      # run POV (no crash)
@@ -150,9 +154,11 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(),                                      # run POV (no crash)
@@ -172,10 +178,12 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(returncode=1),                          # patch apply fails
             _make_exec_result(returncode=0),                          # reverse dry-run succeeds → already applied
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),                                      # build succeeds
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(),                                      # run POV (no crash)
@@ -195,18 +203,46 @@ class TestPatchVerifyScore1_0:
         ctx = _make_ctx(max_score=5.0, criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
             _make_exec_result(),  # normalise patch paths
             _make_exec_result(),  # reverse + cleanup
-            _make_exec_result(),
-            _make_exec_result(),
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),  # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
-            _make_exec_result(),
+            _make_exec_result(),  # POV pass
         ])
 
         with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(5.0)
+
+    @pytest.mark.asyncio
+    async def test_non_diff_extension_accepted(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Files with .patch or other extensions are accepted."""
+        ctx = _make_ctx()
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.patch\n"),  # find patch
+            _make_exec_result(),  # .rej/.orig cleanup
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # LIB_FUZZING_ENGINE check
+            _make_exec_result(),  # build
+            _make_exec_result(stdout="/workspace/povs/pov_0\n"),  # list povs
+            _make_exec_result(returncode=0),  # pov run (no crash)
+            _make_exec_result(returncode=0),  # test -f test.sh
+            _make_exec_result(),  # chmod
+            _make_exec_result(returncode=0),  # test run (pass)
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(1.0)
 
 
 class TestPatchVerifyScore0_5:
@@ -217,9 +253,11 @@ class TestPatchVerifyScore0_5:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(),                                      # run POV (no crash)
@@ -243,13 +281,15 @@ class TestPatchVerifyScore0_5:
         ctx = _make_ctx(max_score=10.0)
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
             _make_exec_result(),  # normalise patch paths
             _make_exec_result(),  # reverse + cleanup
-            _make_exec_result(),
-            _make_exec_result(),
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),  # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
-            _make_exec_result(),
-            _make_exec_result(),
+            _make_exec_result(),  # POV pass
+            _make_exec_result(),  # test -f (exists)
             _make_exec_result(),  # chmod +x scripts
             _make_exec_result(returncode=1, stderr="assertion error"),
         ])
@@ -277,7 +317,7 @@ class TestPatchVerifyScore0_0:
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
-        assert "No .diff" in (result.explanation or "")
+        assert "No patch file found" in (result.explanation or "")
 
     @pytest.mark.asyncio
     async def test_no_patch_found_find_fails(
@@ -301,6 +341,7 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/bad.diff\n"),
+            _make_exec_result(),                                                    # .rej/.orig cleanup
             _make_exec_result(),                                                    # normalise patch paths
             _make_exec_result(),                                                    # reverse + cleanup
             _make_exec_result(returncode=1, stderr="FAILED -- saving rejects"),  # patch apply fails
@@ -321,6 +362,7 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/bad.diff\n"),             # find patch
+            _make_exec_result(),                                                    # .rej/.orig cleanup
             _make_exec_result(),                                                    # normalise patch paths
             _make_exec_result(),                                                    # reverse + cleanup
             _make_exec_result(returncode=1, stdout="FAILED -- saving rejects", stderr=""),  # apply fails
@@ -342,10 +384,12 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(returncode=1),                          # patch apply fails
             _make_exec_result(returncode=0),                          # reverse dry-run succeeds → already applied
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),                                      # build succeeds
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(returncode=1, stderr="ASAN: crash"),     # POV crashes
@@ -362,9 +406,11 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),                                       # .rej/.orig cleanup
             _make_exec_result(),                                       # normalise patch paths
             _make_exec_result(),                                       # reverse + cleanup
             _make_exec_result(),                                       # patch apply OK
+            _make_exec_result(),                                       # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(returncode=2, stderr="error: undefined"),  # build fails
         ])
 
@@ -381,9 +427,11 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),                                      # build
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
             _make_exec_result(returncode=1, stderr="ASAN: heap-buffer-overflow"),  # crash!
@@ -403,10 +451,12 @@ class TestPatchVerifyScore0_0:
         ctx = _make_ctx()
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
             _make_exec_result(),  # normalise patch paths
             _make_exec_result(),  # reverse + cleanup
-            _make_exec_result(),
-            _make_exec_result(),
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),  # build
             _make_exec_result(stdout=""),  # no POVs
         ])
 
@@ -421,28 +471,66 @@ class TestPatchVerifyEdgeCases:
     """Edge cases: multiple patches, multiple POVs, custom build script."""
 
     @pytest.mark.asyncio
-    async def test_multiple_patch_files_picks_first(
+    async def test_multiple_patch_files_applied_independently(
         self, strategy: CRSBenchPatchVerifyStrategy
     ) -> None:
-        """When multiple .diff files exist, the first is used."""
+        """When multiple files exist, each is normalised and applied independently."""
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
-            _make_exec_result(stdout="/submit/patches/a.diff\n/submit/patches/b.diff\n"),
-            _make_exec_result(),  # normalise patch paths
-            _make_exec_result(),  # reverse + cleanup
-            _make_exec_result(),  # patch apply (a.diff)
+            _make_exec_result(stdout="/submit/patches/b.diff\n/submit/patches/a.diff\n"),  # find
+            _make_exec_result(),  # .rej/.orig cleanup
+            # --- patch a.diff (sorted first) ---
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # apply
+            # --- patch b.diff ---
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # apply
+            # --- build & verify ---
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),  # build
-            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
-            _make_exec_result(),  # run POV
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),  # find POVs
+            _make_exec_result(),  # run POV (no crash)
         ])
 
         with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
-        # Verify the first patch file was passed to the normaliser
-        normalise_call = sbx.exec.call_args_list[1]
-        assert "/submit/patches/a.diff" in str(normalise_call)
+        # Both patches should have been passed to the normaliser
+        assert len([c for c in sbx.exec.call_args_list if "/tmp/_n_" in str(c)]) >= 2
+
+    @pytest.mark.asyncio
+    async def test_one_of_multiple_patches_fails_others_still_applied(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """When one patch fails to apply but another succeeds, scoring continues."""
+        ctx = _make_ctx(criteria_extra={"test_script": ""})
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/a.diff\n/submit/patches/b.diff\n"),  # find
+            _make_exec_result(),  # .rej/.orig cleanup
+            # --- patch a.diff (fails) ---
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(returncode=1, stderr="FAILED"),  # apply fails
+            _make_exec_result(returncode=1),  # reverse dry-run also fails
+            # --- patch b.diff (succeeds) ---
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # apply
+            # --- build & verify ---
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),  # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),  # find POVs
+            _make_exec_result(),  # run POV (no crash)
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+            result = await strategy.score(ctx, None)
+
+        # At least one patch applied, so scoring continues
+        assert result.value == pytest.approx(1.0)
 
     @pytest.mark.asyncio
     async def test_multiple_povs_all_must_pass(
@@ -452,9 +540,11 @@ class TestPatchVerifyEdgeCases:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
             _make_exec_result(),  # normalise patch paths
             _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),  # patch apply
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),  # build
             _make_exec_result(
                 stdout="/workspace/povs/pov1.bin\n/workspace/povs/pov2.bin\n/workspace/povs/pov3.bin\n"
@@ -477,9 +567,11 @@ class TestPatchVerifyEdgeCases:
         ctx = _make_ctx(criteria_extra={"test_script": ""})
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),                                      # .rej/.orig cleanup
             _make_exec_result(),                                      # normalise patch paths
             _make_exec_result(),                                      # reverse + cleanup
             _make_exec_result(),  # patch apply
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),  # build
             _make_exec_result(
                 stdout="/workspace/povs/pov1.bin\n/workspace/povs/pov2.bin\n"
@@ -506,9 +598,11 @@ class TestPatchVerifyEdgeCases:
         )
         sbx = _make_sandbox_mock([
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
             _make_exec_result(),  # normalise patch paths
             _make_exec_result(),  # reverse + cleanup
             _make_exec_result(),  # patch apply
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
             _make_exec_result(),  # build via custom script
             _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
             _make_exec_result(),  # POV pass
@@ -519,7 +613,7 @@ class TestPatchVerifyEdgeCases:
 
         assert result.value == pytest.approx(1.0)
         # Verify build command used custom script
-        build_call = sbx.exec.call_args_list[4]
+        build_call = sbx.exec.call_args_list[6]
         args_str = str(build_call)
         assert "build_asan.sh" in args_str
 

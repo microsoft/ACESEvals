@@ -1,26 +1,43 @@
-"""Tests for crsbench.scripts.build_images — Docker image build primitives."""
+"""Tests for crsbench.build_images and crsbench.scripts.build_images."""
 
 from __future__ import annotations
 
 import asyncio
+import subprocess
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
 from crsbench.scripts.build_images import (
-    ImageBuildResult,
-    ImageBuildSummary,
+    ImageBuildResult as ScriptsImageBuildResult,
+    ImageBuildSummary as ScriptsImageBuildSummary,
     _cleanup_dockerignore,
     _read_saber_tooling,
     _write_dockerignore,
     build_all_benchmark_images,
-    build_benchmark_image,
+    build_benchmark_image as scripts_build_benchmark_image,
     env_image_tag_for_benchmark,
     generate_overlay_dockerfile,
-    image_exists,
+    image_exists as scripts_image_exists,
     image_tag_for_benchmark,
+)
+
+from crsbench.build_images import (
+    BENCHMARK_IMAGE_PREFIX,
+    DEFAULT_BUILD_TIMEOUT_SECONDS,
+    DEFAULT_MAX_CONCURRENT_BUILDS,
+    ENV_IMAGE_PREFIX,
+    ImageBuildResult,
+    ImageBuildSummary,
+    _discover_benchmarks,
+    _find_benchmark_dockerfile,
+    build_all_images,
+    build_benchmark_image,
+    build_images_sync,
+    cleanup_build_artifacts,
+    image_exists,
 )
 
 
@@ -50,16 +67,570 @@ def _create_benchmark_dir(parent: Path, name: str) -> Path:
     return bench
 
 
+def _mock_stream(data: bytes = b"") -> AsyncMock:
+    """Create a mock async stream reader that yields *data* then EOF."""
+    lines = data.split(b"\n") if data else []
+    # readline() returns each line with \n, then b"" for EOF
+    payloads = [line + b"\n" for line in lines if line] + [b""]
+    stream = AsyncMock()
+    stream.readline = AsyncMock(side_effect=payloads)
+    return stream
+
+
+def _mock_docker_proc(
+    *,
+    returncode: int = 0,
+    stdout: bytes = b"ok\n",
+    stderr: bytes = b"",
+) -> AsyncMock:
+    """Create a mock async subprocess with streaming stdout/stderr."""
+    proc = AsyncMock()
+    proc.returncode = returncode
+    proc.stdout = _mock_stream(stdout)
+    proc.stderr = _mock_stream(stderr)
+    proc.wait = AsyncMock(return_value=returncode)
+    proc.kill = MagicMock()
+    return proc
+
+
+# ===========================================================================
+# Tests for crsbench.build_images (cherry-pick — dataclass-based pipeline)
+# ===========================================================================
+
+
 # ---------------------------------------------------------------------------
-# 1.1 — Models
+# ImageBuildResult tests
 # ---------------------------------------------------------------------------
 
 
 class TestImageBuildResult:
+    def test_success_result(self) -> None:
+        result = ImageBuildResult(
+            benchmark_id="test-bench",
+            image_tag="saber/crsbench/benchmark:test-bench",
+            success=True,
+            duration_seconds=10.5,
+        )
+        assert result.benchmark_id == "test-bench"
+        assert result.image_tag == "saber/crsbench/benchmark:test-bench"
+        assert result.success is True
+        assert result.duration_seconds == 10.5
+        assert result.error == ""
+
+    def test_failure_result(self) -> None:
+        result = ImageBuildResult(
+            benchmark_id="bad-bench",
+            success=False,
+            error="Build exploded",
+        )
+        assert result.success is False
+        assert result.image_tag == ""
+        assert result.error == "Build exploded"
+
+    def test_frozen(self) -> None:
+        result = ImageBuildResult(benchmark_id="test", success=True)
+        with pytest.raises(AttributeError):
+            result.success = False  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# ImageBuildSummary tests
+# ---------------------------------------------------------------------------
+
+
+class TestImageBuildSummary:
+    def test_empty_summary(self) -> None:
+        summary = ImageBuildSummary()
+        assert summary.succeeded == []
+        assert summary.failed == []
+        assert summary.built_benchmark_ids == set()
+        assert summary.image_map == {}
+
+    def test_mixed_results(self) -> None:
+        ok = ImageBuildResult(
+            benchmark_id="good",
+            image_tag="saber/crsbench/benchmark:good",
+            success=True,
+        )
+        bad = ImageBuildResult(
+            benchmark_id="bad",
+            success=False,
+            error="fail",
+        )
+        summary = ImageBuildSummary(results=[ok, bad])
+        assert len(summary.succeeded) == 1
+        assert len(summary.failed) == 1
+        assert summary.built_benchmark_ids == {"good"}
+        assert summary.image_map == {"good": "saber/crsbench/benchmark:good"}
+
+    def test_all_succeeded(self) -> None:
+        results = [
+            ImageBuildResult(
+                benchmark_id=f"bench-{i}",
+                image_tag=f"saber/crsbench/benchmark:bench-{i}",
+                success=True,
+            )
+            for i in range(3)
+        ]
+        summary = ImageBuildSummary(results=results)
+        assert len(summary.succeeded) == 3
+        assert len(summary.failed) == 0
+
+    def test_all_failed(self) -> None:
+        results = [
+            ImageBuildResult(benchmark_id=f"bench-{i}", success=False, error="boom")
+            for i in range(2)
+        ]
+        summary = ImageBuildSummary(results=results)
+        assert len(summary.succeeded) == 0
+        assert len(summary.failed) == 2
+
+
+# ---------------------------------------------------------------------------
+# image_exists tests
+# ---------------------------------------------------------------------------
+
+
+class TestImageExists:
+    def test_image_exists_true(self) -> None:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            assert image_exists("some:tag") is True
+            mock_run.assert_called_once_with(
+                ["docker", "image", "inspect", "some:tag"],
+                capture_output=True,
+                timeout=30,
+            )
+
+    def test_image_exists_false(self) -> None:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1)
+            assert image_exists("missing:tag") is False
+
+    def test_image_exists_timeout(self) -> None:
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("docker", 30)):
+            assert image_exists("slow:tag") is False
+
+    def test_image_exists_no_docker(self) -> None:
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            assert image_exists("nodocker:tag") is False
+
+
+# ---------------------------------------------------------------------------
+# _find_benchmark_dockerfile tests
+# ---------------------------------------------------------------------------
+
+
+class TestFindBenchmarkDockerfile:
+    def test_finds_root_dockerfile(self, tmp_path: Path) -> None:
+        (tmp_path / "Dockerfile").write_text("FROM ubuntu")
+        assert _find_benchmark_dockerfile(tmp_path) == tmp_path / "Dockerfile"
+
+    def test_finds_docker_subdir_dockerfile(self, tmp_path: Path) -> None:
+        docker_dir = tmp_path / "docker"
+        docker_dir.mkdir()
+        (docker_dir / "Dockerfile").write_text("FROM ubuntu")
+        assert _find_benchmark_dockerfile(tmp_path) == docker_dir / "Dockerfile"
+
+    def test_finds_dockerfile_builder(self, tmp_path: Path) -> None:
+        (tmp_path / "Dockerfile.builder").write_text("FROM ubuntu")
+        assert _find_benchmark_dockerfile(tmp_path) == tmp_path / "Dockerfile.builder"
+
+    def test_prefers_root_over_subdir(self, tmp_path: Path) -> None:
+        (tmp_path / "Dockerfile").write_text("FROM ubuntu")
+        docker_dir = tmp_path / "docker"
+        docker_dir.mkdir()
+        (docker_dir / "Dockerfile").write_text("FROM ubuntu")
+        assert _find_benchmark_dockerfile(tmp_path) == tmp_path / "Dockerfile"
+
+    def test_returns_none_when_no_dockerfile(self, tmp_path: Path) -> None:
+        assert _find_benchmark_dockerfile(tmp_path) is None
+
+
+# ---------------------------------------------------------------------------
+# _discover_benchmarks tests
+# ---------------------------------------------------------------------------
+
+
+class TestDiscoverBenchmarks:
+    def test_empty_dir(self, tmp_path: Path) -> None:
+        assert _discover_benchmarks(tmp_path) == []
+
+    def test_nonexistent_dir(self, tmp_path: Path) -> None:
+        assert _discover_benchmarks(tmp_path / "nope") == []
+
+    def test_finds_benchmarks_with_dockerfiles(self, tmp_path: Path) -> None:
+        # Create two benchmarks with Dockerfiles
+        for name in ["bench-a", "bench-b"]:
+            d = tmp_path / name
+            d.mkdir()
+            (d / "Dockerfile").write_text("FROM ubuntu")
+
+        # Create one without
+        (tmp_path / "no-docker").mkdir()
+
+        result = _discover_benchmarks(tmp_path)
+        assert len(result) == 2
+        assert result[0].name == "bench-a"
+        assert result[1].name == "bench-b"
+
+    def test_sorted_output(self, tmp_path: Path) -> None:
+        for name in ["zzz", "aaa", "mmm"]:
+            d = tmp_path / name
+            d.mkdir()
+            (d / "Dockerfile").write_text("FROM ubuntu")
+
+        result = _discover_benchmarks(tmp_path)
+        assert [r.name for r in result] == ["aaa", "mmm", "zzz"]
+
+    def test_skips_files(self, tmp_path: Path) -> None:
+        (tmp_path / "not-a-dir.txt").write_text("hello")
+        assert _discover_benchmarks(tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# build_benchmark_image tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildBenchmarkImage:
+    @pytest.fixture()
+    def benchmark_dir(self, tmp_path: Path) -> Path:
+        bench = tmp_path / "data" / "benchmarks" / "test-bench"
+        bench.mkdir(parents=True)
+        (bench / "Dockerfile").write_text("FROM ubuntu:22.04")
+        return bench
+
+    @pytest.fixture()
+    def domain_root(self, tmp_path: Path) -> Path:
+        return tmp_path
+
+    @pytest.mark.asyncio()
+    async def test_skips_when_image_exists(
+        self, benchmark_dir: Path, domain_root: Path
+    ) -> None:
+        with patch("crsbench.build_images.image_exists", return_value=True):
+            result = await build_benchmark_image(benchmark_dir, domain_root)
+        assert result.success is True
+        assert result.image_tag == f"{BENCHMARK_IMAGE_PREFIX}:test-bench"
+
+    @pytest.mark.asyncio()
+    async def test_force_rebuild_ignores_existing(
+        self, benchmark_dir: Path, domain_root: Path
+    ) -> None:
+        """force=True should build even when image exists."""
+        with (
+            patch("crsbench.build_images.image_exists", return_value=True),
+            patch(
+                "asyncio.create_subprocess_exec",
+                side_effect=lambda *a, **kw: _mock_docker_proc(),
+            ),
+        ):
+            result = await build_benchmark_image(
+                benchmark_dir, domain_root, force=True
+            )
+        assert result.success is True
+
+    @pytest.mark.asyncio()
+    async def test_successful_two_layer_build(
+        self, benchmark_dir: Path, domain_root: Path
+    ) -> None:
+        with (
+            patch("crsbench.build_images.image_exists", return_value=False),
+            patch(
+                "asyncio.create_subprocess_exec",
+                side_effect=lambda *a, **kw: _mock_docker_proc(),
+            ),
+        ):
+            result = await build_benchmark_image(benchmark_dir, domain_root)
+
+        assert result.success is True
+        assert result.benchmark_id == "test-bench"
+        assert result.image_tag == f"{BENCHMARK_IMAGE_PREFIX}:test-bench"
+        assert result.error == ""
+
+    @pytest.mark.asyncio()
+    async def test_layer1_failure_returns_error(
+        self, benchmark_dir: Path, domain_root: Path
+    ) -> None:
+        with (
+            patch("crsbench.build_images.image_exists", return_value=False),
+            patch(
+                "asyncio.create_subprocess_exec",
+                side_effect=lambda *a, **kw: _mock_docker_proc(
+                    returncode=1, stderr=b"error building\n"
+                ),
+            ),
+        ):
+            result = await build_benchmark_image(benchmark_dir, domain_root)
+
+        assert result.success is False
+        assert "build failed" in result.error
+
+    @pytest.mark.asyncio()
+    async def test_no_dockerfile_returns_error(
+        self, tmp_path: Path, domain_root: Path
+    ) -> None:
+        bench = tmp_path / "no-docker-bench"
+        bench.mkdir()
+        # No Dockerfile
+
+        with patch("crsbench.build_images.image_exists", return_value=False):
+            result = await build_benchmark_image(bench, domain_root)
+
+        assert result.success is False
+        assert "No Dockerfile found" in result.error
+
+    @pytest.mark.asyncio()
+    async def test_timeout_returns_error(
+        self, benchmark_dir: Path, domain_root: Path
+    ) -> None:
+        # Create a proc whose streams never end, triggering timeout
+        async def hang_readline() -> bytes:
+            await asyncio.sleep(100)
+            return b""
+
+        mock_proc = AsyncMock()
+        mock_proc.stdout = AsyncMock()
+        mock_proc.stdout.readline = hang_readline
+        mock_proc.stderr = AsyncMock()
+        mock_proc.stderr.readline = hang_readline
+        mock_proc.kill = MagicMock()
+        mock_proc.wait = AsyncMock(return_value=1)
+        mock_proc.returncode = 1
+
+        with (
+            patch("crsbench.build_images.image_exists", return_value=False),
+            patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+        ):
+            result = await build_benchmark_image(
+                benchmark_dir, domain_root, timeout=0.1
+            )
+
+        assert result.success is False
+        assert "timed out" in result.error
+
+
+# ---------------------------------------------------------------------------
+# build_all_images tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildAllImages:
+    @pytest.fixture()
+    def benchmarks_dir(self, tmp_path: Path) -> Path:
+        benchmarks = tmp_path / "data" / "benchmarks"
+        benchmarks.mkdir(parents=True)
+        for name in ["bench-a", "bench-b", "bench-c"]:
+            d = benchmarks / name
+            d.mkdir()
+            (d / "Dockerfile").write_text("FROM ubuntu")
+        return benchmarks
+
+    @pytest.fixture()
+    def domain_root(self, tmp_path: Path) -> Path:
+        return tmp_path
+
+    @pytest.mark.asyncio()
+    async def test_builds_all_benchmarks(
+        self, benchmarks_dir: Path, domain_root: Path
+    ) -> None:
+        with (
+            patch("crsbench.build_images.image_exists", return_value=False),
+            patch(
+                "asyncio.create_subprocess_exec",
+                side_effect=lambda *a, **kw: _mock_docker_proc(),
+            ),
+        ):
+            summary = await build_all_images(benchmarks_dir, domain_root)
+
+        assert len(summary.succeeded) == 3
+        assert len(summary.failed) == 0
+
+    @pytest.mark.asyncio()
+    async def test_empty_dir_returns_empty_summary(
+        self, tmp_path: Path
+    ) -> None:
+        summary = await build_all_images(tmp_path / "empty", tmp_path)
+        assert summary.results == []
+
+    @pytest.mark.asyncio()
+    async def test_prefix_filter(
+        self, benchmarks_dir: Path, domain_root: Path
+    ) -> None:
+        with (
+            patch("crsbench.build_images.image_exists", return_value=False),
+            patch(
+                "asyncio.create_subprocess_exec",
+                side_effect=lambda *a, **kw: _mock_docker_proc(),
+            ),
+        ):
+            summary = await build_all_images(
+                benchmarks_dir, domain_root, prefix_filter="bench-a"
+            )
+
+        assert len(summary.results) == 1
+        assert summary.results[0].benchmark_id == "bench-a"
+
+    @pytest.mark.asyncio()
+    async def test_partial_failures(
+        self, benchmarks_dir: Path, domain_root: Path
+    ) -> None:
+        """Some benchmarks fail, others succeed."""
+        call_count = 0
+
+        async def mock_exec(*args, **kwargs):  # noqa: ANN002, ANN003
+            nonlocal call_count
+            call_count += 1
+            # Fail every other call (layer 1 of bench-b)
+            if call_count in (3, 4):
+                return _mock_docker_proc(returncode=1, stderr=b"error\n")
+            return _mock_docker_proc()
+
+        with (
+            patch("crsbench.build_images.image_exists", return_value=False),
+            patch("asyncio.create_subprocess_exec", side_effect=mock_exec),
+        ):
+            summary = await build_all_images(benchmarks_dir, domain_root)
+
+        assert len(summary.failed) >= 1
+        assert len(summary.succeeded) >= 1
+
+    @pytest.mark.asyncio()
+    async def test_respects_max_concurrent(
+        self, benchmarks_dir: Path, domain_root: Path
+    ) -> None:
+        """Verifies semaphore limits concurrent builds."""
+        active = 0
+        max_active = 0
+
+        async def tracking_build(
+            benchmark_path: Path,
+            domain_root: Path,
+            **kwargs,  # noqa: ANN003
+        ) -> ImageBuildResult:
+            nonlocal active, max_active
+            active += 1
+            max_active = max(max_active, active)
+            await asyncio.sleep(0.01)
+            active -= 1
+            return ImageBuildResult(
+                benchmark_id=benchmark_path.name,
+                image_tag=f"{BENCHMARK_IMAGE_PREFIX}:{benchmark_path.name}",
+                success=True,
+            )
+
+        with patch("crsbench.build_images.build_benchmark_image", side_effect=tracking_build):
+            await build_all_images(
+                benchmarks_dir, domain_root, max_concurrent=2
+            )
+
+        assert max_active <= 2
+
+
+# ---------------------------------------------------------------------------
+# build_images_sync tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildImagesSync:
+    def test_sync_wrapper_returns_summary(self, tmp_path: Path) -> None:
+        """Sync wrapper should produce an ImageBuildSummary."""
+        mock_summary = ImageBuildSummary(
+            results=[
+                ImageBuildResult(benchmark_id="test", success=True, image_tag="t:t"),
+            ],
+            total_duration_seconds=1.0,
+        )
+
+        with patch(
+            "crsbench.build_images.build_all_images",
+            return_value=mock_summary,
+        ):
+            result = build_images_sync(tmp_path, tmp_path)
+
+        assert isinstance(result, ImageBuildSummary)
+        assert len(result.succeeded) == 1
+
+    def test_sync_wrapper_passes_kwargs(self, tmp_path: Path) -> None:
+        """Verify all kwargs are forwarded correctly."""
+        mock_summary = ImageBuildSummary()
+
+        with patch(
+            "crsbench.build_images.build_all_images",
+            return_value=mock_summary,
+        ) as mock_build:
+            build_images_sync(
+                tmp_path,
+                tmp_path,
+                force=True,
+                max_concurrent=2,
+                timeout=600,
+                prefix_filter="abc",
+            )
+
+            mock_build.assert_called_once_with(
+                tmp_path,
+                tmp_path,
+                force=True,
+                max_concurrent=2,
+                timeout=600,
+                prefix_filter="abc",
+            )
+
+
+# ---------------------------------------------------------------------------
+# cleanup_build_artifacts tests
+# ---------------------------------------------------------------------------
+
+
+class TestCleanupBuildArtifacts:
+    def test_cleanup_removes_build_tmp(self, tmp_path: Path) -> None:
+        build_tmp = tmp_path / ".build_tmp"
+        build_tmp.mkdir()
+        (build_tmp / "test-bench").mkdir()
+        (build_tmp / "test-bench" / "Dockerfile").write_text("FROM ubuntu")
+
+        cleanup_build_artifacts(tmp_path)
+        assert not build_tmp.exists()
+
+    def test_cleanup_noop_when_no_dir(self, tmp_path: Path) -> None:
+        # Should not raise
+        cleanup_build_artifacts(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# Constants tests
+# ---------------------------------------------------------------------------
+
+
+class TestConstants:
+    def test_image_prefixes(self) -> None:
+        assert ENV_IMAGE_PREFIX == "saber/crsbench/env"
+        assert BENCHMARK_IMAGE_PREFIX == "saber/crsbench/benchmark"
+
+    def test_default_concurrent(self) -> None:
+        assert DEFAULT_MAX_CONCURRENT_BUILDS == 4
+
+    def test_default_timeout(self) -> None:
+        assert DEFAULT_BUILD_TIMEOUT_SECONDS == 3600
+
+
+# ===========================================================================
+# Tests for crsbench.scripts.build_images (aces — Pydantic-based pipeline)
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# ScriptsImageBuildResult (Pydantic model) tests
+# ---------------------------------------------------------------------------
+
+
+class TestScriptsImageBuildResult:
     """Tests for the ImageBuildResult Pydantic model."""
 
     def test_frozen(self) -> None:
-        result = ImageBuildResult(
+        result = ScriptsImageBuildResult(
             benchmark_id="afc-curl-delta-01",
             image_tag="saber/crsbench/benchmark:afc-curl-delta-01",
             success=True,
@@ -69,7 +640,7 @@ class TestImageBuildResult:
             result.benchmark_id = "other"  # type: ignore[misc]
 
     def test_success_result(self) -> None:
-        result = ImageBuildResult(
+        result = ScriptsImageBuildResult(
             benchmark_id="afc-curl-delta-01",
             image_tag="saber/crsbench/benchmark:afc-curl-delta-01",
             success=True,
@@ -80,7 +651,7 @@ class TestImageBuildResult:
         assert result.error_message is None
 
     def test_failed_result(self) -> None:
-        result = ImageBuildResult(
+        result = ScriptsImageBuildResult(
             benchmark_id="afc-curl-delta-01",
             image_tag="saber/crsbench/benchmark:afc-curl-delta-01",
             success=False,
@@ -91,7 +662,7 @@ class TestImageBuildResult:
         assert result.error_message is not None
 
     def test_skipped_result(self) -> None:
-        result = ImageBuildResult(
+        result = ScriptsImageBuildResult(
             benchmark_id="afc-curl-delta-01",
             image_tag="saber/crsbench/benchmark:afc-curl-delta-01",
             success=True,
@@ -100,24 +671,29 @@ class TestImageBuildResult:
         assert result.skipped is True
 
 
-class TestImageBuildSummary:
+# ---------------------------------------------------------------------------
+# ScriptsImageBuildSummary (Pydantic model) tests
+# ---------------------------------------------------------------------------
+
+
+class TestScriptsImageBuildSummary:
     """Tests for the ImageBuildSummary aggregate model."""
 
     def test_counts_consistent(self) -> None:
         results = (
-            ImageBuildResult(
+            ScriptsImageBuildResult(
                 benchmark_id="a",
                 image_tag="t:a",
                 success=True,
                 skipped=False,
             ),
-            ImageBuildResult(
+            ScriptsImageBuildResult(
                 benchmark_id="b",
                 image_tag="t:b",
                 success=True,
                 skipped=True,
             ),
-            ImageBuildResult(
+            ScriptsImageBuildResult(
                 benchmark_id="c",
                 image_tag="t:c",
                 success=False,
@@ -125,7 +701,7 @@ class TestImageBuildSummary:
                 error_message="err",
             ),
         )
-        summary = ImageBuildSummary(
+        summary = ScriptsImageBuildSummary(
             total=3,
             built=1,
             skipped=1,
@@ -135,7 +711,7 @@ class TestImageBuildSummary:
         assert summary.total == summary.built + summary.skipped + summary.failed
 
     def test_frozen(self) -> None:
-        summary = ImageBuildSummary(
+        summary = ScriptsImageBuildSummary(
             total=0,
             built=0,
             skipped=0,
@@ -147,7 +723,7 @@ class TestImageBuildSummary:
 
 
 # ---------------------------------------------------------------------------
-# 1.2 — Tag helpers
+# Tag helpers
 # ---------------------------------------------------------------------------
 
 
@@ -180,7 +756,7 @@ class TestEnvImageTagForBenchmark:
 
 
 # ---------------------------------------------------------------------------
-# 1.3 — generate_overlay_dockerfile
+# generate_overlay_dockerfile
 # ---------------------------------------------------------------------------
 
 
@@ -259,18 +835,18 @@ class TestGenerateOverlayDockerfile:
 
 
 # ---------------------------------------------------------------------------
-# 1.4 — image_exists
+# Scripts image_exists (async)
 # ---------------------------------------------------------------------------
 
 
-class TestImageExists:
+class TestScriptsImageExists:
     @pytest.mark.asyncio
     async def test_returns_true_when_image_present(self) -> None:
         with patch(
             "crsbench.scripts.build_images._run_docker_cmd",
             return_value=(0, "", ""),
         ):
-            assert await image_exists("saber/crsbench/benchmark:test") is True
+            assert await scripts_image_exists("saber/crsbench/benchmark:test") is True
 
     @pytest.mark.asyncio
     async def test_returns_false_when_image_absent(self) -> None:
@@ -278,11 +854,11 @@ class TestImageExists:
             "crsbench.scripts.build_images._run_docker_cmd",
             return_value=(1, "", "No such image"),
         ):
-            assert await image_exists("saber/crsbench/benchmark:test") is False
+            assert await scripts_image_exists("saber/crsbench/benchmark:test") is False
 
 
 # ---------------------------------------------------------------------------
-# 1.4b — .dockerignore helpers
+# .dockerignore helpers
 # ---------------------------------------------------------------------------
 
 
@@ -311,11 +887,11 @@ class TestDockerignoreHelpers:
 
 
 # ---------------------------------------------------------------------------
-# 1.5 — build_benchmark_image
+# Scripts build_benchmark_image (aces version)
 # ---------------------------------------------------------------------------
 
 
-class TestBuildBenchmarkImage:
+class TestScriptsBuildBenchmarkImage:
     @pytest.mark.asyncio
     async def test_builds_image_successfully(self, tmp_path: Path) -> None:
         """Successful two-layer build returns success=True with correct tag."""
@@ -330,7 +906,7 @@ class TestBuildBenchmarkImage:
                 return_value=(0, "", ""),
             ),
         ):
-            result = await build_benchmark_image(bench)
+            result = await scripts_build_benchmark_image(bench)
         assert result.success is True
         assert result.benchmark_id == "test-bench-delta-01"
         assert result.image_tag == "saber/crsbench/benchmark:test-bench-delta-01"
@@ -343,7 +919,7 @@ class TestBuildBenchmarkImage:
             "crsbench.scripts.build_images.image_exists",
             return_value=True,
         ):
-            result = await build_benchmark_image(bench, force=False)
+            result = await scripts_build_benchmark_image(bench, force=False)
         assert result.skipped is True
         assert result.success is True
 
@@ -360,7 +936,7 @@ class TestBuildBenchmarkImage:
                 return_value=(0, "", ""),
             ),
         ):
-            result = await build_benchmark_image(bench, force=True)
+            result = await scripts_build_benchmark_image(bench, force=True)
         assert result.skipped is False
         assert result.success is True
 
@@ -384,7 +960,7 @@ class TestBuildBenchmarkImage:
                 side_effect=capture_cmd,
             ),
         ):
-            await build_benchmark_image(bench)
+            await scripts_build_benchmark_image(bench)
         # First docker build call should use the benchmark's Dockerfile
         layer1_call = [c for c in calls if "docker" in c and "build" in c][0]
         assert "-t" in layer1_call
@@ -415,7 +991,7 @@ class TestBuildBenchmarkImage:
             ),
             patch.object(Path, "write_text", capture_write),
         ):
-            await build_benchmark_image(bench)
+            await scripts_build_benchmark_image(bench)
         assert len(captured_content) == 1
         content = captured_content[0]
         assert "FROM saber/crsbench/env:test-bench-delta-01" in content
@@ -435,7 +1011,7 @@ class TestBuildBenchmarkImage:
                 return_value=(1, "", "error: layer 1 failed"),
             ),
         ):
-            result = await build_benchmark_image(bench)
+            result = await scripts_build_benchmark_image(bench)
         assert result.success is False
         assert "layer 1" in (result.error_message or "").lower()
 
@@ -462,7 +1038,7 @@ class TestBuildBenchmarkImage:
                 side_effect=fail_on_second,
             ),
         ):
-            result = await build_benchmark_image(bench)
+            result = await scripts_build_benchmark_image(bench)
         assert result.success is False
         assert "layer 2" in (result.error_message or "").lower()
 
@@ -491,7 +1067,7 @@ class TestBuildBenchmarkImage:
                 side_effect=capture_cmd,
             ),
         ):
-            result = await build_benchmark_image(bench)
+            result = await scripts_build_benchmark_image(bench)
         # Should only have one docker build call (Layer 2), not two
         build_calls = [c for c in calls if "build" in c]
         assert len(build_calls) == 1
@@ -501,7 +1077,7 @@ class TestBuildBenchmarkImage:
     async def test_missing_staged_dir_returns_error(self, tmp_path: Path) -> None:
         bench = tmp_path / "empty-bench-delta-01"
         bench.mkdir()
-        result = await build_benchmark_image(bench)
+        result = await scripts_build_benchmark_image(bench)
         assert result.success is False
         assert "staged" in (result.error_message or "").lower()
 
@@ -511,7 +1087,7 @@ class TestBuildBenchmarkImage:
         bench.mkdir()
         (bench / "staged").mkdir()  # exists but empty
         (bench / "Dockerfile").write_text("FROM ubuntu\n")
-        result = await build_benchmark_image(bench)
+        result = await scripts_build_benchmark_image(bench)
         assert result.success is False
         assert "staged" in (result.error_message or "").lower()
 
@@ -526,7 +1102,7 @@ class TestBuildBenchmarkImage:
                 side_effect=asyncio.TimeoutError("timed out"),
             ),
         ):
-            result = await build_benchmark_image(bench)
+            result = await scripts_build_benchmark_image(bench)
         assert result.success is False
         assert "timeout" in (result.error_message or "").lower()
 
@@ -536,7 +1112,7 @@ class TestBuildBenchmarkImage:
     ) -> None:
         bench = _create_benchmark_dir(tmp_path, "test-bench-delta-01")
         (bench / "Dockerfile").unlink()
-        result = await build_benchmark_image(bench)
+        result = await scripts_build_benchmark_image(bench)
         assert result.success is False
         assert "dockerfile" in (result.error_message or "").lower()
 
@@ -559,7 +1135,7 @@ class TestBuildBenchmarkImage:
                 return_value=(0, "", ""),
             ),
         ):
-            result = await build_benchmark_image(bench)
+            result = await scripts_build_benchmark_image(bench)
         assert result.success is True
         # Should have created no-op build.sh in staged/
         assert (staged / "build.sh").exists()
@@ -580,7 +1156,7 @@ class TestBuildBenchmarkImage:
                 return_value=(0, "", ""),
             ),
         ):
-            await build_benchmark_image(bench)
+            await scripts_build_benchmark_image(bench)
         assert (staged / "build.sh").read_text() == original_content
 
     @pytest.mark.asyncio
@@ -597,7 +1173,7 @@ class TestBuildBenchmarkImage:
                 return_value=(0, "", ""),
             ),
         ):
-            await build_benchmark_image(bench)
+            await scripts_build_benchmark_image(bench)
         assert not (bench / "Dockerfile.saber").exists()
 
     @pytest.mark.asyncio
@@ -623,12 +1199,12 @@ class TestBuildBenchmarkImage:
                 side_effect=fail_on_second,
             ),
         ):
-            await build_benchmark_image(bench)
+            await scripts_build_benchmark_image(bench)
         assert not (bench / "Dockerfile.saber").exists()
 
 
 # ---------------------------------------------------------------------------
-# 1.6 — build_all_benchmark_images
+# Scripts build_all_benchmark_images
 # ---------------------------------------------------------------------------
 
 
@@ -778,7 +1354,7 @@ class TestBuildAllBenchmarkImages:
 
 
 # ---------------------------------------------------------------------------
-# 4.3 — Integration tests (Docker required)
+# Integration tests (Docker required)
 # ---------------------------------------------------------------------------
 
 
@@ -797,15 +1373,15 @@ class TestBuildImageIntegration:
         )
         if not bench_dir.exists() or not (bench_dir / "staged").exists():
             pytest.skip("Benchmark data not staged — run setup first")
-        result = await build_benchmark_image(bench_dir, force=True)
+        result = await scripts_build_benchmark_image(bench_dir, force=True)
         assert result.success is True
-        assert await image_exists(result.image_tag)
+        assert await scripts_image_exists(result.image_tag)
 
     @pytest.mark.asyncio
     async def test_image_has_source_at_workspace(self) -> None:
         """Built image has source code at /workspace/source/."""
         tag = "saber/crsbench/benchmark:sanity-mock-c-delta-01"
-        if not await image_exists(tag):
+        if not await scripts_image_exists(tag):
             pytest.skip("Image not built")
         from crsbench.scripts.build_images import _run_docker_cmd
 
@@ -819,7 +1395,7 @@ class TestBuildImageIntegration:
     async def test_image_has_saber_tooling(self) -> None:
         """Built image has SABER agent tooling installed."""
         tag = "saber/crsbench/benchmark:sanity-mock-c-delta-01"
-        if not await image_exists(tag):
+        if not await scripts_image_exists(tag):
             pytest.skip("Image not built")
         from crsbench.scripts.build_images import _run_docker_cmd
 
@@ -831,7 +1407,7 @@ class TestBuildImageIntegration:
 
 
 # ---------------------------------------------------------------------------
-# 2.1 — Compose env-var interpolation
+# Compose env-var interpolation
 # ---------------------------------------------------------------------------
 
 
@@ -854,7 +1430,7 @@ class TestComposeEnvVarInterpolation:
 
 
 # ---------------------------------------------------------------------------
-# 2.4 — Git init resilience
+# Git init resilience
 # ---------------------------------------------------------------------------
 
 

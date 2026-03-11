@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from saber.hooks import SetupHook
 
 from crsbench.setup import (
     DownloadBenchmarkData,
-    _build_images_sync,
+    LinkDataDir,
     _cli_bool,
     _expand_group,
     _parse_csv,
@@ -56,6 +56,136 @@ def _ensure_huggingface_hub_mock() -> MagicMock:
 _ensure_huggingface_hub_mock()
 
 
+# ---------------------------------------------------------------------------
+# LinkDataDir tests
+# ---------------------------------------------------------------------------
+
+
+class TestLinkDataDir:
+    def test_satisfies_protocol(self) -> None:
+        hook = LinkDataDir("/tmp/data")
+        assert isinstance(hook, SetupHook)
+
+    def test_name(self) -> None:
+        assert LinkDataDir("/tmp/data").name == "link_data_dir"
+
+    def test_should_run_when_no_data_dir(self, tmp_path: Path) -> None:
+        target = tmp_path / "external_data"
+        hook = LinkDataDir(str(target))
+        domain_root = tmp_path / "domain"
+        domain_root.mkdir()
+        assert hook.should_run(domain_root) is True
+
+    def test_should_not_run_when_already_linked(self, tmp_path: Path) -> None:
+        target = tmp_path / "external_data"
+        target.mkdir()
+        domain_root = tmp_path / "domain"
+        domain_root.mkdir()
+        os.symlink(str(target), str(domain_root / "data"))
+        hook = LinkDataDir(str(target))
+        assert hook.should_run(domain_root) is False
+
+    def test_should_run_when_linked_to_wrong_target(self, tmp_path: Path) -> None:
+        old_target = tmp_path / "old_data"
+        old_target.mkdir()
+        new_target = tmp_path / "new_data"
+        domain_root = tmp_path / "domain"
+        domain_root.mkdir()
+        os.symlink(str(old_target), str(domain_root / "data"))
+        hook = LinkDataDir(str(new_target))
+        assert hook.should_run(domain_root) is True
+
+    def test_should_not_run_when_real_dir_with_content(self, tmp_path: Path) -> None:
+        domain_root = tmp_path / "domain"
+        data_dir = domain_root / "data"
+        data_dir.mkdir(parents=True)
+        (data_dir / "file.txt").write_text("content")
+        hook = LinkDataDir(str(tmp_path / "external"))
+        assert hook.should_run(domain_root) is False
+
+    def test_should_run_when_real_dir_empty(self, tmp_path: Path) -> None:
+        domain_root = tmp_path / "domain"
+        (domain_root / "data").mkdir(parents=True)
+        hook = LinkDataDir(str(tmp_path / "external"))
+        assert hook.should_run(domain_root) is True
+
+    def test_run_creates_symlink(self, tmp_path: Path) -> None:
+        target = tmp_path / "external_data"
+        domain_root = tmp_path / "domain"
+        domain_root.mkdir()
+        hook = LinkDataDir(str(target))
+        hook.run(domain_root)
+
+        link = domain_root / "data"
+        assert link.is_symlink()
+        assert link.resolve() == target.resolve()
+        assert target.is_dir()
+
+    def test_run_creates_target_dir(self, tmp_path: Path) -> None:
+        target = tmp_path / "nested" / "external_data"
+        domain_root = tmp_path / "domain"
+        domain_root.mkdir()
+        hook = LinkDataDir(str(target))
+        hook.run(domain_root)
+        assert target.is_dir()
+
+    def test_run_replaces_empty_dir(self, tmp_path: Path) -> None:
+        domain_root = tmp_path / "domain"
+        (domain_root / "data").mkdir(parents=True)
+        target = tmp_path / "external"
+        hook = LinkDataDir(str(target))
+        hook.run(domain_root)
+        assert (domain_root / "data").is_symlink()
+
+    def test_run_replaces_stale_symlink(self, tmp_path: Path) -> None:
+        old_target = tmp_path / "old"
+        old_target.mkdir()
+        domain_root = tmp_path / "domain"
+        domain_root.mkdir()
+        os.symlink(str(old_target), str(domain_root / "data"))
+
+        new_target = tmp_path / "new"
+        hook = LinkDataDir(str(new_target))
+        hook.run(domain_root)
+
+        link = domain_root / "data"
+        assert link.is_symlink()
+        assert link.resolve() == new_target.resolve()
+
+    def test_run_skips_real_dir_with_content(self, tmp_path: Path) -> None:
+        domain_root = tmp_path / "domain"
+        data_dir = domain_root / "data"
+        data_dir.mkdir(parents=True)
+        (data_dir / "important.txt").write_text("keep me")
+        hook = LinkDataDir(str(tmp_path / "external"))
+        hook.run(domain_root)
+        # Should NOT be a symlink — original data preserved
+        assert not data_dir.is_symlink()
+        assert (data_dir / "important.txt").read_text() == "keep me"
+
+
+# ---------------------------------------------------------------------------
+# get_hooks tests
+# ---------------------------------------------------------------------------
+
+
+class TestGetHooks:
+    def test_default_hooks_count(self, tmp_path: Path) -> None:
+        hooks = get_hooks(tmp_path)
+        assert len(hooks) == 4
+        assert hooks[0].name == "download_benchmark_data"
+
+    def test_data_dir_adds_link_hook(self, tmp_path: Path) -> None:
+        hooks = get_hooks(tmp_path, data_dir="/mnt/crsbench_data")
+        assert len(hooks) == 5
+        assert hooks[0].name == "link_data_dir"
+        assert hooks[1].name == "download_benchmark_data"
+
+    def test_no_data_dir_no_link_hook(self, tmp_path: Path) -> None:
+        hooks = get_hooks(tmp_path)
+        assert all(h.name != "link_data_dir" for h in hooks)
+
+
 class TestDownloadBenchmarkData:
     def test_satisfies_protocol(self) -> None:
         hook = DownloadBenchmarkData()
@@ -69,13 +199,13 @@ class TestDownloadBenchmarkData:
         assert hook.should_run(tmp_path) is True
 
     def test_should_run_when_dir_empty(self, tmp_path: Path) -> None:
-        (tmp_path / "data" / "_benchmarks").mkdir(parents=True)
+        (tmp_path / "data" / "benchmarks").mkdir(parents=True)
         hook = DownloadBenchmarkData()
         assert hook.should_run(tmp_path) is True
 
     def test_should_not_run_when_fully_staged(self, tmp_path: Path) -> None:
         """Returns False when benchmarks have meta.yaml, staged content, and tasks."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -93,7 +223,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_when_data_present_but_not_staged(self, tmp_path: Path) -> None:
         """Returns True when benchmarks exist but are not staged."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -103,7 +233,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_when_staged_dir_empty_unfiltered(self, tmp_path: Path) -> None:
         """Returns True when staged dir exists but is empty (no filter)."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -113,7 +243,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_when_only_non_benchmark_dirs(self, tmp_path: Path) -> None:
         """Returns True when dir has content but no benchmark subdirectories."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         benchmarks.mkdir(parents=True)
         (benchmarks / "README.md").write_text("info")
         hook = DownloadBenchmarkData()
@@ -121,7 +251,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_true_when_force_build(self, tmp_path: Path) -> None:
         """Returns True when force_build is set even if everything is staged."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -138,7 +268,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_true_when_rebuild_images(self, tmp_path: Path) -> None:
         """Returns True when rebuild_images is set."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -155,7 +285,7 @@ class TestDownloadBenchmarkData:
 
     def test_should_run_true_when_yamls_missing_benchmark_image(self, tmp_path: Path) -> None:
         """Returns True when task YAMLs exist but lack benchmark_image."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         bm = benchmarks / "benchmark_001"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: benchmark_001")
@@ -171,17 +301,10 @@ class TestDownloadBenchmarkData:
     def test_run_calls_download_default(self, tmp_path: Path) -> None:
         """run() delegates to download_benchmarks() with defaults."""
         hook = DownloadBenchmarkData()
-        with (
-            patch("crsbench.setup.download_benchmarks") as mock_dl,
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
-            patch("crsbench.setup.clean_task_dirs", return_value=0),
-            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
-        ):
+        with patch("crsbench.setup.download_benchmarks") as mock_dl:
             hook.run(tmp_path)
             mock_dl.assert_called_once_with(
-                tmp_path / "data" / "_benchmarks",
+                tmp_path / "data" / "benchmarks",
                 include_ground_truth=True,
                 benchmarks=None,
             )
@@ -192,17 +315,10 @@ class TestDownloadBenchmarkData:
             include_ground_truth=False,
             datasets=["afc-curl-delta-01"],
         )
-        with (
-            patch("crsbench.setup.download_benchmarks") as mock_dl,
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
-            patch("crsbench.setup.clean_task_dirs", return_value=0),
-            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
-        ):
+        with patch("crsbench.setup.download_benchmarks") as mock_dl:
             hook.run(tmp_path)
             mock_dl.assert_called_once_with(
-                tmp_path / "data" / "_benchmarks",
+                tmp_path / "data" / "benchmarks",
                 include_ground_truth=False,
                 benchmarks=["afc-curl-delta-01"],
             )
@@ -287,22 +403,6 @@ class TestDownloadBenchmarks:
                 sys.modules["huggingface_hub"] = saved
 
 
-class TestGetHooks:
-    """Tests for the get_hooks() auto-discovery entry point."""
-
-    def test_returns_list_of_setup_hooks(self) -> None:
-        """get_hooks() returns a non-empty list of SetupHook instances."""
-        hooks = get_hooks(Path("/unused"))
-        assert len(hooks) == 1
-        assert all(isinstance(h, SetupHook) for h in hooks)
-
-    def test_first_hook_is_download_benchmark_data(self) -> None:
-        """First hook is a DownloadBenchmarkData instance with expected name."""
-        hooks = get_hooks(Path("/unused"))
-        assert isinstance(hooks[0], DownloadBenchmarkData)
-        assert hooks[0].name == "download_benchmark_data"
-
-
 class TestDownloadBenchmarkDataForceDownload:
     """Tests for DownloadBenchmarkData.force_download behaviour."""
 
@@ -310,7 +410,7 @@ class TestDownloadBenchmarkDataForceDownload:
         self, tmp_path: Path
     ) -> None:
         """force_download=True overrides the data-exists guard."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         benchmarks.mkdir(parents=True)
         (benchmarks / "some_benchmark").mkdir()
 
@@ -321,7 +421,7 @@ class TestDownloadBenchmarkDataForceDownload:
         self, tmp_path: Path
     ) -> None:
         """force_download=False (default) still checks staging status."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         bm = benchmarks / "some_benchmark"
         (bm / ".aixcc").mkdir(parents=True)
         (bm / ".aixcc" / "meta.yaml").write_text("id: some_benchmark")
@@ -611,7 +711,7 @@ class TestSanitizeStagedDir:
 
 
 def _create_tarball(tar_path: Path, files: dict[str, str]) -> None:
-    """Helper: create a .tar.gz with the given filename→content mapping."""
+    """Helper: create a .tar.gz with the given filename->content mapping."""
     import io
     import tarfile
 
@@ -751,7 +851,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns False when all requested datasets have meta.yaml, staged content, and tasks."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         for name in ("ds-a", "ds-b"):
             d = benchmarks / name
             (d / ".aixcc").mkdir(parents=True)
@@ -773,7 +873,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns True when any requested dataset lacks staged content."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         # ds-a is fully staged
         d = benchmarks / "ds-a"
         (d / ".aixcc").mkdir(parents=True)
@@ -793,7 +893,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns True when any requested dataset lacks meta.yaml."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         benchmarks.mkdir(parents=True)
         # ds-a directory exists but no .aixcc/meta.yaml
         (benchmarks / "ds-a").mkdir()
@@ -805,7 +905,7 @@ class TestDownloadBenchmarkDataShouldRunWithDatasets:
         self, tmp_path: Path
     ) -> None:
         """Returns True when staged dir exists but is empty."""
-        benchmarks = tmp_path / "data" / "_benchmarks"
+        benchmarks = tmp_path / "data" / "benchmarks"
         d = benchmarks / "ds-a"
         (d / ".aixcc").mkdir(parents=True)
         (d / ".aixcc" / "meta.yaml").write_text("id: ds-a")
@@ -853,186 +953,6 @@ class TestCleanTaskDirs:
         assert removed == 0
 
 
-class TestDownloadBenchmarkDataRunCallsExtract:
-    """Verify run() calls extract_all_tarballs between download and stage."""
-
-    def test_run_calls_extract_between_download_and_stage(
-        self, tmp_path: Path
-    ) -> None:
-        """run() calls extract_all_tarballs after download, before stage."""
-        call_order: list[str] = []
-
-        hook = DownloadBenchmarkData()
-        with (
-            patch(
-                "crsbench.setup.download_benchmarks",
-                side_effect=lambda *a, **kw: call_order.append("download"),
-            ),
-            patch(
-                "crsbench.setup.extract_all_tarballs",
-                side_effect=lambda *a, **kw: call_order.append("extract"),
-            ),
-            patch(
-                "crsbench.setup.stage_all_benchmarks",
-                side_effect=lambda *a, **kw: call_order.append("stage"),
-            ),
-            patch(
-                "crsbench.setup._build_images_sync",
-                side_effect=lambda *a, **kw: (call_order.append("build"), _mock_build_summary())[1],
-            ),
-            patch(
-                "crsbench.setup.clean_task_dirs",
-                side_effect=lambda *a, **kw: (call_order.append("clean"), 0)[1],
-            ),
-            patch(
-                "crsbench.scripts.generate_tasks.generate_all_tasks",
-                side_effect=lambda *a, **kw: (call_order.append("generate"), [])[1],
-            ),
-        ):
-            hook.run(tmp_path)
-
-        assert call_order == ["download", "extract", "stage", "build", "clean", "generate"]
-
-
-class TestDownloadBenchmarkDataRunGeneratesTasks:
-    """Verify run() calls clean_task_dirs and generate_all_tasks after staging."""
-
-    def test_run_calls_clean_and_generate(self, tmp_path: Path) -> None:
-        """run() calls clean_task_dirs then generate_all_tasks."""
-        hook = DownloadBenchmarkData()
-        with (
-            patch("crsbench.setup.download_benchmarks"),
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
-            patch("crsbench.setup.clean_task_dirs", return_value=3) as mock_clean,
-            patch(
-                "crsbench.scripts.generate_tasks.generate_all_tasks",
-                return_value=[Path("a.yaml"), Path("b.yaml")],
-            ) as mock_gen,
-        ):
-            hook.run(tmp_path)
-
-            mock_clean.assert_called_once_with(tmp_path / "tasks")
-            mock_gen.assert_called_once_with(
-                tmp_path / "data" / "_benchmarks",
-                tmp_path / "tasks",
-                datasets=None,
-                built_benchmarks=None,
-            )
-
-    def test_run_passes_datasets_to_generate(self, tmp_path: Path) -> None:
-        """run() forwards datasets filter to generate_all_tasks."""
-        hook = DownloadBenchmarkData(datasets=["ds-a", "ds-b"])
-        with (
-            patch("crsbench.setup.download_benchmarks"),
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
-            patch("crsbench.setup.clean_task_dirs") as mock_clean,
-            patch(
-                "crsbench.scripts.generate_tasks.generate_all_tasks",
-                return_value=[],
-            ) as mock_gen,
-        ):
-            hook.run(tmp_path)
-
-            mock_clean.assert_not_called()
-            mock_gen.assert_called_once_with(
-                tmp_path / "data" / "_benchmarks",
-                tmp_path / "tasks",
-                datasets=["ds-a", "ds-b"],
-                built_benchmarks=None,
-            )
-
-    def test_call_order_download_extract_stage_build_clean_generate(
-        self, tmp_path: Path
-    ) -> None:
-        """Full call order: download → extract → stage → build → clean → generate."""
-        call_order: list[str] = []
-
-        hook = DownloadBenchmarkData()
-        with (
-            patch(
-                "crsbench.setup.download_benchmarks",
-                side_effect=lambda *a, **kw: call_order.append("download"),
-            ),
-            patch(
-                "crsbench.setup.extract_all_tarballs",
-                side_effect=lambda *a, **kw: call_order.append("extract"),
-            ),
-            patch(
-                "crsbench.setup.stage_all_benchmarks",
-                side_effect=lambda *a, **kw: call_order.append("stage"),
-            ),
-            patch(
-                "crsbench.setup._build_images_sync",
-                side_effect=lambda *a, **kw: (call_order.append("build"), _mock_build_summary())[1],
-            ),
-            patch(
-                "crsbench.setup.clean_task_dirs",
-                side_effect=lambda *a, **kw: (call_order.append("clean"), 0)[1],
-            ),
-            patch(
-                "crsbench.scripts.generate_tasks.generate_all_tasks",
-                side_effect=lambda *a, **kw: (call_order.append("generate"), [])[1],
-            ),
-        ):
-            hook.run(tmp_path)
-
-        assert call_order == ["download", "extract", "stage", "build", "clean", "generate"]
-
-    def test_run_skips_clean_when_datasets_specified(self, tmp_path: Path) -> None:
-        """run() skips clean_task_dirs when specific datasets are requested."""
-        hook = DownloadBenchmarkData(datasets=["ds-a"])
-        with (
-            patch("crsbench.setup.download_benchmarks"),
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()),
-            patch("crsbench.setup.clean_task_dirs") as mock_clean,
-            patch(
-                "crsbench.scripts.generate_tasks.generate_all_tasks",
-                return_value=[],
-            ),
-        ):
-            hook.run(tmp_path)
-            mock_clean.assert_not_called()
-
-    def test_call_order_with_datasets_skips_clean(self, tmp_path: Path) -> None:
-        """With specific datasets: download -> extract -> stage -> build -> generate (no clean)."""
-        call_order: list[str] = []
-
-        hook = DownloadBenchmarkData(datasets=["ds-a"])
-        with (
-            patch(
-                "crsbench.setup.download_benchmarks",
-                side_effect=lambda *a, **kw: call_order.append("download"),
-            ),
-            patch(
-                "crsbench.setup.extract_all_tarballs",
-                side_effect=lambda *a, **kw: call_order.append("extract"),
-            ),
-            patch(
-                "crsbench.setup.stage_all_benchmarks",
-                side_effect=lambda *a, **kw: call_order.append("stage"),
-            ),
-            patch(
-                "crsbench.setup._build_images_sync",
-                side_effect=lambda *a, **kw: (call_order.append("build"), _mock_build_summary())[1],
-            ),
-            patch("crsbench.setup.clean_task_dirs") as mock_clean,
-            patch(
-                "crsbench.scripts.generate_tasks.generate_all_tasks",
-                side_effect=lambda *a, **kw: (call_order.append("generate"), [])[1],
-            ),
-        ):
-            hook.run(tmp_path)
-
-        assert call_order == ["download", "extract", "stage", "build", "generate"]
-        mock_clean.assert_not_called()
-
-
 class TestGetHooksImageBuildKwargs:
     """Tests for get_hooks() with image-build kwargs."""
 
@@ -1051,125 +971,3 @@ class TestGetHooksImageBuildKwargs:
     def test_rebuild_images_default_none(self) -> None:
         hooks = get_hooks(Path("/unused"))
         assert hooks[0]._rebuild_images is None
-
-
-class TestRunCallsBuildImages:
-    """Tests for DownloadBenchmarkData.run() image build step."""
-
-    def test_run_calls_build_images_sync(self, tmp_path: Path) -> None:
-        hook = DownloadBenchmarkData()
-        with (
-            patch("crsbench.setup.download_benchmarks"),
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup.clean_task_dirs", return_value=0),
-            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()) as mock_build,
-        ):
-            hook.run(tmp_path)
-            mock_build.assert_called_once()
-
-    def test_run_passes_force_build(self, tmp_path: Path) -> None:
-        hook = DownloadBenchmarkData(force_build=True)
-        with (
-            patch("crsbench.setup.download_benchmarks"),
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup.clean_task_dirs", return_value=0),
-            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()) as mock_build,
-        ):
-            hook.run(tmp_path)
-            mock_build.assert_called_once()
-            _, call_kwargs = mock_build.call_args
-            assert call_kwargs["force"] is True
-
-    def test_run_passes_rebuild_prefix(self, tmp_path: Path) -> None:
-        hook = DownloadBenchmarkData(rebuild_images="afc-curl")
-        with (
-            patch("crsbench.setup.download_benchmarks"),
-            patch("crsbench.setup.extract_all_tarballs"),
-            patch("crsbench.setup.stage_all_benchmarks"),
-            patch("crsbench.setup.clean_task_dirs", return_value=0),
-            patch("crsbench.scripts.generate_tasks.generate_all_tasks", return_value=[]),
-            patch("crsbench.setup._build_images_sync", return_value=_mock_build_summary()) as mock_build,
-        ):
-            hook.run(tmp_path)
-            mock_build.assert_called_once()
-            _, call_kwargs = mock_build.call_args
-            assert call_kwargs["rebuild_prefix"] == "afc-curl"
-
-
-class TestBuildImagesSync:
-    """Tests for _build_images_sync() wrapper."""
-
-    def test_calls_build_all_benchmark_images(self, tmp_path: Path) -> None:
-        """Verifies the async function is called with correct args."""
-        from crsbench.scripts.build_images import ImageBuildSummary
-
-        mock_summary = ImageBuildSummary(
-            total=2,
-            built=2,
-            skipped=0,
-            failed=0,
-            results=(),
-        )
-        with patch(
-            "crsbench.scripts.build_images.build_all_benchmark_images",
-            return_value=mock_summary,
-        ):
-            _build_images_sync(
-                tmp_path,
-                datasets=["bench-a"],
-                force=True,
-                rebuild_prefix="bench",
-            )
-
-    def test_prints_summary(self, tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
-        from crsbench.scripts.build_images import ImageBuildSummary
-
-        mock_summary = ImageBuildSummary(
-            total=3,
-            built=1,
-            skipped=1,
-            failed=1,
-            results=(),
-        )
-        with patch(
-            "crsbench.scripts.build_images.build_all_benchmark_images",
-            return_value=mock_summary,
-        ):
-            _build_images_sync(tmp_path)
-        captured = capsys.readouterr()
-        assert "1 built" in captured.out
-        assert "1 skipped" in captured.out
-        assert "1 failed" in captured.out
-
-    def test_logs_warnings_for_failures(self, tmp_path: Path) -> None:
-        from crsbench.scripts.build_images import ImageBuildResult, ImageBuildSummary
-
-        failed_result = ImageBuildResult(
-            benchmark_id="fail-bench",
-            image_tag="t:fail",
-            success=False,
-            skipped=False,
-            error_message="docker build failed",
-        )
-        mock_summary = ImageBuildSummary(
-            total=1,
-            built=0,
-            skipped=0,
-            failed=1,
-            results=(failed_result,),
-        )
-        with (
-            patch(
-                "crsbench.scripts.build_images.build_all_benchmark_images",
-                return_value=mock_summary,
-            ),
-            patch("crsbench.setup.logger") as mock_logger,
-        ):
-            _build_images_sync(tmp_path)
-            mock_logger.warning.assert_called_once()
-            warning_args = mock_logger.warning.call_args
-            assert "fail-bench" in str(warning_args)

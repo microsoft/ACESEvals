@@ -1,25 +1,42 @@
 """CRSBench domain setup hooks.
 
-Provides a ``DownloadBenchmarkData`` hook that downloads CRSBench benchmark
-data from HuggingFace if not already present locally.
+Provides setup hooks that run before task evaluation:
+
+0. ``LinkDataDir`` — (optional) symlinks ``<domain_root>/data`` to an
+   external directory on a larger drive so downloads don't fill the
+   root filesystem.
+1. ``DownloadBenchmarkData`` — downloads CRSBench benchmark data from
+   HuggingFace if not already present locally.
+2. ``StageBenchmarkData`` — extracts benchmark.tar.gz and ground-truth.tar.gz
+   in each benchmark directory so Dockerfiles and .aixcc/meta.yaml are ready.
+3. ``BuildBenchmarkImages`` — builds two-layer Docker images for each
+   benchmark so containers launch pre-loaded with source, deps, and tooling.
+4. ``GenerateTaskYAMLs`` — generates task YAML files from benchmark metadata
+   after data is downloaded and images are built.
+
+The ``get_hooks()`` entry point returns all hooks in the correct order
+and is auto-discovered by ``saber.setup_discovery``.
 """
 
 from __future__ import annotations
 
+import os
 import shutil
 import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from saber.hooks import SetupHook
-from saber.logging import get_logger
+from saber.logging import display_progress, get_logger
 
 if TYPE_CHECKING:
     from crsbench.scripts.build_images import ImageBuildSummary
 
 logger = get_logger("domains.crsbench.setup")
 
-_BENCHMARK_SUBDIR = "data/_benchmarks"
+_DATA_SUBDIR = "data"
+_BENCHMARK_SUBDIR = "data/benchmarks"
+_TASKS_SUBDIR = "tasks"
 REPO_ID = "sslab-gatech/crsbench-dataset"
 
 # Named dataset groups.  Values are either ``None`` (meaning "all
@@ -119,6 +136,69 @@ def download_benchmarks(
 
     logger.info("CRSBench download complete: %s", result)
     return Path(result)
+
+
+class LinkDataDir:
+    """Setup hook that symlinks the data directory to an external path.
+
+    When benchmark data is large (CRSBench is ~13 GB compressed, ~120 GB
+    extracted), storing it on the root filesystem can be impractical.
+    This hook creates a symlink from ``<domain_root>/data`` to a
+    user-specified directory on a larger drive.
+
+    If ``<domain_root>/data`` already exists as a real directory **with
+    content**, the hook logs a warning and skips — it will not overwrite
+    existing data.  If it already points to the target, it's a no-op.
+
+    Args:
+        target_dir: Absolute path to the external data directory
+            (e.g. ``/mnt/crsbench_data``).  Created if it does not exist.
+    """
+
+    def __init__(self, target_dir: str) -> None:
+        self._target = Path(target_dir)
+
+    @property
+    def name(self) -> str:
+        """Human-readable hook name."""
+        return "link_data_dir"
+
+    def should_run(self, domain_root: Path) -> bool:
+        """Return True unless the symlink already points to the target."""
+        link_path = domain_root / _DATA_SUBDIR
+        if link_path.is_symlink():
+            return link_path.resolve() != self._target.resolve()
+        # Real directory with content — don't clobber
+        if link_path.is_dir() and any(link_path.iterdir()):
+            return False
+        return True
+
+    def run(self, domain_root: Path) -> None:
+        """Create or update the data directory symlink."""
+        link_path = domain_root / _DATA_SUBDIR
+
+        # Ensure the target exists
+        self._target.mkdir(parents=True, exist_ok=True)
+
+        # Remove empty dir or stale symlink
+        if link_path.is_symlink() or (link_path.is_dir() and not any(link_path.iterdir())):
+            if link_path.is_symlink():
+                link_path.unlink()
+            else:
+                link_path.rmdir()
+
+        if link_path.exists():
+            logger.warning(
+                "Cannot link data dir: %s already exists with content. "
+                "Remove it manually or move its contents to %s.",
+                link_path, self._target,
+            )
+            return
+
+        # Create parent directories if needed
+        link_path.parent.mkdir(parents=True, exist_ok=True)
+        os.symlink(str(self._target), str(link_path))
+        logger.info("Linked data directory: %s -> %s", link_path, self._target)
 
 
 class DownloadBenchmarkData:
@@ -232,110 +312,14 @@ class DownloadBenchmarkData:
             benchmarks=download_resolved,
         )
 
-        # Now that data is on disk, resolve groups for extract/stage/generate
-        resolved = self._resolve_datasets(output_dir)
-        count = len(resolved) if resolved else "all"
-
-        print(f"[crsbench] Extracting tarballs ({count} benchmarks)...", flush=True)
-        extract_all_tarballs(output_dir, datasets=resolved)
-
-        print(f"[crsbench] Staging benchmarks ({count} benchmarks)...", flush=True)
-        stage_all_benchmarks(output_dir, datasets=resolved)
-
-        # Build Docker images for each benchmark
-        print(f"[crsbench] Building benchmark images ({count} benchmarks)...", flush=True)
-        build_summary = _build_images_sync(
-            output_dir,
-            datasets=resolved,
-            force=self._force_build,
-            rebuild_prefix=self._rebuild_images,
-        )
-
-        # Collect successfully built benchmarks so task YAMLs only reference
-        # images that actually exist (graceful fallback to base sandbox).
-        built_benchmarks: set[str] | None = None
-        if build_summary is not None and build_summary.failed > 0:
-            built_benchmarks = {
-                r.benchmark_id for r in build_summary.results if r.success
-            }
-
-        # Generate task YAMLs
-        from crsbench.scripts.generate_tasks import generate_all_tasks
-
-        tasks_dir = domain_root / "tasks"
-        if resolved is None:
-            removed = clean_task_dirs(tasks_dir)
-            if removed:
-                logger.info("Cleaned %d old task group directories", removed)
-
-        print(f"[crsbench] Generating task YAMLs ({count} benchmarks)...", flush=True)
-        generated = generate_all_tasks(
-            output_dir, tasks_dir, datasets=resolved, built_benchmarks=built_benchmarks
-        )
-        print(f"[crsbench] Generated {len(generated)} task YAML files")
-        logger.info("Generated %d task YAML files", len(generated))
+        # Download is done. Extract/stage/build/generate are handled
+        # by subsequent hooks in the hook chain returned by get_hooks().
+        logger.info("Download complete for %s", output_dir)
 
 
-def _build_images_sync(
-    benchmarks_dir: Path,
-    *,
-    datasets: list[str] | None = None,
-    force: bool = False,
-    rebuild_prefix: str | None = None,
-) -> "ImageBuildSummary":
-    """Synchronous wrapper for async image building.
-
-    Handles the case where an event loop is already running by using a
-    thread pool fallback.
-
-    Args:
-        benchmarks_dir: Root benchmarks directory.
-        datasets: Optional benchmark name filter.
-        force: Force rebuild all images.
-        rebuild_prefix: Force rebuild images matching this prefix.
-
-    Returns:
-        Build summary with per-benchmark results.
-    """
-    import asyncio
-
-    from crsbench.scripts.build_images import build_all_benchmark_images
-
-    coro = build_all_benchmark_images(
-        benchmarks_dir,
-        datasets=datasets,
-        force=force,
-        rebuild_prefix=rebuild_prefix,
-    )
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop is not None and loop.is_running():
-        import concurrent.futures
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            summary = pool.submit(asyncio.run, coro).result()
-    else:
-        summary = asyncio.run(coro)
-
-    print(
-        f"[crsbench] Image builds complete: "
-        f"{summary.built} built, {summary.skipped} skipped, "
-        f"{summary.failed} failed"
-    )
-    if summary.failed > 0:
-        for r in summary.results:
-            if not r.success:
-                logger.warning(
-                    "Failed to build %s: %s",
-                    r.benchmark_id,
-                    r.error_message,
-                )
-
-    return summary
+# ---------------------------------------------------------------------------
+# Helpers used by DownloadBenchmarkData.should_run() and others
+# ---------------------------------------------------------------------------
 
 
 def _is_benchmark_ready(benchmark_dir: Path) -> bool:
@@ -467,7 +451,7 @@ def extract_benchmark_tarballs(benchmark_dir: Path) -> None:
         )
         return
 
-    print(f"[crsbench]   extracting {benchmark_dir.name}...", flush=True)
+    display_progress(f"Extracting {benchmark_dir.name}...")
     for name in _TARBALL_NAMES:
         tarball = benchmark_dir / name
         if not tarball.exists():
@@ -520,7 +504,7 @@ def stage_benchmark(benchmark_dir: Path) -> None:
         logger.info("Already staged: %s", benchmark_dir.name)
         return
 
-    print(f"[crsbench]   staging {benchmark_dir.name}...", flush=True)
+    display_progress(f"Staging {benchmark_dir.name}...")
     staged.mkdir(parents=True, exist_ok=True)
 
     # Extract all tarballs in pkgs/
@@ -674,50 +658,386 @@ def _cli_bool(value: str | bool | None, default: bool = False) -> bool:
     return str(value).lower() in {"true", "1", "yes"}
 
 
+# ---------------------------------------------------------------------------
+# Modular setup hooks — Extract, Build, Generate
+# ---------------------------------------------------------------------------
+
+
+class StageBenchmarkData:
+    """Setup hook that extracts benchmark tarballs after download.
+
+    Each benchmark directory from HuggingFace contains:
+    - ``benchmark.tar.gz`` — Dockerfile, source code, build scripts
+    - ``ground-truth.tar.gz`` — ``.aixcc/meta.yaml``, POV blobs, patches
+
+    This hook extracts both tarballs in-place so that subsequent hooks
+    (image build, task generation) can find Dockerfiles and metadata.
+
+    Extraction is skipped for any benchmark that already has a
+    ``.aixcc/meta.yaml`` file (indicating previous extraction).
+
+    Args:
+        prefix_filter: Only extract benchmarks whose directory name starts
+            with this prefix. When ``None``, extract all benchmarks.
+    """
+
+    def __init__(self, *, prefix_filter: str | None = None) -> None:
+        self._prefix_filter = prefix_filter
+
+    @property
+    def name(self) -> str:
+        """Human-readable hook name."""
+        return "stage_benchmark_data"
+
+    def _matches_filter(self, benchmark_name: str) -> bool:
+        """Return True if the benchmark name matches the prefix filter."""
+        if self._prefix_filter is None:
+            return True
+        return benchmark_name.startswith(self._prefix_filter)
+
+    def should_run(self, domain_root: Path) -> bool:
+        """Return True if any benchmark has tarballs that need extraction."""
+        benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+        if not benchmarks_dir.is_dir():
+            return False
+
+        for child in benchmarks_dir.iterdir():
+            if not child.is_dir() or not self._matches_filter(child.name):
+                continue
+            tar_file = child / "benchmark.tar.gz"
+            meta_file = child / ".aixcc" / "meta.yaml"
+            if tar_file.is_file() and not meta_file.is_file():
+                return True
+        return False
+
+    def run(self, domain_root: Path) -> None:
+        """Extract benchmark tarballs in each benchmark directory."""
+        benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+        extracted = 0
+        skipped = 0
+
+        for child in sorted(benchmarks_dir.iterdir()):
+            if not child.is_dir() or not self._matches_filter(child.name):
+                continue
+
+            meta_file = child / ".aixcc" / "meta.yaml"
+            if meta_file.is_file():
+                skipped += 1
+                continue
+
+            # Extract ground-truth first (contains .aixcc/meta.yaml)
+            gt_tar = child / "ground-truth.tar.gz"
+            if gt_tar.is_file():
+                logger.debug("Extracting %s", gt_tar)
+                with tarfile.open(gt_tar, "r:gz") as tf:
+                    tf.extractall(path=child)
+
+            # Extract benchmark (contains Dockerfile, source, etc.)
+            bench_tar = child / "benchmark.tar.gz"
+            if bench_tar.is_file():
+                logger.debug("Extracting %s", bench_tar)
+                with tarfile.open(bench_tar, "r:gz") as tf:
+                    tf.extractall(path=child)
+
+            extracted += 1
+
+        logger.info(
+            "Staged %d benchmark(s), skipped %d (already extracted)",
+            extracted, skipped,
+        )
+
+
+class BuildBenchmarkImages:
+    """Setup hook that builds two-layer Docker images for each benchmark.
+
+    Satisfies the ``saber.hooks.SetupHook`` protocol. Checks whether
+    benchmark directories have Dockerfiles and builds images for any
+    benchmarks lacking a pre-built ``saber/crsbench/benchmark:<id>`` image.
+
+    Args:
+        force: Rebuild images even if they already exist.
+        prefix_filter: Only build images for benchmarks matching this prefix.
+    """
+
+    def __init__(
+        self,
+        *,
+        force: bool = False,
+        prefix_filter: str | None = None,
+    ) -> None:
+        self._force = force
+        self._prefix_filter = prefix_filter
+        self._summary: object | None = None
+
+    @property
+    def name(self) -> str:
+        """Human-readable hook name."""
+        return "build_benchmark_images"
+
+    @property
+    def summary(self) -> object | None:
+        """The ImageBuildSummary from the last run, or None."""
+        return self._summary
+
+    def should_run(self, domain_root: Path) -> bool:
+        """Return True if any benchmark is missing a pre-built image."""
+        from crsbench.build_images import (
+            BENCHMARK_IMAGE_PREFIX,
+            _discover_benchmarks,
+            image_exists,
+        )
+
+        if self._force:
+            return True
+
+        benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+        benchmarks = _discover_benchmarks(benchmarks_dir)
+
+        if self._prefix_filter:
+            benchmarks = [
+                b for b in benchmarks if b.name.startswith(self._prefix_filter)
+            ]
+
+        if not benchmarks:
+            return False
+
+        # Check if any benchmark is missing its image
+        return any(
+            not image_exists(f"{BENCHMARK_IMAGE_PREFIX}:{b.name}")
+            for b in benchmarks
+        )
+
+    def run(self, domain_root: Path) -> None:
+        """Build Docker images for benchmarks."""
+        from crsbench.build_images import build_images_sync
+
+        summary = build_images_sync(
+            domain_root / _BENCHMARK_SUBDIR,
+            domain_root,
+            force=self._force,
+            prefix_filter=self._prefix_filter,
+        )
+        self._summary = summary
+
+        if summary.failed:
+            failed_ids = [r.benchmark_id for r in summary.failed]
+            logger.warning(
+                "Image builds failed for %d benchmark(s): %s",
+                len(failed_ids),
+                ", ".join(failed_ids),
+            )
+
+        logger.info(
+            "Image build: %d succeeded, %d failed",
+            len(summary.succeeded),
+            len(summary.failed),
+        )
+        display_progress(
+            f"Image build: {len(summary.succeeded)} succeeded, "
+            f"{len(summary.failed)} failed",
+        )
+
+
+class GenerateTaskYAMLs:
+    """Setup hook that generates task YAMLs from benchmark metadata.
+
+    Scans benchmark directories for ``.aixcc/meta.yaml`` files and generates
+    task YAML files. When ``built_benchmarks`` is provided, only generates
+    tasks for benchmarks that have successfully built Docker images, and
+    includes the ``benchmark_image`` in the task's initial_context.
+
+    Args:
+        built_benchmarks: Set of benchmark IDs that have pre-built images.
+            When provided, only these benchmarks get task YAMLs generated
+            and each task includes a ``benchmark_image`` key.
+    """
+
+    def __init__(
+        self,
+        *,
+        built_benchmarks: set[str] | None = None,
+    ) -> None:
+        self._built_benchmarks = built_benchmarks
+
+    @property
+    def name(self) -> str:
+        """Human-readable hook name."""
+        return "generate_task_yamls"
+
+    def should_run(self, domain_root: Path) -> bool:
+        """Return True — always regenerate task YAMLs from metadata."""
+        benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+        if not benchmarks_dir.exists():
+            return False
+        # Check if any benchmarks have .aixcc/meta.yaml
+        return any(benchmarks_dir.rglob(".aixcc/meta.yaml"))
+
+    def run(self, domain_root: Path) -> None:
+        """Generate task YAMLs from benchmark metadata."""
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+        output_dir = domain_root / _TASKS_SUBDIR
+
+        generated = generate_all_tasks(
+            benchmarks_dir,
+            output_dir,
+            built_benchmarks=self._built_benchmarks,
+        )
+
+        logger.info("Generated %d task YAML(s)", len(generated))
+
+
+# ---------------------------------------------------------------------------
+# Hook discovery entry point
+# ---------------------------------------------------------------------------
+
+
 def get_hooks(
-    domain_root: Path,  # noqa: ARG001
+    domain_root: Path,
     *,
-    dataset: str | list[str] | None = None,
+    dataset: str | None = None,
+    build: str | None = None,
+    rebuild_images: str | None = None,
+    data_dir: str | None = None,
     include_ground_truth: str | bool | None = None,
     force_download: str | bool | None = None,
     force_build: str | bool | None = None,
-    rebuild_images: str | None = None,
 ) -> list[SetupHook]:
-    """Return CRSBench setup hooks for auto-discovery.
+    """Return ordered setup hooks for CRSBench.
 
-    Called by ``saber.task._discover_setup_hooks()`` when it finds this
-    module's ``get_hooks`` function.
-
-    Recognized ``-T`` flags:
-
-    * ``dataset`` — comma-separated dataset/benchmark names, or a named
-      group: ``all`` (everything), ``competition`` (non-sanity),
-      ``sanity`` (sanity only).  Defaults to all.
-    * ``include_ground_truth`` — ``"true"`` / ``"false"`` (default: true).
-    * ``force_download`` — ``"true"`` / ``"false"`` (default: false).
-    * ``force_build`` — ``"true"`` / ``"false"`` (default: false).
-      Force rebuild all Docker images.
-    * ``rebuild_images`` — prefix string to selectively rebuild images
-      matching the prefix.
+    Called by ``saber.setup_discovery._discover_setup_hooks()`` before
+    task evaluation. Returns hooks in dependency order:
+    0. (optional) Link data directory to external drive
+    1. Download benchmark data
+    2. Stage (extract) benchmark tarballs
+    3. Build Docker images
+    4. Generate task YAMLs
 
     Args:
-        domain_root: Path to the domain root directory.
-        dataset: Comma-separated dataset/benchmark names to download,
-            or ``None`` for all.
+        domain_root: Domain root directory.
+        dataset: Dataset selector (``competition``, ``sanity``, ``all``).
+        build: When ``"true"``, force-build Docker images.
+        rebuild_images: Prefix filter for rebuilding specific images.
+        data_dir: External directory for benchmark data storage.
+            When provided, ``<domain_root>/data`` is symlinked to this
+            path so large datasets live on a bigger drive
+            (e.g. ``-T data_dir=/mnt/crsbench_data``).
         include_ground_truth: ``"true"`` / ``"false"`` (default: true).
         force_download: ``"true"`` / ``"false"`` (default: false).
         force_build: ``"true"`` / ``"false"`` (default: false).
-        rebuild_images: Prefix string for selective image rebuild.
+            Force rebuild all Docker images.
 
     Returns:
-        List of setup hook instances.
+        Ordered list of setup hooks.
     """
-    return [
+    force = (
+        _cli_bool(build) or _cli_bool(force_build) or rebuild_images is not None
+    )
+
+    hooks: list[SetupHook] = []
+
+    # 0. (optional) Symlink data directory to external drive
+    if data_dir:
+        hooks.append(LinkDataDir(data_dir))
+
+    # 1. Download benchmark data
+    hooks.append(
         DownloadBenchmarkData(
             datasets=_parse_csv(dataset),
             include_ground_truth=_cli_bool(include_ground_truth, default=True),
             force_download=_cli_bool(force_download, default=False),
-            force_build=_cli_bool(force_build, default=False),
+            force_build=force,
             rebuild_images=rebuild_images,
         )
-    ]
+    )
+
+    # 2. Stage (extract) benchmark tarballs
+    hooks.append(StageBenchmarkData(prefix_filter=rebuild_images))
+
+    # 3. Build Docker images
+    build_hook = BuildBenchmarkImages(
+        force=force,
+        prefix_filter=rebuild_images,
+    )
+    hooks.append(build_hook)
+
+    # 4. Generate task YAMLs — we connect the build results to task generation
+    #    via a wrapper that extracts built_benchmarks after the build hook runs.
+    hooks.append(_ConnectedGenerateTaskYAMLs(
+        build_hook=build_hook,
+        dataset=dataset or "competition",
+    ))
+
+    return hooks
+
+
+class _ConnectedGenerateTaskYAMLs:
+    """Internal wrapper that connects build results to task generation.
+
+    After the build hook runs, this hook extracts the set of successfully
+    built benchmark IDs and passes them to GenerateTaskYAMLs.
+    """
+
+    def __init__(
+        self,
+        *,
+        build_hook: BuildBenchmarkImages,
+        dataset: str = "competition",
+    ) -> None:
+        self._build_hook = build_hook
+        self._dataset = dataset
+
+    @property
+    def name(self) -> str:
+        return "generate_task_yamls"
+
+    def should_run(self, domain_root: Path) -> bool:
+        benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+        if not benchmarks_dir.exists():
+            return False
+        return any(benchmarks_dir.rglob(".aixcc/meta.yaml"))
+
+    def run(self, domain_root: Path) -> None:
+        from crsbench.build_images import (
+            BENCHMARK_IMAGE_PREFIX,
+            ImageBuildSummary,
+            _discover_benchmarks,
+            image_exists,
+        )
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        # Extract built benchmarks from the build hook's summary
+        built_benchmarks: set[str] | None = None
+        summary = self._build_hook.summary
+        if isinstance(summary, ImageBuildSummary) and summary.succeeded:
+            built_benchmarks = summary.built_benchmark_ids
+        else:
+            # Build hook was skipped (images already exist) — detect which
+            # L2 images are actually present so we only generate tasks for
+            # benchmarks that have working images.
+            benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+            discovered = _discover_benchmarks(benchmarks_dir)
+            existing = {
+                b.name
+                for b in discovered
+                if image_exists(f"{BENCHMARK_IMAGE_PREFIX}:{b.name}")
+            }
+            if existing:
+                built_benchmarks = existing
+                logger.info(
+                    "Build hook skipped — detected %d existing L2 images",
+                    len(existing),
+                )
+
+        benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+        output_dir = domain_root / _TASKS_SUBDIR
+
+        generated = generate_all_tasks(
+            benchmarks_dir,
+            output_dir,
+            built_benchmarks=built_benchmarks,
+            dataset=self._dataset,
+        )
+
+        logger.info("Generated %d task YAML(s)", len(generated))
