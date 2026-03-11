@@ -102,9 +102,12 @@ def bash(
           The output of the command.
         """
         # execute the command
-        result = await sandbox_env(sandbox).exec(
-            cmd=["bash", "--login", "-c", command], timeout=timeout, user=user
-        )
+        try:
+            result = await sandbox_env(sandbox).exec(
+                cmd=["bash", "--login", "-c", cmd], timeout=timeout, user=user
+            )
+        except ValueError as exc:
+            return f"Error: {exc}"
         # return output (including stderr if any)
         output = ""
         if result.stderr:
@@ -161,12 +164,15 @@ def python(
         Returns:
           The output of the Python code.
         """
-        result = await sandbox_env(sandbox).exec(
-            cmd=["bash", "--login", "-c", "python3 -"],
-            input=code,
-            timeout=timeout,
-            user=user,
-        )
+        try:
+            result = await sandbox_env(sandbox).exec(
+                cmd=["bash", "--login", "-c", "python3 -"],
+                input=code,
+                timeout=timeout,
+                user=user,
+            )
+        except ValueError as exc:
+            return f"Error: {exc}"
         # return output (including stderr if any)
         output = ""
         if result.stderr:

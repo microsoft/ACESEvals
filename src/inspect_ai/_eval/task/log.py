@@ -171,8 +171,6 @@ class TaskLogger:
         if high_throughput:
             if eval_config.log_realtime is None:
                 eval_config.log_realtime = False
-            if eval_config.score_display is None:
-                eval_config.score_display = False
 
         # write defaults for unspecified config
         for name, value in eval_config_defaults().items():
