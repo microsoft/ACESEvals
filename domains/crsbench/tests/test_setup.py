@@ -12,8 +12,10 @@ import pytest
 from saber.hooks import SetupHook
 
 from crsbench.setup import (
+    BuildBenchmarkImages,
     DownloadBenchmarkData,
     LinkDataDir,
+    _LITE_BENCHMARKS,
     _cli_bool,
     _expand_group,
     _parse_csv,
@@ -971,3 +973,139 @@ class TestGetHooksImageBuildKwargs:
     def test_rebuild_images_default_none(self) -> None:
         hooks = get_hooks(Path("/unused"))
         assert hooks[0]._rebuild_images is None
+
+
+class TestBuildBenchmarkImagesBenchmarkNames:
+    """Tests for BuildBenchmarkImages with benchmark_names filtering."""
+
+    def test_satisfies_protocol(self) -> None:
+        hook = BuildBenchmarkImages()
+        assert isinstance(hook, SetupHook)
+
+    def test_benchmark_names_stored(self) -> None:
+        names = frozenset({"afc-curl-delta-01", "afc-xz-full-01"})
+        hook = BuildBenchmarkImages(benchmark_names=names)
+        assert hook._benchmark_names is names
+
+    def test_benchmark_names_default_none(self) -> None:
+        hook = BuildBenchmarkImages()
+        assert hook._benchmark_names is None
+
+    def test_should_run_filters_by_benchmark_names(
+        self, tmp_path: Path
+    ) -> None:
+        """should_run only considers benchmarks in benchmark_names."""
+        benchmarks_dir = tmp_path / "data" / "benchmarks"
+        for name in ("afc-curl-delta-01", "afc-xz-full-01", "atlanta-batik-delta-01"):
+            bm = benchmarks_dir / name
+            (bm / ".aixcc").mkdir(parents=True)
+            (bm / "Dockerfile").write_text("FROM scratch")
+
+        # Only request two of the three benchmarks
+        requested = frozenset({"afc-curl-delta-01", "afc-xz-full-01"})
+        hook = BuildBenchmarkImages(benchmark_names=requested)
+
+        with patch(
+            "crsbench.build_images.image_exists", return_value=True
+        ) as mock_exists:
+            result = hook.should_run(tmp_path)
+
+        # Should only check images for the two requested benchmarks
+        checked_tags = {c.args[0] for c in mock_exists.call_args_list}
+        assert all("atlanta" not in tag for tag in checked_tags)
+        assert result is False  # all images "exist"
+
+    def test_should_run_without_benchmark_names_checks_all(
+        self, tmp_path: Path
+    ) -> None:
+        """Without benchmark_names, should_run checks all benchmarks."""
+        benchmarks_dir = tmp_path / "data" / "benchmarks"
+        for name in ("afc-curl-delta-01", "atlanta-batik-delta-01"):
+            bm = benchmarks_dir / name
+            (bm / ".aixcc").mkdir(parents=True)
+            (bm / "Dockerfile").write_text("FROM scratch")
+
+        hook = BuildBenchmarkImages()
+
+        with patch(
+            "crsbench.build_images.image_exists", return_value=True
+        ) as mock_exists:
+            hook.should_run(tmp_path)
+
+        # Both benchmarks should have been checked
+        checked_tags = {c.args[0] for c in mock_exists.call_args_list}
+        assert len(checked_tags) == 2
+
+    def test_run_passes_benchmark_names(self, tmp_path: Path) -> None:
+        """run() forwards benchmark_names to build_images_sync."""
+        names = frozenset({"afc-curl-delta-01"})
+        hook = BuildBenchmarkImages(benchmark_names=names)
+
+        mock_summary = MagicMock()
+        mock_summary.failed = []
+        mock_summary.succeeded = []
+        with patch(
+            "crsbench.build_images.build_images_sync", return_value=mock_summary
+        ) as mock_build:
+            hook.run(tmp_path)
+
+        mock_build.assert_called_once()
+        assert mock_build.call_args.kwargs["benchmark_names"] is names
+
+
+class TestGetHooksDatasetBenchmarkNames:
+    """Tests that get_hooks() threads dataset into BuildBenchmarkImages."""
+
+    def _find_build_hook(
+        self, hooks: list[SetupHook]
+    ) -> BuildBenchmarkImages:
+        for hook in hooks:
+            if isinstance(hook, BuildBenchmarkImages):
+                return hook
+        raise AssertionError("BuildBenchmarkImages not found in hooks")
+
+    def test_dataset_lite_sets_benchmark_names(self) -> None:
+        hooks = get_hooks(Path("/unused"), dataset="lite")
+        build_hook = self._find_build_hook(hooks)
+        assert build_hook._benchmark_names == _LITE_BENCHMARKS
+
+    def test_dataset_all_no_benchmark_names(self) -> None:
+        hooks = get_hooks(Path("/unused"), dataset="all")
+        build_hook = self._find_build_hook(hooks)
+        assert build_hook._benchmark_names is None
+
+    def test_dataset_none_no_benchmark_names(self) -> None:
+        hooks = get_hooks(Path("/unused"))
+        build_hook = self._find_build_hook(hooks)
+        assert build_hook._benchmark_names is None
+
+    def test_explicit_benchmark_names(self) -> None:
+        hooks = get_hooks(
+            Path("/unused"),
+            dataset="afc-curl-delta-01,afc-xz-full-01",
+        )
+        build_hook = self._find_build_hook(hooks)
+        assert build_hook._benchmark_names == frozenset(
+            {"afc-curl-delta-01", "afc-xz-full-01"}
+        )
+
+    def test_dataset_competition_resolves_when_dir_exists(
+        self, tmp_path: Path
+    ) -> None:
+        """competition group resolves via _expand_group when dir exists."""
+        benchmarks_dir = tmp_path / "data" / "benchmarks"
+        for name in ("afc-curl-delta-01", "sanity-mock"):
+            (benchmarks_dir / name / ".aixcc").mkdir(parents=True)
+
+        hooks = get_hooks(tmp_path, dataset="competition")
+        build_hook = self._find_build_hook(hooks)
+        # "competition" = "!sanity-*" → excludes sanity-mock
+        assert build_hook._benchmark_names is not None
+        assert "afc-curl-delta-01" in build_hook._benchmark_names
+        assert "sanity-mock" not in build_hook._benchmark_names
+
+    def test_dataset_competition_none_when_dir_missing(self) -> None:
+        """competition group stays None when benchmarks dir doesn't exist."""
+        hooks = get_hooks(Path("/nonexistent"), dataset="competition")
+        build_hook = self._find_build_hook(hooks)
+        assert build_hook._benchmark_names is None

@@ -15,9 +15,12 @@ Score tiers:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import posixpath
 import shlex
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 # Domain loggers use saber.domains.* namespace so they inherit
 # saber's logging configuration and flow through inspect_ai's LogHandler.
@@ -31,11 +34,69 @@ from saber.scoring.context import ScoringContext
 logger = logging.getLogger("saber.domains.crsbench.scoring.patch_verify")
 
 
+@asynccontextmanager
+async def _sandbox_network_access() -> AsyncIterator[None]:
+    """Temporarily grant the sandbox container internet access.
+
+    Connects the container to Docker's default ``bridge`` network,
+    which provides outbound internet.  The connection is always removed
+    in the ``finally`` block, even if an exception is raised.
+
+    This is used during the scorer's build and test steps — the agent
+    never has network access during its solve phase.
+    """
+    container: str | None = None
+    connected = False
+    try:
+        sbx = sandbox()
+        conn = await sbx.connection()
+        container = conn.container
+        if not container:
+            logger.warning("Cannot determine container name; skipping network toggle")
+            yield
+            return
+
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "network", "connect", "bridge", container,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode == 0:
+            connected = True
+            logger.info("Enabled network access for container %s", container)
+        else:
+            # May already be connected, or bridge may not exist
+            logger.warning(
+                "Failed to connect container %s to bridge (rc=%d): %s",
+                container, proc.returncode, stderr.decode(errors="replace").strip(),
+            )
+        yield
+    finally:
+        if connected and container:
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "network", "disconnect", "bridge", container,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await proc.communicate()
+            if proc.returncode == 0:
+                logger.info("Disabled network access for container %s", container)
+            else:
+                logger.warning(
+                    "Failed to disconnect container %s from bridge (rc=%d): %s",
+                    container, proc.returncode, stderr.decode(errors="replace").strip(),
+                )
+
+
 class CRSBenchPatchVerifyStrategy:
     """Patch verification strategy implementing ``SaberScoringStrategy`` protocol.
 
     Reads criteria fields from ``DomainCriteria.model_extra``:
       - ``source_dir``: Path to source code in sandbox (default ``/workspace/source``)
+      - ``build_cwd``: Directory to ``cd`` into before running build/test scripts
+        (default: ``source_dir``).  Allows decoupling the build working directory
+        from ``$SRC`` so that ``build.sh`` scripts can reference sibling directories.
       - ``build_script``: Path to build script (optional)
       - ``harness_name``: Name of fuzz harness binary
       - ``harness_path``: Path to harness binary in sandbox
@@ -60,6 +121,7 @@ class CRSBenchPatchVerifyStrategy:
 
         extra = criteria.model_extra or {}
         source_dir = extra.get("source_dir") or "/workspace/source"
+        build_cwd = extra.get("build_cwd") or source_dir
         build_script = extra.get("build_script") or ""
         harness_path = extra.get("harness_path") or ""
         pov_dir = extra.get("pov_dir") or "/workspace/povs"
@@ -99,6 +161,7 @@ class CRSBenchPatchVerifyStrategy:
         # the source directory, then apply with git apply (more reliable
         # context matching) or fall back to GNU patch.
         src_q = shlex.quote(str(source_dir))
+        build_cwd_q = shlex.quote(str(build_cwd))
 
         # Clean .rej / .orig artefacts from earlier failed attempts once
         # before processing any patches.
@@ -277,17 +340,18 @@ class CRSBenchPatchVerifyStrategy:
             "CXXFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
         )
         if build_script:
-            build_cmd = f"cd {src_q} && {env_prefix} bash -eu {shlex.quote(str(build_script))}"
+            build_cmd = f"cd {build_cwd_q} && {env_prefix} bash -eu {shlex.quote(str(build_script))}"
         else:
             build_cmd = (
-                f"cd {src_q} && make clean 2>/dev/null; "
+                f"cd {build_cwd_q} && make clean 2>/dev/null; "
                 f"make CC=clang CFLAGS='-fsanitize=address -fno-omit-frame-pointer -g'"
             )
 
-        build_result = await sbx.exec(
-            ["bash", "-c", build_cmd],
-            timeout=300,
-        )
+        async with _sandbox_network_access():
+            build_result = await sbx.exec(
+                ["bash", "-c", build_cmd],
+                timeout=300,
+            )
         if build_result.returncode != 0:
             return Score(
                 value=0.0,
@@ -355,10 +419,18 @@ class CRSBenchPatchVerifyStrategy:
                     ["bash", "-c", f"chmod +x {shlex.quote(str(test_script))} {src_q}/*.sh 2>/dev/null || true"],
                     timeout=10,
                 )
-                test_result = await sbx.exec(
-                    ["bash", "-c", f"cd {src_q} && {env_prefix} {shlex.quote(str(test_script))}"],
-                    timeout=300,
-                )
+                try:
+                    async with _sandbox_network_access():
+                        test_result = await sbx.exec(
+                            ["bash", "-c", f"cd {build_cwd_q} && {env_prefix} {shlex.quote(str(test_script))}"],
+                            timeout=300,
+                        )
+                except (TimeoutError, asyncio.TimeoutError):
+                    return Score(
+                        value=0.5 * max_score,
+                        answer=ctx.submission,
+                        explanation="Patch fixes crash but test.sh timed out after 300s",
+                    )
                 if test_result.returncode != 0:
                     return Score(
                         value=0.5 * max_score,

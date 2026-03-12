@@ -9,8 +9,11 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 import yaml
+
+from crsbench.scripts.models import CRSBenchHarness, CRSBenchPOV, CRSBenchVuln
 
 
 # ---------------------------------------------------------------------------
@@ -18,7 +21,6 @@ import yaml
 # ---------------------------------------------------------------------------
 
 SAMPLE_META_YAML: dict[str, object] = {
-    "patch_exclude_list": ["build.sh", "Makefile"],
     "delta_mode": {
         "base_commit": "aaa111",
         "ref_commit": "bbb222",
@@ -51,7 +53,6 @@ SAMPLE_META_YAML: dict[str, object] = {
 
 
 SAMPLE_META_MULTI_HARNESS: dict[str, object] = {
-    "patch_exclude_list": ["build.sh"],
     "delta_mode": {
         "base_commit": "aaa111",
         "ref_commit": "bbb222",
@@ -130,6 +131,9 @@ def benchmark_dir(tmp_path: Path) -> Path:
     staged.mkdir()
     (staged / "main.c").write_text("int main() { return 0; }")
 
+    # Dockerfile for source_subdir parsing
+    (bench / "Dockerfile").write_text("FROM base\nWORKDIR $SRC/mock-c\n")
+
     return bench
 
 
@@ -152,6 +156,9 @@ def multi_harness_dir(tmp_path: Path) -> Path:
             pov_dir = aixcc / harness_name / vk / "blobs"
             pov_dir.mkdir(parents=True)
             (pov_dir / "pov_0.bin").write_bytes(b"\x00")
+
+    # Dockerfile for source_subdir parsing
+    (bench / "Dockerfile").write_text("FROM base\nWORKDIR $SRC/mock-c\n")
 
     return bench
 
@@ -286,6 +293,32 @@ class TestCRSBenchModels:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_harness_and_vuln() -> tuple[CRSBenchHarness, CRSBenchVuln]:
+    """Create a harness + vuln pair for testing."""
+    harness = CRSBenchHarness(
+        name="fuzz_target",
+        path="$PROJECT/fuzz/fuzz_target.c",
+        vulns=(
+            CRSBenchVuln(
+                vuln_keyword="cpv_0",
+                povs=(
+                    CRSBenchPOV(
+                        id="pov_0",
+                        sanitizer="address",
+                        error_token="ERROR: AddressSanitizer: stack-buffer-overflow",
+                    ),
+                ),
+            ),
+        ),
+    )
+    return harness, harness.vulns[0]
+
+
+# ---------------------------------------------------------------------------
 # generate_bugfix_task Tests
 # ---------------------------------------------------------------------------
 
@@ -293,33 +326,11 @@ class TestCRSBenchModels:
 class TestGenerateBugfixTask:
     """Tests for the generate_bugfix_task function."""
 
-    def _make_harness_and_vuln(self):
-        """Helper to create a harness + vuln with new model schema."""
-        from crsbench.scripts.models import CRSBenchHarness, CRSBenchPOV, CRSBenchVuln
-
-        harness = CRSBenchHarness(
-            name="fuzz_target",
-            path="$PROJECT/fuzz/fuzz_target.c",
-            vulns=(
-                CRSBenchVuln(
-                    vuln_keyword="cpv_0",
-                    povs=(
-                        CRSBenchPOV(
-                            id="pov_0",
-                            sanitizer="address",
-                            error_token="ERROR: AddressSanitizer: stack-buffer-overflow",
-                        ),
-                    ),
-                ),
-            ),
-        )
-        return harness, harness.vulns[0]
-
     def test_task_id_format(self, benchmark_dir: Path) -> None:
         """Task ID uses benchmark_id__harness_name__bugfix with underscores."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
-        harness, vuln = self._make_harness_and_vuln()
+        harness, vuln = _make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         assert task["task_id"] == "sanity_mock_c_delta_01__fuzz_target__cpv_0__bugfix"
 
@@ -327,7 +338,7 @@ class TestGenerateBugfixTask:
         """Initial context contains project, harness_name, benchmark_id."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
-        harness, vuln = self._make_harness_and_vuln()
+        harness, vuln = _make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         ctx = task["initial_context"]
         assert ctx["project"] == "sanity-mock-c"
@@ -338,7 +349,7 @@ class TestGenerateBugfixTask:
         """Initial files reference correct POV blob paths."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
-        harness, vuln = self._make_harness_and_vuln()
+        harness, vuln = _make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         files = task["initial_files"]
         assert "/workspace/povs/" in files
@@ -351,7 +362,7 @@ class TestGenerateBugfixTask:
         """initial_files must not contain any build/ keys or values."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
-        harness, vuln = self._make_harness_and_vuln()
+        harness, vuln = _make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         files = task["initial_files"]
         assert not any("build/" in key for key in files), (
@@ -365,7 +376,7 @@ class TestGenerateBugfixTask:
         """Scoring includes crsbench_patch_verify, llm_judge, tool_call."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
-        harness, vuln = self._make_harness_and_vuln()
+        harness, vuln = _make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         scoring = task["scoring"]
         assert "crsbench_patch_verify" in scoring
@@ -382,7 +393,7 @@ class TestGenerateBugfixTask:
         """Scoring aggregation uses average."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
-        harness, vuln = self._make_harness_and_vuln()
+        harness, vuln = _make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         agg = task["scoring_aggregation"]
         assert "average" in agg
@@ -391,7 +402,7 @@ class TestGenerateBugfixTask:
         """Task has a meaningful title and description."""
         from crsbench.scripts.generate_tasks import generate_bugfix_task
 
-        harness, vuln = self._make_harness_and_vuln()
+        harness, vuln = _make_harness_and_vuln()
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         assert "title" in task
         assert "description" in task
@@ -684,9 +695,10 @@ class TestWriteSharedYaml:
 class TestGenerateBugfixTaskPrebuilt:
     """Tests for generate_bugfix_task with pre-built image support."""
 
-    def test_initial_files_includes_source_for_fallback(
+    def test_initial_files_only_contains_povs(
         self, benchmark_dir: Path
     ) -> None:
+        """initial_files must only contain POV blobs, not source files."""
         from crsbench.scripts.generate_tasks import (
             generate_bugfix_task,
             load_benchmark_meta,
@@ -697,8 +709,9 @@ class TestGenerateBugfixTaskPrebuilt:
         vuln = harness.vulns[0]
         task = generate_bugfix_task(benchmark_dir, harness, vuln)
         initial_files = task["initial_files"]
-        assert "/workspace/source" in initial_files
+        assert "/workspace/source" not in initial_files
         assert "/workspace/povs/" in initial_files
+        assert len(initial_files) == 1
 
     def test_initial_context_has_benchmark_image(self, benchmark_dir: Path) -> None:
         from crsbench.scripts.generate_tasks import (
@@ -729,3 +742,160 @@ class TestGenerateBugfixTaskPrebuilt:
         assert "harness_name" in ctx
         assert "benchmark_id" in ctx
         assert "benchmark_image" in ctx
+
+
+# ---------------------------------------------------------------------------
+# parse_source_subdir Tests
+# ---------------------------------------------------------------------------
+
+
+class TestParseSourceSubdir:
+    """Tests for parse_source_subdir() Dockerfile parser."""
+
+    def test_single_level_bare(self, tmp_path: Path) -> None:
+        """$SRC/lcms → 'lcms'."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text("FROM base\nWORKDIR $SRC/lcms\n")
+        assert parse_source_subdir(df) == "lcms"
+
+    def test_single_level_curly(self, tmp_path: Path) -> None:
+        """${SRC}/lcms → 'lcms'."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text("FROM base\nWORKDIR ${SRC}/lcms\n")
+        assert parse_source_subdir(df) == "lcms"
+
+    def test_multi_level(self, tmp_path: Path) -> None:
+        """$SRC/src/cp-java-activemq-source → 'src/cp-java-activemq-source'."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text("FROM base\nWORKDIR $SRC/src/cp-java-activemq-source\n")
+        assert parse_source_subdir(df) == "src/cp-java-activemq-source"
+
+    def test_multi_level_curly(self, tmp_path: Path) -> None:
+        """${SRC}/project-parent/pdfbox → 'project-parent/pdfbox'."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text("FROM base\nWORKDIR ${SRC}/project-parent/pdfbox\n")
+        assert parse_source_subdir(df) == "project-parent/pdfbox"
+
+    def test_trailing_slash_stripped(self, tmp_path: Path) -> None:
+        """$SRC/src/ → 'src' (trailing slash stripped)."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text("FROM base\nWORKDIR $SRC/src/\n")
+        assert parse_source_subdir(df) == "src"
+
+    def test_multiple_workdir_last_wins(self, tmp_path: Path) -> None:
+        """Multiple WORKDIR lines — last one wins."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text(
+            "FROM base\nWORKDIR $SRC/wrong\nRUN make\nWORKDIR $SRC/correct\n"
+        )
+        assert parse_source_subdir(df) == "correct"
+
+    def test_multiple_workdir_last_curly_wins(self, tmp_path: Path) -> None:
+        """Multiple WORKDIR lines, last uses ${SRC} — last one wins."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text(
+            "FROM base\nWORKDIR $SRC/wrong\nWORKDIR ${SRC}/correct\n"
+        )
+        assert parse_source_subdir(df) == "correct"
+
+    def test_no_workdir_returns_empty(self, tmp_path: Path) -> None:
+        """No WORKDIR → empty string."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text("FROM base\nRUN make\n")
+        assert parse_source_subdir(df) == ""
+
+    def test_no_src_reference_returns_empty(self, tmp_path: Path) -> None:
+        """WORKDIR without $SRC → empty string."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        df = tmp_path / "Dockerfile"
+        df.write_text("FROM base\nWORKDIR /app\n")
+        assert parse_source_subdir(df) == ""
+
+    def test_missing_file_returns_empty(self, tmp_path: Path) -> None:
+        """Non-existent Dockerfile → empty string."""
+        from crsbench.scripts.generate_tasks import parse_source_subdir
+
+        assert parse_source_subdir(tmp_path / "nonexistent") == ""
+
+
+# ---------------------------------------------------------------------------
+# generate_bugfix_task build_cwd Tests
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateBugfixTaskBuildCwd:
+    """Tests for build_cwd in generated task scoring config."""
+
+    def test_source_dir_always_root(self, benchmark_dir: Path) -> None:
+        """source_dir must always be /workspace/source regardless of subdir."""
+        from crsbench.scripts.generate_tasks import generate_bugfix_task
+
+        harness, vuln = _make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln, source_subdir="lcms")
+        sub = task["scoring"]["crsbench_patch_verify"]["submission"]
+        assert sub["source_dir"] == "/workspace/source"
+
+    def test_build_cwd_set_when_subdir_present(self, benchmark_dir: Path) -> None:
+        """build_cwd is set to /workspace/source/<subdir> when subdir is provided."""
+        from crsbench.scripts.generate_tasks import generate_bugfix_task
+
+        harness, vuln = _make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln, source_subdir="lcms")
+        sub = task["scoring"]["crsbench_patch_verify"]["submission"]
+        assert sub["build_cwd"] == "/workspace/source/lcms"
+
+    def test_build_cwd_absent_when_no_subdir(self, benchmark_dir: Path) -> None:
+        """build_cwd is omitted when source_subdir is empty."""
+        from crsbench.scripts.generate_tasks import generate_bugfix_task
+
+        harness, vuln = _make_harness_and_vuln()
+        task = generate_bugfix_task(benchmark_dir, harness, vuln, source_subdir="")
+        sub = task["scoring"]["crsbench_patch_verify"]["submission"]
+        assert "build_cwd" not in sub
+
+    def test_build_cwd_multi_level(self, benchmark_dir: Path) -> None:
+        """build_cwd handles multi-level subdirs."""
+        from crsbench.scripts.generate_tasks import generate_bugfix_task
+
+        harness, vuln = _make_harness_and_vuln()
+        task = generate_bugfix_task(
+            benchmark_dir, harness, vuln,
+            source_subdir="src/cp-java-activemq-source",
+        )
+        sub = task["scoring"]["crsbench_patch_verify"]["submission"]
+        assert sub["build_cwd"] == "/workspace/source/src/cp-java-activemq-source"
+
+    def test_generate_all_tasks_adds_build_cwd(
+        self, benchmarks_root: Path, tmp_path: Path
+    ) -> None:
+        """generate_all_tasks reads Dockerfile WORKDIR and sets build_cwd."""
+        from crsbench.scripts.generate_tasks import generate_all_tasks
+
+        output_dir = tmp_path / "output_build_cwd"
+        generate_all_tasks(benchmarks_root, output_dir)
+        # Check any generated task YAML has build_cwd
+        for yaml_file in output_dir.rglob("*.yaml"):
+            if yaml_file.name == "shared.yaml":
+                continue
+            content = yaml.safe_load(yaml_file.read_text())
+            for task in content["tasks"]:
+                sub = task["scoring"]["crsbench_patch_verify"]["submission"]
+                assert sub["source_dir"] == "/workspace/source"
+                assert sub["build_cwd"] == "/workspace/source/mock-c"

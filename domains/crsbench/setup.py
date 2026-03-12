@@ -39,42 +39,30 @@ _BENCHMARK_SUBDIR = "data/benchmarks"
 _TASKS_SUBDIR = "tasks"
 REPO_ID = "sslab-gatech/crsbench-dataset"
 
-# Benchmark directories included in the ``lite`` dataset (100 tasks
-# across all 81 projects — one representative task per project plus
-# 19 additional tasks from the largest projects for extra coverage).
+# Benchmark directories included in the ``lite`` dataset (60 tasks
+# across 60 projects — one task per project, chosen for maximum
+# coverage of project categories, languages, and sources).
 _LITE_BENCHMARKS: frozenset[str] = frozenset({
+    # --- afc (15) ---
     "afc-apache-commons-compress-delta-01",
-    "afc-apache-commons-compress-delta-02",
-    "afc-apache-poi-full-01",
     "afc-curl-delta-01",
-    "afc-curl-delta-04",
     "afc-dav1d-full-01",
     "afc-freerdp-delta-01",
-    "afc-freerdp-delta-03",
-    "afc-lcms-full-01",
     "afc-libavif-delta-02",
-    "afc-libavif-orig-delta-02",
     "afc-libexif-delta-01",
     "afc-libpng-delta-01",
-    "afc-libxml2-delta-01",
-    "afc-libxml2-delta-02",
     "afc-log4j2-delta-01",
-    "afc-mongoose-delta-01",
     "afc-pdfbox-delta-01",
-    "afc-pdfbox-full-01",
     "afc-shadowsocks-full-01",
     "afc-sqlite3-delta-01",
-    "afc-sqlite3-delta-02",
     "afc-systemd-full-01",
-    "afc-tika-delta-01",
-    "afc-tika-delta-02",
     "afc-wireshark-delta-01",
-    "afc-wireshark-delta-02",
     "afc-xz-full-01",
     "afc-zookeeper-delta-01",
+    # --- asc (1) ---
     "asc-nginx-delta-01",
+    # --- atlanta (44) ---
     "atlanta-activemq-delta-01",
-    "atlanta-activemq-var-delta-01",
     "atlanta-apache-commons-validator-delta-01",
     "atlanta-apache-poi-full-01",
     "atlanta-batik-delta-01",
@@ -82,14 +70,9 @@ _LITE_BENCHMARKS: frozenset[str] = frozenset({
     "atlanta-beanutils-full-01",
     "atlanta-binutils-delta-01",
     "atlanta-cron-utils-delta-01",
-    "atlanta-curl-delta-01",
     "atlanta-cxf-full-01",
-    "atlanta-faad2-delta-01",
     "atlanta-feign-full-01",
-    "atlanta-file-delta-01",
     "atlanta-freetype2-delta-01",
-    "atlanta-fuzzy-delta-01",
-    "atlanta-geonetwork-delta-01",
     "atlanta-gpac-delta-01",
     "atlanta-htmlunit-delta-01",
     "atlanta-imaging-delta-01",
@@ -100,9 +83,7 @@ _LITE_BENCHMARKS: frozenset[str] = frozenset({
     "atlanta-json-java-full-01",
     "atlanta-jsoup-full-01",
     "atlanta-keycloak-delta-01",
-    "atlanta-kylin-delta-01",
     "atlanta-libavc-full-01",
-    "atlanta-libcue-delta-01",
     "atlanta-libjpeg-full-01",
     "atlanta-libssh2-delta-01",
     "atlanta-libtiff-full-01",
@@ -111,11 +92,8 @@ _LITE_BENCHMARKS: frozenset[str] = frozenset({
     "atlanta-mosquitto-delta-01",
     "atlanta-nasm-delta-01",
     "atlanta-netty-delta-01",
-    "atlanta-olingo-delta-01",
-    "atlanta-oripa-delta-01",
     "atlanta-pac4j-full-01",
     "atlanta-pcre2-full-01",
-    "atlanta-pdfbox-full-01",
     "atlanta-php-delta-01",
     "atlanta-rdf4j-full-01",
     "atlanta-shiro-full-01",
@@ -125,13 +103,9 @@ _LITE_BENCHMARKS: frozenset[str] = frozenset({
     "atlanta-sqlite-jdbc-delta-01",
     "atlanta-struts-delta-01",
     "atlanta-tika-delta-01",
-    "atlanta-tkctf-rpn-calculator-delta-01",
     "atlanta-tmux-delta-01",
     "atlanta-user-nginx-full-01",
-    "atlanta-widoco-delta-01",
-    "atlanta-wireshark-delta-01",
     "atlanta-xstream-full-01",
-    "atlanta-ztzip-full-01",
 })
 
 # Named dataset groups.  Values are either a glob pattern string or
@@ -858,6 +832,8 @@ class BuildBenchmarkImages:
     Args:
         force: Rebuild images even if they already exist.
         prefix_filter: Only build images for benchmarks matching this prefix.
+        benchmark_names: When provided, only build benchmarks whose directory
+            name is in this set.
     """
 
     def __init__(
@@ -865,9 +841,11 @@ class BuildBenchmarkImages:
         *,
         force: bool = False,
         prefix_filter: str | None = None,
+        benchmark_names: frozenset[str] | None = None,
     ) -> None:
         self._force = force
         self._prefix_filter = prefix_filter
+        self._benchmark_names = benchmark_names
         self._summary: object | None = None
 
     @property
@@ -899,14 +877,20 @@ class BuildBenchmarkImages:
                 b for b in benchmarks if b.name.startswith(self._prefix_filter)
             ]
 
+        if self._benchmark_names is not None:
+            benchmarks = [
+                b for b in benchmarks if b.name in self._benchmark_names
+            ]
+
         if not benchmarks:
             return False
 
+        missing = [
+            b.name for b in benchmarks
+            if not image_exists(f"{BENCHMARK_IMAGE_PREFIX}:{b.name}")
+        ]
         # Check if any benchmark is missing its image
-        return any(
-            not image_exists(f"{BENCHMARK_IMAGE_PREFIX}:{b.name}")
-            for b in benchmarks
-        )
+        return len(missing) > 0
 
     def run(self, domain_root: Path) -> None:
         """Build Docker images for benchmarks."""
@@ -917,6 +901,7 @@ class BuildBenchmarkImages:
             domain_root,
             force=self._force,
             prefix_filter=self._prefix_filter,
+            benchmark_names=self._benchmark_names,
         )
         self._summary = summary
 
@@ -1057,9 +1042,34 @@ def get_hooks(
     hooks.append(StageBenchmarkData(prefix_filter=rebuild_images))
 
     # 3. Build Docker images
+    # Resolve dataset to benchmark names so the build hook only builds
+    # images for the requested subset (e.g. ``dataset=lite``).
+    build_benchmark_names: frozenset[str] | None = None
+    parsed_datasets = _parse_csv(dataset)
+    if (
+        parsed_datasets is not None
+        and len(parsed_datasets) == 1
+        and parsed_datasets[0] in _DATASET_GROUPS
+    ):
+        group_value = _DATASET_GROUPS[parsed_datasets[0]]
+        if isinstance(group_value, frozenset):
+            # Explicit set of benchmark names (e.g. "lite")
+            build_benchmark_names = group_value
+        elif group_value != "*":
+            # Pattern-based group — resolve if benchmarks dir exists
+            benchmarks_dir = domain_root / _BENCHMARK_SUBDIR
+            if benchmarks_dir.is_dir():
+                expanded = _expand_group(parsed_datasets[0], benchmarks_dir)
+                if expanded is not None:
+                    build_benchmark_names = frozenset(expanded)
+    elif parsed_datasets:
+        # Explicit benchmark names passed directly
+        build_benchmark_names = frozenset(parsed_datasets)
+
     build_hook = BuildBenchmarkImages(
         force=force,
         prefix_filter=rebuild_images,
+        benchmark_names=build_benchmark_names,
     )
     hooks.append(build_hook)
 

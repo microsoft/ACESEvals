@@ -31,6 +31,8 @@ from crsbench.build_images import (
     ENV_IMAGE_PREFIX,
     ImageBuildResult,
     ImageBuildSummary,
+    _GRADLE_OFFLINE_INIT,
+    _LAYER2_DOCKERFILE,
     _discover_benchmarks,
     _find_benchmark_dockerfile,
     build_all_images,
@@ -442,7 +444,7 @@ class TestBuildAllImages:
                 side_effect=lambda *a, **kw: _mock_docker_proc(),
             ),
         ):
-            summary = await build_all_images(benchmarks_dir, domain_root)
+            summary = await build_all_images(benchmarks_dir, domain_root, verbose=True)
 
         assert len(summary.succeeded) == 3
         assert len(summary.failed) == 0
@@ -466,7 +468,7 @@ class TestBuildAllImages:
             ),
         ):
             summary = await build_all_images(
-                benchmarks_dir, domain_root, prefix_filter="bench-a"
+                benchmarks_dir, domain_root, prefix_filter="bench-a", verbose=True,
             )
 
         assert len(summary.results) == 1
@@ -491,7 +493,7 @@ class TestBuildAllImages:
             patch("crsbench.build_images.image_exists", return_value=False),
             patch("asyncio.create_subprocess_exec", side_effect=mock_exec),
         ):
-            summary = await build_all_images(benchmarks_dir, domain_root)
+            summary = await build_all_images(benchmarks_dir, domain_root, verbose=True)
 
         assert len(summary.failed) >= 1
         assert len(summary.succeeded) >= 1
@@ -522,7 +524,7 @@ class TestBuildAllImages:
 
         with patch("crsbench.build_images.build_benchmark_image", side_effect=tracking_build):
             await build_all_images(
-                benchmarks_dir, domain_root, max_concurrent=2
+                benchmarks_dir, domain_root, max_concurrent=2, verbose=True,
             )
 
         assert max_active <= 2
@@ -576,6 +578,8 @@ class TestBuildImagesSync:
                 max_concurrent=2,
                 timeout=600,
                 prefix_filter="abc",
+                benchmark_names=None,
+                verbose=False,
             )
 
 
@@ -1416,14 +1420,14 @@ class TestComposeEnvVarInterpolation:
 
     def test_compose_uses_benchmark_image_var(self) -> None:
         compose_path = (
-            Path(__file__).resolve().parents[1] / "compose" / "sandbox.compose.yml"
+            Path(__file__).resolve().parents[1] / "compose" / "default.compose.yml"
         )
         content = compose_path.read_text()
         assert "SAMPLE_METADATA_BENCHMARK_IMAGE" in content
 
     def test_compose_has_no_fallback(self) -> None:
         compose_path = (
-            Path(__file__).resolve().parents[1] / "compose" / "sandbox.compose.yml"
+            Path(__file__).resolve().parents[1] / "compose" / "default.compose.yml"
         )
         content = compose_path.read_text()
         assert ":-" not in content, "Compose should not have a fallback default"
@@ -1432,6 +1436,41 @@ class TestComposeEnvVarInterpolation:
 # ---------------------------------------------------------------------------
 # Git init resilience
 # ---------------------------------------------------------------------------
+
+
+class TestGradleOfflineInit:
+    """Tests for Gradle offline init script in Docker images."""
+
+    def test_gradle_offline_init_constant_has_cache_directives(self) -> None:
+        assert "cacheDynamicVersionsFor" in _GRADLE_OFFLINE_INIT
+        assert "cacheChangingModulesFor" in _GRADLE_OFFLINE_INIT
+        assert "365" in _GRADLE_OFFLINE_INIT
+
+    def test_layer2_dockerfile_contains_gradle_init(self) -> None:
+        """_LAYER2_DOCKERFILE must install offline-cache.gradle."""
+        assert "offline-cache.gradle" in _LAYER2_DOCKERFILE
+        assert "cacheDynamicVersionsFor" in _LAYER2_DOCKERFILE
+        assert "cacheChangingModulesFor" in _LAYER2_DOCKERFILE
+
+    def test_overlay_dockerfile_contains_gradle_init(self) -> None:
+        """generate_overlay_dockerfile() output must include the gradle init script."""
+        dockerfile = generate_overlay_dockerfile("saber/crsbench/env:test")
+        assert "offline-cache.gradle" in dockerfile
+        assert "cacheDynamicVersionsFor" in dockerfile
+        assert "cacheChangingModulesFor" in dockerfile
+
+    def test_gradle_init_runs_after_build_sh_in_layer2(self) -> None:
+        """The Gradle init script must appear AFTER build.sh in _LAYER2_DOCKERFILE."""
+        build_sh_pos = _LAYER2_DOCKERFILE.index("build.sh")
+        gradle_init_pos = _LAYER2_DOCKERFILE.index("offline-cache.gradle")
+        assert gradle_init_pos > build_sh_pos
+
+    def test_gradle_init_runs_after_build_sh_in_overlay(self) -> None:
+        """The Gradle init script must appear AFTER build.sh in overlay dockerfile."""
+        dockerfile = generate_overlay_dockerfile("saber/crsbench/env:test")
+        build_sh_pos = dockerfile.index("build.sh")
+        gradle_init_pos = dockerfile.index("offline-cache.gradle")
+        assert gradle_init_pos > build_sh_pos
 
 
 class TestGitInitResilience:

@@ -31,6 +31,20 @@ from pathlib import Path
 
 from saber.logging import display_progress, get_logger
 
+try:
+    from rich.console import Console
+    from rich.progress import (
+        BarColumn,
+        MofNCompleteColumn,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        TimeElapsedColumn,
+    )
+    _HAS_RICH = True
+except ImportError:
+    _HAS_RICH = False
+
 logger = get_logger("domains.crsbench.build_images")
 
 
@@ -44,6 +58,7 @@ async def _stream_build(
     label: str,
     *,
     timeout: int,
+    quiet: bool = False,
 ) -> None:
     """Stream Docker build output through the logger and wait for exit.
 
@@ -56,6 +71,7 @@ async def _stream_build(
         proc: Running Docker build subprocess.
         label: Human label for log messages (e.g. ``"Layer 1 afc-curl"``).
         timeout: Maximum seconds to wait before killing the build.
+        quiet: If True, suppress per-line ``display_progress`` output.
 
     Raises:
         RuntimeError: On build failure or timeout.
@@ -86,7 +102,7 @@ async def _stream_build(
             decoded = line.decode(errors="replace").rstrip()
             if is_stderr:
                 stderr_chunks.append(line)
-            if decoded:
+            if decoded and not quiet:
                 display_progress(f"[{label}] {decoded}")
 
     try:
@@ -124,6 +140,24 @@ DEFAULT_MAX_CONCURRENT_BUILDS = 4
 #: Per-build timeout in seconds (some benchmarks have heavy C++/Java deps).
 #: Set generous to accommodate parallel builds competing for CPU.
 DEFAULT_BUILD_TIMEOUT_SECONDS = 3600  # 60 minutes
+
+#: Gradle init script that tells Gradle to cache dynamic version resolutions
+#: and changing module artifacts indefinitely. This prevents Gradle from
+#: attempting to refresh version ranges (e.g. ``[1.81,1.82)``) from remote
+#: repositories when the sandbox has no network access. The script is
+#: installed AFTER ``build.sh`` warms the dependency cache during image build.
+_GRADLE_OFFLINE_INIT = """\
+// Prevent Gradle from refreshing dynamic version ranges and changing modules.
+// Installed by SABER Layer 2 build — the dependency cache is already warm.
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            cacheDynamicVersionsFor 365, 'days'
+            cacheChangingModulesFor 365, 'days'
+        }
+    }
+}
+"""
 
 #: Layer 2 Dockerfile template — overlays SABER tooling on the env image.
 #: Uses the benchmark directory as build context so COPY can access
@@ -182,6 +216,22 @@ RUN chmod +x /workspace/build.sh /workspace/test.sh
 # at runtime.  A non-zero exit from build.sh is recorded so the
 # harness verification step can flag it.
 RUN /workspace/build.sh || echo 'SABER_BUILD_WARNING: build.sh exited non-zero' >&2
+
+# Install Gradle init script to prevent dynamic version re-resolution.
+# Without this, Gradle tries to refresh expired cached version ranges
+# from Maven Central, which fails in the offline sandbox environment.
+RUN mkdir -p /root/.gradle/init.d && \
+    cat > /root/.gradle/init.d/offline-cache.gradle <<'GRADLE_INIT'
+// Installed by SABER Layer 2 — dependency cache is already warm from build.sh.
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            cacheDynamicVersionsFor 365, 'days'
+            cacheChangingModulesFor 365, 'days'
+        }
+    }
+}
+GRADLE_INIT
 
 WORKDIR /workspace
 """
@@ -304,6 +354,7 @@ async def _build_layer1(
     benchmark_id: str,
     *,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
+    quiet: bool = False,
 ) -> str:
     """Build Layer 1: benchmark environment image.
 
@@ -328,10 +379,12 @@ async def _build_layer1(
 
     # Skip rebuild if Layer 1 already exists
     if image_exists(image_tag):
-        display_progress(f"Layer 1 image {image_tag} already exists, reusing")
+        if not quiet:
+            display_progress(f"Layer 1 image {image_tag} already exists, reusing")
         return image_tag
 
-    display_progress(f"Building Layer 1 image {image_tag} from {dockerfile}")
+    if not quiet:
+        display_progress(f"Building Layer 1 image {image_tag} from {dockerfile}")
 
     proc = await asyncio.create_subprocess_exec(
         "docker", "build",
@@ -342,9 +395,10 @@ async def _build_layer1(
         stderr=asyncio.subprocess.PIPE,
     )
 
-    await _stream_build(proc, f"L1 {benchmark_id}", timeout=timeout)
+    await _stream_build(proc, f"L1 {benchmark_id}", timeout=timeout, quiet=quiet)
 
-    display_progress(f"Layer 1 complete: {image_tag}")
+    if not quiet:
+        display_progress(f"Layer 1 complete: {image_tag}")
     return image_tag
 
 
@@ -360,6 +414,7 @@ async def _build_layer2(
     domain_root: Path,
     *,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
+    quiet: bool = False,
 ) -> str:
     """Build Layer 2: SABER tooling overlay on benchmark env.
 
@@ -399,7 +454,8 @@ async def _build_layer2(
             # Create a no-op placeholder so COPY doesn't fail
             (tmp_dir / script).write_text(f"#!/bin/bash\necho '{script} not provided'\n")
 
-    display_progress(f"Building Layer 2 image {image_tag} (base: {base_image})")
+    if not quiet:
+        display_progress(f"Building Layer 2 image {image_tag} (base: {base_image})")
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -412,9 +468,10 @@ async def _build_layer2(
             stderr=asyncio.subprocess.PIPE,
         )
 
-        await _stream_build(proc, f"L2 {benchmark_id}", timeout=timeout)
+        await _stream_build(proc, f"L2 {benchmark_id}", timeout=timeout, quiet=quiet)
 
-        display_progress(f"Layer 2 complete: {image_tag}")
+        if not quiet:
+            display_progress(f"Layer 2 complete: {image_tag}")
         return image_tag
     finally:
         # Clean up temporary build files
@@ -432,6 +489,7 @@ async def build_benchmark_image(
     *,
     force: bool = False,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
+    quiet: bool = False,
 ) -> ImageBuildResult:
     """Build both layers for a single benchmark.
 
@@ -452,7 +510,8 @@ async def build_benchmark_image(
 
     # Skip if already built
     if not force and image_exists(final_tag):
-        display_progress(f"Image {final_tag} already exists, skipping")
+        if not quiet:
+            display_progress(f"Image {final_tag} already exists, skipping")
         return ImageBuildResult(
             benchmark_id=benchmark_id,
             image_tag=final_tag,
@@ -462,17 +521,18 @@ async def build_benchmark_image(
 
     try:
         # Layer 1: Build benchmark environment
-        layer1_tag = await _build_layer1(benchmark_path, benchmark_id, timeout=timeout)
+        layer1_tag = await _build_layer1(benchmark_path, benchmark_id, timeout=timeout, quiet=quiet)
 
         # Layer 2: Overlay SABER tooling
         layer2_tag = await _build_layer2(
-            layer1_tag, benchmark_id, benchmark_path, domain_root, timeout=timeout,
+            layer1_tag, benchmark_id, benchmark_path, domain_root, timeout=timeout, quiet=quiet,
         )
 
         elapsed = time.monotonic() - start
-        display_progress(
-            f"Benchmark {benchmark_id}: both layers built in {elapsed:.1f}s → {layer2_tag}",
-        )
+        if not quiet:
+            display_progress(
+                f"Benchmark {benchmark_id}: both layers built in {elapsed:.1f}s → {layer2_tag}",
+            )
         return ImageBuildResult(
             benchmark_id=benchmark_id,
             image_tag=layer2_tag,
@@ -525,6 +585,8 @@ async def build_all_images(
     max_concurrent: int = DEFAULT_MAX_CONCURRENT_BUILDS,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
     prefix_filter: str | None = None,
+    benchmark_names: frozenset[str] | None = None,
+    verbose: bool = False,
 ) -> ImageBuildSummary:
     """Build Docker images for all benchmarks in a directory.
 
@@ -538,6 +600,8 @@ async def build_all_images(
         max_concurrent: Maximum concurrent Docker builds.
         timeout: Per-layer build timeout in seconds.
         prefix_filter: Only build benchmarks whose ID starts with this prefix.
+        benchmark_names: When provided, only build benchmarks whose directory
+            name is in this set.  Applied after *prefix_filter*.
 
     Returns:
         Summary of all build results.
@@ -550,10 +614,89 @@ async def build_all_images(
             b for b in benchmarks if b.name.startswith(prefix_filter)
         ]
 
+    if benchmark_names is not None:
+        benchmarks = [b for b in benchmarks if b.name in benchmark_names]
+
     if not benchmarks:
         logger.warning("No benchmarks with Dockerfiles found in %s", benchmarks_dir)
         return ImageBuildSummary(total_duration_seconds=time.monotonic() - start)
 
+    use_progress_bar = not verbose and _HAS_RICH
+
+    if use_progress_bar:
+        console = Console(stderr=True)
+        failed_results: list[ImageBuildResult] = []
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("•"),
+            TimeElapsedColumn(),
+            console=console,
+            transient=False,
+        ) as progress:
+            task_id = progress.add_task(
+                "Building images", total=len(benchmarks),
+            )
+
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def _bounded_build(benchmark_path: Path) -> ImageBuildResult:
+                async with semaphore:
+                    result = await build_benchmark_image(
+                        benchmark_path, domain_root, force=force,
+                        timeout=timeout, quiet=True,
+                    )
+
+                if not result.success:
+                    failed_results.append(result)
+                    progress.console.print(
+                        f"  [red]✗[/red] {result.benchmark_id} "
+                        f"({result.duration_seconds:.0f}s)",
+                    )
+
+                n_failed = len(failed_results)
+                desc = "Building images"
+                if n_failed:
+                    desc += f" [red]({n_failed} failed)[/red]"
+                progress.update(task_id, advance=1, description=desc)
+                return result
+
+            results = await asyncio.gather(
+                *[_bounded_build(b) for b in benchmarks],
+                return_exceptions=False,
+            )
+
+        elapsed = time.monotonic() - start
+        summary = ImageBuildSummary(
+            results=list(results),
+            total_duration_seconds=elapsed,
+        )
+
+        # Print summary
+        console.print(
+            f"\n[bold]Build complete:[/bold] "
+            f"[green]{len(summary.succeeded)} succeeded[/green], "
+            f"[red]{len(summary.failed)} failed[/red] "
+            f"in {elapsed:.1f}s",
+        )
+
+        # Dump detailed failure output
+        if failed_results:
+            console.print(f"\n[bold red]{'━' * 60}[/bold red]")
+            console.print("[bold red]Failed builds:[/bold red]\n")
+            for r in failed_results:
+                console.print(
+                    f"[bold]{r.benchmark_id}[/bold] "
+                    f"(failed in {r.duration_seconds:.1f}s)",
+                )
+                console.print(f"[dim]{r.error}[/dim]\n")
+
+        return summary
+
+    # --- Verbose mode: original behavior ---
     display_progress(
         f"Building images for {len(benchmarks)} benchmarks "
         f"(max_concurrent={max_concurrent}, timeout={timeout}s)",
@@ -603,6 +746,8 @@ def build_images_sync(
     max_concurrent: int = DEFAULT_MAX_CONCURRENT_BUILDS,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
     prefix_filter: str | None = None,
+    benchmark_names: frozenset[str] | None = None,
+    verbose: bool = False,
 ) -> ImageBuildSummary:
     """Synchronous wrapper for :func:`build_all_images`.
 
@@ -616,6 +761,8 @@ def build_images_sync(
         max_concurrent: Maximum concurrent Docker builds.
         timeout: Per-layer build timeout in seconds.
         prefix_filter: Only build benchmarks whose ID starts with this prefix.
+        benchmark_names: When provided, only build benchmarks whose directory
+            name is in this set.  Applied after *prefix_filter*.
 
     Returns:
         Summary of all build results.
@@ -627,6 +774,8 @@ def build_images_sync(
         max_concurrent=max_concurrent,
         timeout=timeout,
         prefix_filter=prefix_filter,
+        benchmark_names=benchmark_names,
+        verbose=verbose,
     )
 
     try:

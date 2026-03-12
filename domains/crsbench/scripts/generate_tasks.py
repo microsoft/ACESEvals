@@ -48,6 +48,34 @@ def _derive_project_name(benchmark_id: str) -> str:
     return parts[0] if len(parts) >= 3 else benchmark_id  # noqa: PLR2004
 
 
+# Regex matches WORKDIR $SRC/... or WORKDIR ${SRC}/...
+_WORKDIR_SRC_RE = re.compile(r"^\s*WORKDIR\s+(?:\$SRC|\$\{SRC\})/(.+)$")
+
+
+def parse_source_subdir(dockerfile_path: Path) -> str:
+    """Parse the project subdirectory from a benchmark Dockerfile's WORKDIR.
+
+    Finds the last ``WORKDIR`` directive referencing ``$SRC/`` or
+    ``${SRC}/`` and extracts the relative path after it.
+
+    Args:
+        dockerfile_path: Path to the benchmark Dockerfile.
+
+    Returns:
+        Relative subdirectory path (e.g. ``"lcms"``,
+        ``"src/cp-java-activemq-source"``), or empty string if no
+        matching WORKDIR directive is found.
+    """
+    if not dockerfile_path.is_file():
+        return ""
+    subdir = ""
+    for line in dockerfile_path.read_text().splitlines():
+        m = _WORKDIR_SRC_RE.match(line)
+        if m:
+            subdir = m.group(1).rstrip("/")
+    return subdir
+
+
 # ---------------------------------------------------------------------------
 # Core functions
 # ---------------------------------------------------------------------------
@@ -86,6 +114,7 @@ def generate_bugfix_task(
     *,
     built_benchmarks: set[str] | None = None,
     dataset: str = "competition",
+    source_subdir: str = "",
 ) -> dict[str, object]:
     """Generate a bug-fix task dict from benchmark metadata.
 
@@ -98,6 +127,8 @@ def generate_bugfix_task(
             have images.  When provided, only benchmarks in this set get
             ``benchmark_image`` in their initial_context.
         dataset: Dataset name for task filtering (default: ``"competition"``).
+        source_subdir: Relative subdirectory under ``/workspace/source``
+            where ``build.sh`` expects to run (default: ``""`` = root).
 
     Returns:
         A dict representing a single task entry, suitable for YAML serialization.
@@ -124,6 +155,20 @@ def generate_bugfix_task(
     if built_benchmarks is None or benchmark_id in built_benchmarks:
         initial_context["benchmark_image"] = image_tag_for_benchmark(benchmark_id)
 
+    submission_config: dict[str, object] = {
+        "target": "submission",
+        "max_score": 1.0,
+        "source_dir": "/workspace/source",
+        "build_script": "/workspace/build.sh",
+        "harness_name": harness.name,
+        "harness_path": f"/workspace/build/{harness.name}",
+        "pov_dir": "/workspace/povs",
+        "test_script": "/workspace/test.sh",
+        "patch_dir": "/submit/patches",
+    }
+    if source_subdir:
+        submission_config["build_cwd"] = f"/workspace/source/{source_subdir}"
+
     return {
         "task_id": task_id,
         "dataset": dataset,
@@ -142,17 +187,7 @@ def generate_bugfix_task(
         },
         "scoring": {
             "crsbench_patch_verify": {
-                "submission": {
-                    "target": "submission",
-                    "max_score": 1.0,
-                    "source_dir": "/workspace/source",
-                    "build_script": "/workspace/build.sh",
-                    "harness_name": harness.name,
-                    "harness_path": f"/workspace/build/{harness.name}",
-                    "pov_dir": "/workspace/povs",
-                    "test_script": "/workspace/test.sh",
-                    "patch_dir": "/submit/patches",
-                },
+                "submission": submission_config,
             },
             "llm_judge": {
                 "model": "openai/azure/gpt-4.1",
@@ -318,12 +353,14 @@ def generate_all_tasks(
         group_dir.mkdir(parents=True, exist_ok=True)
         _write_shared_yaml(group_dir, dataset=dataset)
 
+        source_subdir = parse_source_subdir(benchmark_path / "Dockerfile")
         for harness in meta.harnesses_with_vulns:
             for vuln in harness.vulns:
                 task_dict = generate_bugfix_task(
                     benchmark_path, harness, vuln,
                     built_benchmarks=built_benchmarks,
                     dataset=dataset,
+                    source_subdir=source_subdir,
                 )
                 task_id = task_dict["task_id"]
 

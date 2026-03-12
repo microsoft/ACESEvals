@@ -6,6 +6,7 @@ patches, multiple POVs, missing test script, build failures, etc.).
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -79,6 +80,12 @@ def _make_sandbox_mock(exec_side_effects: list[MagicMock]) -> MagicMock:
     return sbx
 
 
+@asynccontextmanager
+async def _noop_cm():  # type: ignore[no-untyped-def]
+    """No-op async context manager to replace ``_sandbox_network_access`` in tests."""
+    yield
+
+
 # ---------------------------------------------------------------------------
 # Strategy fixture
 # ---------------------------------------------------------------------------
@@ -115,7 +122,8 @@ class TestPatchVerifyScore1_0:
             _make_exec_result(),                                      # bash test.sh (pass)
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert isinstance(result, Score)
@@ -141,7 +149,8 @@ class TestPatchVerifyScore1_0:
             _make_exec_result(),                                      # run POV (no crash)
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
@@ -165,7 +174,8 @@ class TestPatchVerifyScore1_0:
             _make_exec_result(returncode=1),                          # test -f (not found)
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
@@ -189,7 +199,8 @@ class TestPatchVerifyScore1_0:
             _make_exec_result(),                                      # run POV (no crash)
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert isinstance(result, Score)
@@ -213,7 +224,8 @@ class TestPatchVerifyScore1_0:
             _make_exec_result(),  # POV pass
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(5.0)
@@ -239,7 +251,8 @@ class TestPatchVerifyScore1_0:
             _make_exec_result(returncode=0),  # test run (pass)
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
@@ -266,7 +279,8 @@ class TestPatchVerifyScore0_5:
             _make_exec_result(returncode=1, stderr="FAIL: test_foo"),  # bash test.sh fails
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.5)
@@ -294,7 +308,8 @@ class TestPatchVerifyScore0_5:
             _make_exec_result(returncode=1, stderr="assertion error"),
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(5.0)
@@ -313,7 +328,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(stdout=""),  # find returns no files
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -329,7 +345,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(returncode=1, stderr="No such directory"),
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -348,7 +365,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(returncode=1),  # reverse dry-run also fails → truly bad patch
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -369,7 +387,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(returncode=1),                                      # reverse dry-run also fails
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -395,7 +414,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(returncode=1, stderr="ASAN: crash"),     # POV crashes
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -414,7 +434,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(returncode=2, stderr="error: undefined"),  # build fails
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -437,7 +458,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(returncode=1, stderr="ASAN: heap-buffer-overflow"),  # crash!
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -460,7 +482,8 @@ class TestPatchVerifyScore0_0:
             _make_exec_result(stdout=""),  # no POVs
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -494,7 +517,8 @@ class TestPatchVerifyEdgeCases:
             _make_exec_result(),  # run POV (no crash)
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
@@ -526,7 +550,8 @@ class TestPatchVerifyEdgeCases:
             _make_exec_result(),  # run POV (no crash)
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         # At least one patch applied, so scoring continues
@@ -554,7 +579,8 @@ class TestPatchVerifyEdgeCases:
             _make_exec_result(),  # POV 3 pass
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
@@ -580,7 +606,8 @@ class TestPatchVerifyEdgeCases:
             _make_exec_result(returncode=1, stderr="ASAN detected"),  # POV 2 crashes
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.0)
@@ -608,7 +635,8 @@ class TestPatchVerifyEdgeCases:
             _make_exec_result(),  # POV pass
         ])
 
-        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx):
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(1.0)
@@ -647,6 +675,186 @@ class TestPatchVerifyEdgeCases:
 
         assert result.value == pytest.approx(0.0)
         assert "Expected DomainCriteria" in (result.explanation or "")
+
+
+# ---------------------------------------------------------------------------
+# build_cwd decoupling tests (Phase 3)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildCwdDecoupling:
+    """Phase 3: build_cwd decouples build directory from source_dir.
+
+    When ``build_cwd`` is present in criteria extra, the build & test
+    commands should ``cd`` into ``build_cwd`` while ``SRC`` env var and
+    ``git apply`` / ``patch -p1`` still use ``source_dir``.
+    """
+
+    @pytest.mark.asyncio
+    async def test_build_uses_build_cwd_not_source_dir(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Build command 'cd's into build_cwd, not source_dir."""
+        ctx = _make_ctx(
+            criteria_extra={
+                "build_cwd": "/workspace/source/mock-c",
+                "build_script": "/workspace/build.sh",
+                "test_script": "",
+            },
+        )
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
+            _make_exec_result(),                                      # normalise
+            _make_exec_result(),                                      # reverse cleanup
+            _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # LIB_FUZZING_ENGINE
+            _make_exec_result(),                                      # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # POV pass
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(1.0)
+        # Build command is call index 6 (0-based)
+        build_call_args = str(sbx.exec.call_args_list[6])
+        assert "cd /workspace/source/mock-c" in build_call_args
+
+    @pytest.mark.asyncio
+    async def test_src_env_always_uses_source_dir(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """SRC env var is always source_dir, never build_cwd."""
+        ctx = _make_ctx(
+            criteria_extra={
+                "build_cwd": "/workspace/source/mock-c",
+                "build_script": "/workspace/build.sh",
+                "test_script": "",
+            },
+        )
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # LIB_FUZZING_ENGINE
+            _make_exec_result(),  # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
+            _make_exec_result(),  # POV pass
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(1.0)
+        build_call_args = str(sbx.exec.call_args_list[6])
+        # SRC must point to source_dir, not build_cwd
+        # Trailing space ensures we don't match SRC=/workspace/source/mock-c
+        assert "SRC=/workspace/source " in build_call_args
+
+    @pytest.mark.asyncio
+    async def test_git_apply_uses_source_dir_not_build_cwd(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """git apply and patch -p1 run in source_dir, not build_cwd."""
+        ctx = _make_ctx(
+            criteria_extra={
+                "build_cwd": "/workspace/source/mock-c",
+                "test_script": "",
+            },
+        )
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # LIB_FUZZING_ENGINE
+            _make_exec_result(),  # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
+            _make_exec_result(),  # POV pass
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            await strategy.score(ctx, None)
+
+        # Reverse cleanup (call 3) should cd into source_dir
+        reverse_call = str(sbx.exec.call_args_list[3])
+        assert "cd /workspace/source" in reverse_call
+        # Must NOT cd into build_cwd for patching
+        assert "/workspace/source/mock-c" not in reverse_call
+
+        # Patch apply (call 4) should cd into source_dir
+        apply_call = str(sbx.exec.call_args_list[4])
+        assert "cd /workspace/source" in apply_call
+        assert "/workspace/source/mock-c" not in apply_call
+
+    @pytest.mark.asyncio
+    async def test_fallback_when_build_cwd_absent(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """When build_cwd is absent, build still uses source_dir (backward compat)."""
+        ctx = _make_ctx(criteria_extra={"test_script": ""})
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # LIB_FUZZING_ENGINE
+            _make_exec_result(),  # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
+            _make_exec_result(),  # POV pass
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(1.0)
+        build_call_args = str(sbx.exec.call_args_list[6])
+        assert "cd /workspace/source" in build_call_args
+        assert "mock-c" not in build_call_args
+
+    @pytest.mark.asyncio
+    async def test_test_script_uses_build_cwd(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """test.sh runs from build_cwd, not source_dir."""
+        ctx = _make_ctx(
+            criteria_extra={
+                "build_cwd": "/workspace/source/mock-c",
+            },
+        )
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
+            _make_exec_result(),  # normalise
+            _make_exec_result(),  # reverse cleanup
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # LIB_FUZZING_ENGINE
+            _make_exec_result(),  # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
+            _make_exec_result(),  # POV pass
+            _make_exec_result(),  # test -f
+            _make_exec_result(),  # chmod +x
+            _make_exec_result(),  # test.sh pass
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(1.0)
+        # Test run command is the last call (index 11)
+        test_call_args = str(sbx.exec.call_args_list[11])
+        assert "cd /workspace/source/mock-c" in test_call_args
 
 
 # ---------------------------------------------------------------------------
@@ -834,3 +1042,236 @@ class TestPatchNormaliser:
         # Absolute paths should NOT survive; basename resolve should find lib/util.c
         assert "--- a/" in output
         assert "+++ b/" in output
+
+
+# ---------------------------------------------------------------------------
+# Sandbox network access context manager tests
+# ---------------------------------------------------------------------------
+
+
+def _mock_subprocess(returncode: int = 0, stderr: bytes = b"") -> AsyncMock:
+    """Build a mock asyncio subprocess result."""
+    proc = AsyncMock()
+    proc.returncode = returncode
+    proc.communicate = AsyncMock(return_value=(b"", stderr))
+    return proc
+
+
+class TestSandboxNetworkAccess:
+    """Tests for the ``_sandbox_network_access`` async context manager."""
+
+    @pytest.mark.asyncio
+    async def test_network_connected_and_disconnected(self) -> None:
+        """Bridge network is connected before yield and disconnected after."""
+        conn = MagicMock()
+        conn.container = "inspect-crsbench-abc123-default-1"
+
+        sbx = MagicMock()
+        sbx.connection = AsyncMock(return_value=conn)
+
+        connect_proc = _mock_subprocess(returncode=0)
+        disconnect_proc = _mock_subprocess(returncode=0)
+        procs = [connect_proc, disconnect_proc]
+
+        with (
+            patch(
+                "crsbench.scoring.patch_verify.sandbox", return_value=sbx
+            ),
+            patch(
+                "crsbench.scoring.patch_verify.asyncio.create_subprocess_exec",
+                side_effect=procs,
+            ) as mock_exec,
+        ):
+            from crsbench.scoring.patch_verify import _sandbox_network_access
+
+            async with _sandbox_network_access():
+                # Inside context: connect should have been called
+                assert mock_exec.call_count == 1
+                args = mock_exec.call_args_list[0][0]
+                assert args == (
+                    "docker", "network", "connect", "bridge",
+                    "inspect-crsbench-abc123-default-1",
+                )
+
+            # After exit: disconnect should also have been called
+            assert mock_exec.call_count == 2
+            args = mock_exec.call_args_list[1][0]
+            assert args == (
+                "docker", "network", "disconnect", "bridge",
+                "inspect-crsbench-abc123-default-1",
+            )
+
+    @pytest.mark.asyncio
+    async def test_network_disconnect_on_exception(self) -> None:
+        """Disconnect is called even when an exception occurs inside the context."""
+        conn = MagicMock()
+        conn.container = "inspect-container-1"
+
+        sbx = MagicMock()
+        sbx.connection = AsyncMock(return_value=conn)
+
+        connect_proc = _mock_subprocess(returncode=0)
+        disconnect_proc = _mock_subprocess(returncode=0)
+
+        with (
+            patch(
+                "crsbench.scoring.patch_verify.sandbox", return_value=sbx
+            ),
+            patch(
+                "crsbench.scoring.patch_verify.asyncio.create_subprocess_exec",
+                side_effect=[connect_proc, disconnect_proc],
+            ) as mock_exec,
+        ):
+            from crsbench.scoring.patch_verify import _sandbox_network_access
+
+            with pytest.raises(RuntimeError, match="boom"):
+                async with _sandbox_network_access():
+                    raise RuntimeError("boom")
+
+            # Disconnect must still be called despite the exception
+            assert mock_exec.call_count == 2
+            args = mock_exec.call_args_list[1][0]
+            assert args == (
+                "docker", "network", "disconnect", "bridge",
+                "inspect-container-1",
+            )
+
+    @pytest.mark.asyncio
+    async def test_network_no_container_name(self) -> None:
+        """When container name is None, no docker commands are run."""
+        conn = MagicMock()
+        conn.container = None
+
+        sbx = MagicMock()
+        sbx.connection = AsyncMock(return_value=conn)
+
+        with (
+            patch(
+                "crsbench.scoring.patch_verify.sandbox", return_value=sbx
+            ),
+            patch(
+                "crsbench.scoring.patch_verify.asyncio.create_subprocess_exec",
+            ) as mock_exec,
+        ):
+            from crsbench.scoring.patch_verify import _sandbox_network_access
+
+            async with _sandbox_network_access():
+                pass
+
+            mock_exec.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_network_connect_failure_nonfatal(self) -> None:
+        """Connect failure is non-fatal; disconnect is NOT called since connect failed."""
+        conn = MagicMock()
+        conn.container = "inspect-container-2"
+
+        sbx = MagicMock()
+        sbx.connection = AsyncMock(return_value=conn)
+
+        connect_proc = _mock_subprocess(returncode=1, stderr=b"network not found")
+
+        with (
+            patch(
+                "crsbench.scoring.patch_verify.sandbox", return_value=sbx
+            ),
+            patch(
+                "crsbench.scoring.patch_verify.asyncio.create_subprocess_exec",
+                side_effect=[connect_proc],
+            ) as mock_exec,
+        ):
+            from crsbench.scoring.patch_verify import _sandbox_network_access
+
+            # Should not raise
+            async with _sandbox_network_access():
+                pass
+
+            # Only connect was called; disconnect skipped because connect failed
+            assert mock_exec.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_build_and_test_steps_use_network_toggle(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Build (step 3) and test (step 5) both use _sandbox_network_access."""
+        ctx = _make_ctx()
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
+            _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),                                      # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # run POV (no crash)
+            _make_exec_result(),                                      # test -f (exists)
+            _make_exec_result(),                                      # chmod +x scripts
+            _make_exec_result(),                                      # bash test.sh (pass)
+        ])
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=None)
+        mock_cm.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx),
+            patch(
+                "crsbench.scoring.patch_verify._sandbox_network_access",
+                return_value=mock_cm,
+            ) as mock_net,
+        ):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(1.0)
+        # Called twice: once for build, once for test
+        assert mock_net.call_count == 2
+        assert mock_cm.__aenter__.await_count == 2
+        assert mock_cm.__aexit__.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_test_step_timeout_returns_half_score(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """TimeoutError during test.sh returns 0.5 score instead of crashing."""
+        ctx = _make_ctx()
+
+        exec_results = [
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
+            _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),                                      # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # run POV (no crash)
+            _make_exec_result(),                                      # test -f (exists)
+            _make_exec_result(),                                      # chmod +x scripts
+        ]
+
+        call_idx = 0
+
+        async def exec_side_effect(*args: object, **kwargs: object) -> MagicMock:
+            nonlocal call_idx
+            if call_idx < len(exec_results):
+                result = exec_results[call_idx]
+                call_idx += 1
+                return result
+            # The final exec call is test.sh — raise TimeoutError
+            raise TimeoutError("timed out after 300 seconds")
+
+        sbx = MagicMock()
+        sbx.exec = AsyncMock(side_effect=exec_side_effect)
+
+        with (
+            patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx),
+            patch(
+                "crsbench.scoring.patch_verify._sandbox_network_access",
+                side_effect=_noop_cm,
+            ),
+        ):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(0.5)
+        assert "timed out" in result.explanation.lower()
