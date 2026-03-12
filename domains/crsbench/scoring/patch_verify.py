@@ -277,10 +277,10 @@ class CRSBenchPatchVerifyStrategy:
             "CXXFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
         )
         if build_script:
-            build_cmd = f"{env_prefix} bash -eu {shlex.quote(str(build_script))}"
+            build_cmd = f"cd {src_q} && {env_prefix} bash -eu {shlex.quote(str(build_script))}"
         else:
             build_cmd = (
-                f"cd {shlex.quote(str(source_dir))} && make clean 2>/dev/null; "
+                f"cd {src_q} && make clean 2>/dev/null; "
                 f"make CC=clang CFLAGS='-fsanitize=address -fno-omit-frame-pointer -g'"
             )
 
@@ -292,7 +292,7 @@ class CRSBenchPatchVerifyStrategy:
             return Score(
                 value=0.0,
                 answer=ctx.submission,
-                explanation=f"Build failed after patching: {build_result.stderr[:500]}",
+                explanation=f"Build failed after patching: {build_result.stderr[-2000:]}",
             )
 
         # Step 4: Run all POVs — patched binary should NOT crash
@@ -356,7 +356,7 @@ class CRSBenchPatchVerifyStrategy:
                     timeout=10,
                 )
                 test_result = await sbx.exec(
-                    ["bash", "-c", f"{env_prefix} {shlex.quote(str(test_script))}"],
+                    ["bash", "-c", f"cd {src_q} && {env_prefix} {shlex.quote(str(test_script))}"],
                     timeout=300,
                 )
                 if test_result.returncode != 0:
@@ -365,7 +365,7 @@ class CRSBenchPatchVerifyStrategy:
                         answer=ctx.submission,
                         explanation=(
                             "Patch fixes crash but breaks unit tests: "
-                            f"{test_result.stderr[:500]}"
+                            f"{test_result.stderr[-2000:]}"
                         ),
                     )
 
