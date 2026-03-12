@@ -39,20 +39,116 @@ _BENCHMARK_SUBDIR = "data/benchmarks"
 _TASKS_SUBDIR = "tasks"
 REPO_ID = "sslab-gatech/crsbench-dataset"
 
-# Named dataset groups.  Values are either ``None`` (meaning "all
-# benchmarks") or a callable ``(list[str]) -> list[str]`` that filters
-# a list of benchmark directory names.
-_DATASET_GROUPS: dict[str, str] = {
+# Benchmark directories included in the ``lite`` dataset (100 tasks
+# across all 81 projects — one representative task per project plus
+# 19 additional tasks from the largest projects for extra coverage).
+_LITE_BENCHMARKS: frozenset[str] = frozenset({
+    "afc-apache-commons-compress-delta-01",
+    "afc-apache-commons-compress-delta-02",
+    "afc-apache-poi-full-01",
+    "afc-curl-delta-01",
+    "afc-curl-delta-04",
+    "afc-dav1d-full-01",
+    "afc-freerdp-delta-01",
+    "afc-freerdp-delta-03",
+    "afc-lcms-full-01",
+    "afc-libavif-delta-02",
+    "afc-libavif-orig-delta-02",
+    "afc-libexif-delta-01",
+    "afc-libpng-delta-01",
+    "afc-libxml2-delta-01",
+    "afc-libxml2-delta-02",
+    "afc-log4j2-delta-01",
+    "afc-mongoose-delta-01",
+    "afc-pdfbox-delta-01",
+    "afc-pdfbox-full-01",
+    "afc-shadowsocks-full-01",
+    "afc-sqlite3-delta-01",
+    "afc-sqlite3-delta-02",
+    "afc-systemd-full-01",
+    "afc-tika-delta-01",
+    "afc-tika-delta-02",
+    "afc-wireshark-delta-01",
+    "afc-wireshark-delta-02",
+    "afc-xz-full-01",
+    "afc-zookeeper-delta-01",
+    "asc-nginx-delta-01",
+    "atlanta-activemq-delta-01",
+    "atlanta-activemq-var-delta-01",
+    "atlanta-apache-commons-validator-delta-01",
+    "atlanta-apache-poi-full-01",
+    "atlanta-batik-delta-01",
+    "atlanta-bcel-delta-01",
+    "atlanta-beanutils-full-01",
+    "atlanta-binutils-delta-01",
+    "atlanta-cron-utils-delta-01",
+    "atlanta-curl-delta-01",
+    "atlanta-cxf-full-01",
+    "atlanta-faad2-delta-01",
+    "atlanta-feign-full-01",
+    "atlanta-file-delta-01",
+    "atlanta-freetype2-delta-01",
+    "atlanta-fuzzy-delta-01",
+    "atlanta-geonetwork-delta-01",
+    "atlanta-gpac-delta-01",
+    "atlanta-htmlunit-delta-01",
+    "atlanta-imaging-delta-01",
+    "atlanta-jackson-databind-delta-01",
+    "atlanta-jakarta-mail-api-delta-01",
+    "atlanta-jenkins-delta-01",
+    "atlanta-jq-delta-01",
+    "atlanta-json-java-full-01",
+    "atlanta-jsoup-full-01",
+    "atlanta-keycloak-delta-01",
+    "atlanta-kylin-delta-01",
+    "atlanta-libavc-full-01",
+    "atlanta-libcue-delta-01",
+    "atlanta-libjpeg-full-01",
+    "atlanta-libssh2-delta-01",
+    "atlanta-libtiff-full-01",
+    "atlanta-libxml2-delta-01",
+    "atlanta-mongoose-delta-01",
+    "atlanta-mosquitto-delta-01",
+    "atlanta-nasm-delta-01",
+    "atlanta-netty-delta-01",
+    "atlanta-olingo-delta-01",
+    "atlanta-oripa-delta-01",
+    "atlanta-pac4j-full-01",
+    "atlanta-pcre2-full-01",
+    "atlanta-pdfbox-full-01",
+    "atlanta-php-delta-01",
+    "atlanta-rdf4j-full-01",
+    "atlanta-shiro-full-01",
+    "atlanta-sleuthkit-delta-01",
+    "atlanta-snappy-java-delta-01",
+    "atlanta-spring-framework-full-01",
+    "atlanta-sqlite-jdbc-delta-01",
+    "atlanta-struts-delta-01",
+    "atlanta-tika-delta-01",
+    "atlanta-tkctf-rpn-calculator-delta-01",
+    "atlanta-tmux-delta-01",
+    "atlanta-user-nginx-full-01",
+    "atlanta-widoco-delta-01",
+    "atlanta-wireshark-delta-01",
+    "atlanta-xstream-full-01",
+    "atlanta-ztzip-full-01",
+})
+
+# Named dataset groups.  Values are either a glob pattern string or
+# an explicit frozenset of benchmark directory names.
+_DATASET_GROUPS: dict[str, str | frozenset[str]] = {
     "all": "*",
     "competition": "!sanity-*",
     "sanity": "sanity-*",
+    "lite": _LITE_BENCHMARKS,
 }
 """Predefined dataset groups for ``-T dataset=<group>``.
 
-Each value is a simple pattern string:
+Values may be:
 - ``"*"`` — match all benchmarks
 - ``"prefix-*"`` — match benchmarks starting with *prefix-*
 - ``"!prefix-*"`` — match all benchmarks **except** those starting with *prefix-*
+- ``frozenset[str]`` — explicit set of benchmark directory names
 """
 
 # File patterns removed from staged directories to prevent information
@@ -605,6 +701,11 @@ def _expand_group(group_name: str, benchmarks_dir: Path) -> list[str] | None:
         resolves to *all* benchmarks.
     """
     pattern = _DATASET_GROUPS[group_name]
+
+    if isinstance(pattern, frozenset):
+        all_dirs = {d.name for d in _list_benchmark_dirs(benchmarks_dir)}
+        return sorted(name for name in pattern if name in all_dirs)
+
     if pattern == "*":
         return None
 
