@@ -4,6 +4,7 @@ global_defaults:
   prompts:
     instruction: "instructions/bug_fixing.j2"
     assistant: "assistants/inspect_assistant.j2"
+    continue: ""
 
   max_steps: 40
 

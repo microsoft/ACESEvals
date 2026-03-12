@@ -42,6 +42,16 @@ git commit --allow-empty -m "initial" --quiet
 """
 
 
+# Parameters consumed by setup hooks (setup.py) or crsbench itself
+# that must NOT leak through to the agent factory via **kwargs.
+_DOMAIN_ONLY_PARAMS = frozenset({
+    "dataset",
+    "data_dir",
+    "build",
+    "rebuild_images",
+})
+
+
 @task
 def crsbench(**kwargs: str | None) -> Task:
     """CRSBench vulnerability patching domain.
@@ -61,7 +71,10 @@ def crsbench(**kwargs: str | None) -> Task:
     Returns:
         Fully configured inspect_ai Task.
     """
-    result = create_task(**kwargs)
+    # Strip domain-only params so they don't leak to the agent factory
+    # (e.g. react() would fail on unknown kwargs like 'dataset').
+    task_kwargs = {k: v for k, v in kwargs.items() if k not in _DOMAIN_ONLY_PARAMS}
+    result = create_task(**task_kwargs)
     # Inject git init setup into every sample so agents can use `git diff`
     # to generate patches instead of manually crafting unified diffs.
     # Unconditionally overwrite — git init must always run, even if YAML
