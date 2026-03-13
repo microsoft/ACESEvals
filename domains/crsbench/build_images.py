@@ -26,13 +26,15 @@ import asyncio
 import shutil
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from saber.logging import display_progress, get_logger
 
 try:
-    from rich.console import Console
+    from rich.console import Console, Group
+    from rich.live import Live
     from rich.progress import (
         BarColumn,
         MofNCompleteColumn,
@@ -41,11 +43,41 @@ try:
         TextColumn,
         TimeElapsedColumn,
     )
+    from rich.text import Text as RichText
     _HAS_RICH = True
 except ImportError:
     _HAS_RICH = False
 
 logger = get_logger("domains.crsbench.build_images")
+
+
+# ---------------------------------------------------------------------------
+# Build-phase detection
+# ---------------------------------------------------------------------------
+
+
+def _detect_build_phase(line: str) -> str | None:
+    """Detect the current build phase from a Docker build output line.
+
+    Returns a short human-readable status string when a recognisable
+    build step is detected, or ``None`` otherwise.
+    """
+    lower = line.lower()
+    if "apt-get" in lower:
+        return "installing packages…"
+    if "/workspace/build.sh" in lower:
+        return "compiling project…"
+    if "standalonefuzztargetmain" in lower or "libfuzzingengine" in lower:
+        return "building fuzzer engine…"
+    if "offline-cache.gradle" in lower:
+        return "configuring Gradle cache…"
+    if "gradle" in lower and ("build" in lower or "compile" in lower):
+        return "building with Gradle…"
+    if "mvn " in lower or "maven" in lower:
+        return "building with Maven…"
+    if "cmake" in lower:
+        return "running cmake…"
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +91,7 @@ async def _stream_build(
     *,
     timeout: int,
     quiet: bool = False,
+    status_callback: Callable[[str], None] | None = None,
 ) -> None:
     """Stream Docker build output through the logger and wait for exit.
 
@@ -72,6 +105,8 @@ async def _stream_build(
         label: Human label for log messages (e.g. ``"Layer 1 afc-curl"``).
         timeout: Maximum seconds to wait before killing the build.
         quiet: If True, suppress per-line ``display_progress`` output.
+        status_callback: Optional callback invoked with a short phase
+            description whenever a recognisable build step is detected.
 
     Raises:
         RuntimeError: On build failure or timeout.
@@ -104,6 +139,10 @@ async def _stream_build(
                 stderr_chunks.append(line)
             if decoded and not quiet:
                 display_progress(f"[{label}] {decoded}")
+            if decoded and status_callback is not None:
+                phase = _detect_build_phase(decoded)
+                if phase is not None:
+                    status_callback(phase)
 
     try:
         await asyncio.wait_for(
@@ -207,6 +246,17 @@ RUN $CC -c /src/libfuzzer/standalone/StandaloneFuzzTargetMain.c \
 # Copy benchmark build/test scripts from the build context
 COPY build.sh test.sh /workspace/
 RUN chmod +x /workspace/build.sh /workspace/test.sh
+
+# Workaround: snappy-java's Makefile runs ``cmake`` on snappy which
+# pulls in Google Benchmark as a submodule.  Google Benchmark's
+# CXXFeatureCheck.cmake uses ``try_run()`` to test std::regex support;
+# when CXXFLAGS contains ``-fsanitize=address`` (injected by the
+# Makefile for ASan), the compiled test binary hangs indefinitely.
+# Disabling benchmark/test subdirectories via SNAPPY_CMAKE_OPTS
+# prevents cmake from ever reaching the problematic ``try_run()``.
+# This variable is only consumed by snappy-java's Makefile and is
+# harmless for all other benchmarks.
+ENV SNAPPY_CMAKE_OPTS="-DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF"
 
 # Attempt to compile the project and harness binaries into $OUT
 # (/workspace/build).  This is best-effort: some benchmark build
@@ -355,6 +405,7 @@ async def _build_layer1(
     *,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
     quiet: bool = False,
+    status_callback: Callable[[str], None] | None = None,
 ) -> str:
     """Build Layer 1: benchmark environment image.
 
@@ -362,6 +413,7 @@ async def _build_layer1(
         benchmark_path: Path to the benchmark root directory.
         benchmark_id: Benchmark identifier for the image tag.
         timeout: Build timeout in seconds.
+        status_callback: Optional callback for phase updates.
 
     Returns:
         The Layer 1 image tag.
@@ -381,10 +433,14 @@ async def _build_layer1(
     if image_exists(image_tag):
         if not quiet:
             display_progress(f"Layer 1 image {image_tag} already exists, reusing")
+        if status_callback is not None:
+            status_callback("cached ✓")
         return image_tag
 
     if not quiet:
         display_progress(f"Building Layer 1 image {image_tag} from {dockerfile}")
+    if status_callback is not None:
+        status_callback("building env image…")
 
     proc = await asyncio.create_subprocess_exec(
         "docker", "build",
@@ -395,7 +451,10 @@ async def _build_layer1(
         stderr=asyncio.subprocess.PIPE,
     )
 
-    await _stream_build(proc, f"L1 {benchmark_id}", timeout=timeout, quiet=quiet)
+    await _stream_build(
+        proc, f"L1 {benchmark_id}", timeout=timeout,
+        quiet=quiet, status_callback=status_callback,
+    )
 
     if not quiet:
         display_progress(f"Layer 1 complete: {image_tag}")
@@ -415,6 +474,7 @@ async def _build_layer2(
     *,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
     quiet: bool = False,
+    status_callback: Callable[[str], None] | None = None,
 ) -> str:
     """Build Layer 2: SABER tooling overlay on benchmark env.
 
@@ -456,6 +516,8 @@ async def _build_layer2(
 
     if not quiet:
         display_progress(f"Building Layer 2 image {image_tag} (base: {base_image})")
+    if status_callback is not None:
+        status_callback("building overlay…")
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -468,7 +530,10 @@ async def _build_layer2(
             stderr=asyncio.subprocess.PIPE,
         )
 
-        await _stream_build(proc, f"L2 {benchmark_id}", timeout=timeout, quiet=quiet)
+        await _stream_build(
+            proc, f"L2 {benchmark_id}", timeout=timeout,
+            quiet=quiet, status_callback=status_callback,
+        )
 
         if not quiet:
             display_progress(f"Layer 2 complete: {image_tag}")
@@ -490,6 +555,7 @@ async def build_benchmark_image(
     force: bool = False,
     timeout: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
     quiet: bool = False,
+    status_callback: Callable[[str], None] | None = None,
 ) -> ImageBuildResult:
     """Build both layers for a single benchmark.
 
@@ -500,10 +566,22 @@ async def build_benchmark_image(
         domain_root: Domain root directory.
         force: Rebuild even if the image already exists.
         timeout: Per-layer build timeout in seconds.
+        status_callback: Optional callback for phase updates.
 
     Returns:
         Build result with success status and image tag.
     """
+
+    def _prefixed(prefix: str) -> Callable[[str], None] | None:
+        """Wrap *status_callback* to prepend a layer prefix."""
+        if status_callback is None:
+            return None
+
+        def _cb(status: str) -> None:
+            status_callback(f"{prefix}: {status}")
+
+        return _cb
+
     benchmark_id = benchmark_path.name
     final_tag = f"{BENCHMARK_IMAGE_PREFIX}:{benchmark_id}"
     start = time.monotonic()
@@ -512,6 +590,8 @@ async def build_benchmark_image(
     if not force and image_exists(final_tag):
         if not quiet:
             display_progress(f"Image {final_tag} already exists, skipping")
+        if status_callback is not None:
+            status_callback("cached ✓")
         return ImageBuildResult(
             benchmark_id=benchmark_id,
             image_tag=final_tag,
@@ -521,11 +601,15 @@ async def build_benchmark_image(
 
     try:
         # Layer 1: Build benchmark environment
-        layer1_tag = await _build_layer1(benchmark_path, benchmark_id, timeout=timeout, quiet=quiet)
+        layer1_tag = await _build_layer1(
+            benchmark_path, benchmark_id, timeout=timeout,
+            quiet=quiet, status_callback=_prefixed("L1"),
+        )
 
         # Layer 2: Overlay SABER tooling
         layer2_tag = await _build_layer2(
-            layer1_tag, benchmark_id, benchmark_path, domain_root, timeout=timeout, quiet=quiet,
+            layer1_tag, benchmark_id, benchmark_path, domain_root,
+            timeout=timeout, quiet=quiet, status_callback=_prefixed("L2"),
         )
 
         elapsed = time.monotonic() - start
@@ -626,33 +710,53 @@ async def build_all_images(
     if use_progress_bar:
         console = Console(stderr=True)
         failed_results: list[ImageBuildResult] = []
+        active_builds: dict[str, str] = {}
 
-        with Progress(
+        bar = Progress(
             SpinnerColumn(),
             TextColumn("[bold blue]{task.description}"),
             BarColumn(),
             MofNCompleteColumn(),
             TextColumn("•"),
             TimeElapsedColumn(),
-            console=console,
-            transient=False,
-        ) as progress:
-            task_id = progress.add_task(
-                "Building images", total=len(benchmarks),
-            )
+        )
+        overall_task = bar.add_task(
+            "Building images", total=len(benchmarks),
+        )
 
+        def _render() -> Group:
+            parts: list[RichText | Progress] = [bar]
+            for name, status in list(active_builds.items()):
+                parts.append(
+                    RichText.from_markup(f"  [dim]{name}[/dim]  {status}"),
+                )
+            return Group(*parts)
+
+        with Live(_render(), console=console, refresh_per_second=4) as live:
             semaphore = asyncio.Semaphore(max_concurrent)
 
             async def _bounded_build(benchmark_path: Path) -> ImageBuildResult:
+                benchmark_name = benchmark_path.name
+
                 async with semaphore:
+                    active_builds[benchmark_name] = "starting…"
+                    live.update(_render())
+
+                    def _status_cb(status: str) -> None:
+                        active_builds[benchmark_name] = status
+                        live.update(_render())
+
                     result = await build_benchmark_image(
                         benchmark_path, domain_root, force=force,
                         timeout=timeout, quiet=True,
+                        status_callback=_status_cb,
                     )
+
+                active_builds.pop(benchmark_name, None)
 
                 if not result.success:
                     failed_results.append(result)
-                    progress.console.print(
+                    console.print(
                         f"  [red]✗[/red] {result.benchmark_id} "
                         f"({result.duration_seconds:.0f}s)",
                     )
@@ -661,7 +765,8 @@ async def build_all_images(
                 desc = "Building images"
                 if n_failed:
                     desc += f" [red]({n_failed} failed)[/red]"
-                progress.update(task_id, advance=1, description=desc)
+                bar.update(overall_task, advance=1, description=desc)
+                live.update(_render())
                 return result
 
             results = await asyncio.gather(
