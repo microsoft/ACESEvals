@@ -10,16 +10,6 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
-class CRSBenchPov(BaseModel):
-    """A single proof-of-vulnerability entry within a vuln."""
-
-    model_config = ConfigDict(frozen=True)
-
-    id: str
-    sanitizer: str
-    error_token: str = ""
-
-
 class CRSBenchPOV(BaseModel):
     """A single proof-of-vulnerability entry."""
 

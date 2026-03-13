@@ -46,6 +46,8 @@ def submit_patch(timeout: int = 60) -> Tool:
 
         # 2. Basic unified diff validation
         head = await sbx.exec(["head", "-5", patch_path], timeout=timeout)
+        if head.returncode != 0:
+            return f"ERROR: Could not read {patch_path}: {head.stderr}"
         content = head.stdout
         if not any(marker in content for marker in _DIFF_MARKERS):
             return (

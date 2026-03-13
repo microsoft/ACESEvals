@@ -14,7 +14,10 @@ import pytest
 from inspect_ai.model import ChatMessageUser
 from inspect_ai.scorer import Score
 
-from crsbench.scoring.patch_verify import CRSBenchPatchVerifyStrategy
+from crsbench.scoring.patch_verify import (
+    CRSBenchPatchVerifyStrategy,
+    _build_normalise_script,
+)
 from saber.config.models import DomainCriteria, ScorerConfig
 from saber.scoring.context import ScoringContext
 
@@ -872,61 +875,8 @@ class TestPatchNormaliser:
 
     @staticmethod
     def _build_normaliser_script(source_dir: str) -> str:
-        """Reconstruct the normaliser script with the given source_dir."""
-        return "\n".join([
-            "import re, sys, os, pathlib",
-            f"src = {str(source_dir)!r}",
-            "def resolve(p):",
-            "  if os.path.exists(os.path.join(src, p)): return p",
-            "  base = os.path.basename(p)",
-            "  for root, dirs, files in os.walk(src):",
-            "    if base in files:",
-            "      return os.path.relpath(os.path.join(root, base), src)",
-            "  return p",
-            "lines = pathlib.Path(sys.argv[1]).read_text()",
-            "out = []",
-            "for ln in lines.splitlines():",
-            "  m = re.match(r'^(---|\\+\\+\\+)\\s+(.*)', ln)",
-            "  if not m:",
-            "    out.append(ln + chr(10))",
-            "    continue",
-            "  raw = m.group(2).replace(src + '/', '').lstrip('/')",
-            "  raw = re.sub(r'^[ab]/', '', raw)",
-            "  raw = re.sub(r'\\t.*', '', raw)",
-            "  raw = re.sub(r'\\.(bak|orig|old|new)(\\s.*|[0-9].*)?$', '', raw)",
-            "  raw = raw.rstrip('~')",
-            "  raw = resolve(raw)",
-            "  prefix = 'a/' if m.group(1) == '---' else 'b/'",
-            "  out.append(m.group(1) + ' ' + prefix + raw + chr(10))",
-            "fixed = []",
-            "i = 0",
-            "while i < len(out):",
-            "  hm = re.match(r'^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@(.*)', out[i])",
-            "  if not hm:",
-            "    fixed.append(out[i])",
-            "    i += 1",
-            "    continue",
-            "  oc = nc = 0",
-            "  j = i + 1",
-            "  while j < len(out):",
-            "    hl = out[j].rstrip(chr(10))",
-            "    if hl.startswith('@@') or hl.startswith('diff ') or re.match(r'^(---|\\+\\+\\+) [ab]/', hl):",
-            "      break",
-            "    if hl.startswith('+'):",
-            "      nc += 1",
-            "    elif hl.startswith('-'):",
-            "      oc += 1",
-            "    elif hl.startswith(chr(92)):",
-            "      pass",
-            "    else:",
-            "      oc += 1",
-            "      nc += 1",
-            "    j += 1",
-            "  fixed.append('@@ -%s,%d +%s,%d @@%s' % (hm.group(1), oc, hm.group(2), nc, hm.group(3)) + chr(10))",
-            "  i += 1",
-            "out = fixed",
-            "pathlib.Path(sys.argv[2]).write_text(''.join(out))",
-        ])
+        """Delegate to the canonical implementation in patch_verify."""
+        return _build_normalise_script(source_dir)
 
     def test_syntax_valid(self, tmp_path: Path) -> None:
         """Normaliser script is syntactically valid Python."""

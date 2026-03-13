@@ -7,10 +7,11 @@ from pathlib import Path
 
 from saber.scoring.strategies import SaberScoringStrategy
 
-from .patch_verify import CRSBenchPatchVerifyStrategy
+from .patch_verify import CRSBenchPatchVerifyStrategy, PovVerifyResult
 
 __all__ = [
     "CRSBenchPatchVerifyStrategy",
+    "PovVerifyResult",
     "get_strategies",
 ]
 

@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 logger = get_logger("domains.crsbench.setup")
 
 _DATA_SUBDIR = "data"
-_BENCHMARK_SUBDIR = "data/benchmarks"
+_BENCHMARK_SUBDIR = "data/_benchmarks"
 _TASKS_SUBDIR = "tasks"
 REPO_ID = "sslab-gatech/crsbench-dataset"
 
@@ -800,20 +800,7 @@ class StageBenchmarkData:
                 skipped += 1
                 continue
 
-            # Extract ground-truth first (contains .aixcc/meta.yaml)
-            gt_tar = child / "ground-truth.tar.gz"
-            if gt_tar.is_file():
-                logger.debug("Extracting %s", gt_tar)
-                with tarfile.open(gt_tar, "r:gz") as tf:
-                    tf.extractall(path=child)
-
-            # Extract benchmark (contains Dockerfile, source, etc.)
-            bench_tar = child / "benchmark.tar.gz"
-            if bench_tar.is_file():
-                logger.debug("Extracting %s", bench_tar)
-                with tarfile.open(bench_tar, "r:gz") as tf:
-                    tf.extractall(path=child)
-
+            extract_benchmark_tarballs(child)
             extracted += 1
 
         logger.info(
@@ -846,7 +833,7 @@ class BuildBenchmarkImages:
         self._force = force
         self._prefix_filter = prefix_filter
         self._benchmark_names = benchmark_names
-        self._summary: object | None = None
+        self._summary: ImageBuildSummary | None = None
 
     @property
     def name(self) -> str:
@@ -854,7 +841,7 @@ class BuildBenchmarkImages:
         return "build_benchmark_images"
 
     @property
-    def summary(self) -> object | None:
+    def summary(self) -> ImageBuildSummary | None:
         """The ImageBuildSummary from the last run, or None."""
         return self._summary
 
@@ -972,6 +959,97 @@ class GenerateTaskYAMLs:
         )
 
         logger.info("Generated %d task YAML(s)", len(generated))
+
+
+# ---------------------------------------------------------------------------
+# Dataset → task-filter mapping
+# ---------------------------------------------------------------------------
+
+# Task-level IDs for the lite dataset (60 tasks).  Distinct from
+# _LITE_BENCHMARKS (60 benchmark directories) because each benchmark
+# can produce multiple tasks (one per fuzzer × CPV × fix-type combo).
+# _LITE_BENCHMARKS scopes data download/image build; _LITE_TASK_IDS
+# scopes which generated tasks are loaded for evaluation.
+_LITE_TASK_IDS: frozenset[str] = frozenset({
+    # --- afc (15) ---
+    "afc_apache_commons_compress_delta_01__CompressTarFuzzer__cpv_0__bugfix",
+    "afc_curl_delta_01__curl_fuzzer_ws__cpv_0__bugfix",
+    "afc_dav1d_full_01__dav1d_fuzzer_mt_NO_OOM__cpv_0__bugfix",
+    "afc_freerdp_delta_01__TestFuzzCryptoCertificateDataSetPEM__cpv_0__bugfix",
+    "afc_libavif_delta_02__avif_yuvrgb_fuzzer__cpv_0__bugfix",
+    "afc_libexif_delta_01__exif_from_data_fuzzer__cpv_2__bugfix",
+    "afc_libpng_delta_01__libpng_read_fuzzer__cpv_0__bugfix",
+    "afc_log4j2_delta_01__SimpleLoggerFuzzer__cpv_0__bugfix",
+    "afc_pdfbox_delta_01__PDFOCRFuzzer__cpv_0__bugfix",
+    "afc_shadowsocks_full_01__json_fuzz__cpv_0__bugfix",
+    "afc_sqlite3_delta_01__customfuzz3__cpv_0__bugfix",
+    "afc_systemd_full_01__fuzz_catalog__cpv_1__bugfix",
+    "afc_wireshark_delta_01__handler_ber__cpv_0__bugfix",
+    "afc_xz_full_01__fuzz_encode_stream__cpv_0__bugfix",
+    "afc_zookeeper_delta_01__MessageTrackerPeekReceivedFuzzer__cpv_0__bugfix",
+    # --- asc (1) ---
+    "asc_nginx_delta_01__mail_request_harness__cpv_11__bugfix",
+    # --- atlanta (44) ---
+    "atlanta_activemq_delta_01__ActivemqOne__cpv_0__bugfix",
+    "atlanta_apache_commons_validator_delta_01__UrlValidator2Fuzzer__cpv_0__bugfix",
+    "atlanta_apache_poi_full_01__POIHDGFFuzzer__cpv_3__bugfix",
+    "atlanta_batik_delta_01__BatikOneFDP__cpv_1__bugfix",
+    "atlanta_bcel_delta_01__BCELOneFDP__cpv_1__bugfix",
+    "atlanta_beanutils_full_01__BeanUtilsOne__cpv_0__bugfix",
+    "atlanta_binutils_delta_01__fuzz_as__cpv_0__bugfix",
+    "atlanta_cron_utils_delta_01__CronUtilsOneFDP__cpv_1__bugfix",
+    "atlanta_cxf_full_01__CXFOne__cpv_0__bugfix",
+    "atlanta_feign_full_01__BodyTemplateFuzzer__cpv_0__bugfix",
+    "atlanta_freetype2_delta_01__cff_ftengine__cpv_1__bugfix",
+    "atlanta_gpac_delta_01__fuzz_probe_analyze__cpv_0__bugfix",
+    "atlanta_htmlunit_delta_01__HtmlunitOneFDP__cpv_1__bugfix",
+    "atlanta_imaging_delta_01__ImagingOne__cpv_0__bugfix",
+    "atlanta_jackson_databind_delta_01__JacksonDatabindOneFDP__cpv_1__bugfix",
+    "atlanta_jakarta_mail_api_delta_01__MailApiHarnessOneFDP__cpv_1__bugfix",
+    "atlanta_jenkins_delta_01__JenkinsFive__cpv_14__bugfix",
+    "atlanta_jq_delta_01__jq_fuzz_fixed__cpv_0__bugfix",
+    "atlanta_json_java_full_01__JsonJavaFuzzer__cpv_0__bugfix",
+    "atlanta_jsoup_full_01__HtmlFuzzer__cpv_1__bugfix",
+    "atlanta_keycloak_delta_01__ServicesUtilsFuzzer__cpv_0__bugfix",
+    "atlanta_libavc_full_01__mvc_dec_fuzzer__cpv_1__bugfix",
+    "atlanta_libjpeg_full_01__libjpeg_cjpeg_fuzzer__cpv_0__bugfix",
+    "atlanta_libssh2_delta_01__ssh2_client_fuzzer__cpv_0__bugfix",
+    "atlanta_libtiff_full_01__tiff_open__cpv_1__bugfix",
+    "atlanta_libxml2_delta_01__api__cpv_0__bugfix",
+    "atlanta_mongoose_delta_01__fuzz__cpv_0__bugfix",
+    "atlanta_mosquitto_delta_01__broker_fuzz_test_config__cpv_0__bugfix",
+    "atlanta_nasm_delta_01__fuzz_nasm__cpv_0__bugfix",
+    "atlanta_netty_delta_01__ByteBufUtilFuzzer__cpv_0__bugfix",
+    "atlanta_pac4j_full_01__Pac4jOne__cpv_0__bugfix",
+    "atlanta_pcre2_full_01__pcre2_fuzzer__cpv_0__bugfix",
+    "atlanta_php_delta_01__php_fuzz_execute__cpv_0__bugfix",
+    "atlanta_rdf4j_full_01__Rdf4jOne__cpv_0__bugfix",
+    "atlanta_shiro_full_01__ShiroOne__cpv_0__bugfix",
+    "atlanta_sleuthkit_delta_01__sleuthkit_fls_ntfs_fuzzer__cpv_0__bugfix",
+    "atlanta_snappy_java_delta_01__BitShuffleFuzzer__cpv_1__bugfix",
+    "atlanta_spring_framework_full_01__SpelExpressionFuzzer__cpv_0__bugfix",
+    "atlanta_sqlite_jdbc_delta_01__SqliteConnectionFuzzer__cpv_0__bugfix",
+    "atlanta_struts_delta_01__StrutsOne__cpv_0__bugfix",
+    "atlanta_tika_delta_01__TikaOne__cpv_0__bugfix",
+    "atlanta_tmux_delta_01__input_fuzzer__cpv_0__bugfix",
+    "atlanta_user_nginx_full_01__pov_harness__cpv_0__bugfix",
+    "atlanta_xstream_full_01__XmlFuzzer__cpv_0__bugfix",
+})
+
+
+def get_task_filter(dataset: str) -> str | None:
+    """Return a task-level filter for the given dataset name.
+
+    Args:
+        dataset: Dataset name (e.g. ``"lite"``).
+
+    Returns:
+        Comma-separated task IDs, or ``None`` if no task-level filter
+        is needed for this dataset.
+    """
+    if dataset == "lite":
+        return ",".join(sorted(_LITE_TASK_IDS))
+    return None
 
 
 # ---------------------------------------------------------------------------

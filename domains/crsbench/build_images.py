@@ -224,6 +224,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     file \\
     && rm -rf /var/lib/apt/lists/*
 
+# ── SABER agent tooling ──────────────────────────────────────────────
+# Install Node.js 22 LTS (required by Copilot CLI and Claude Code CLI)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \\
+    apt-get install -y --no-install-recommends nodejs && \\
+    rm -rf /var/lib/apt/lists/*
+
+# Install agent CLI tools globally via npm
+RUN npm install -g --ignore-scripts \\
+        @github/copilot \\
+        @anthropic-ai/claude-code && \\
+    npm cache clean --force
+
+# Install uv package manager
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Install Python packages for basic execution and agent SDKs
+RUN uv pip install --system --no-cache \\
+    requests \\
+    github-copilot-sdk==0.1.32 \\
+    claude-code-sdk
+
 # Workspace structure — symlink /workspace/source and /workspace/build
 # to the locations used by AIxCC base-builder ($SRC=/src, $OUT=/out).
 # build.sh and test.sh use these env vars so paths stay consistent.

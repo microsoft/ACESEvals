@@ -34,6 +34,7 @@ classifiers = [
 dependencies = [
     "saber",
     "inspect-ai",
+    "openai>=2.26.0",
 ]
 
 [project.optional-dependencies]

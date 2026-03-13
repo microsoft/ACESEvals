@@ -142,7 +142,7 @@ def generate_bugfix_task(
     project = _derive_project_name(benchmark_id)
 
     # Use the first POV's sanitizer for the description
-    sanitizer = vuln.povs[0].sanitizer if vuln.povs else "address"
+    sanitizer = vuln.sanitizer
 
     data_prefix = f"data/_benchmarks/{benchmark_id}"
 

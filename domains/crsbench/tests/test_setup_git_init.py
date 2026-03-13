@@ -1,127 +1,90 @@
-"""Tests for CRSBench git-init sandbox setup.
+"""Tests for the simplified CRSBench task function.
 
 Verifies that:
-- The ``_GIT_INIT_SETUP`` constant contains required git commands.
-- The ``crsbench()`` task function injects ``setup`` into every sample.
-- The setup script contains no vulnerability fix information.
+- ``crsbench()`` delegates directly to ``create_task()``.
+- All kwargs are forwarded without filtering.
+- No git-init injection or metadata promotion happens in crsbench.py
+  (these are now handled by global.yaml's ``setup`` field and the
+  converter's metadata promotion, respectively).
 """
 
 from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
 from inspect_ai import Task
 from inspect_ai.dataset import MemoryDataset, Sample
 
-from crsbench.crsbench import _GIT_INIT_SETUP, crsbench
+_CREATE_TASK_PATCH = "crsbench.crsbench.create_task"
 
 
 # ---------------------------------------------------------------------------
-# _GIT_INIT_SETUP constant tests
+# Simplified task function tests
 # ---------------------------------------------------------------------------
 
 
-class TestGitInitSetupConstant:
-    """Validate the git-init setup script constant."""
-
-    def test_starts_with_shebang(self) -> None:
-        assert _GIT_INIT_SETUP.startswith("#!/usr/bin/env bash\n")
-
-    def test_uses_strict_mode(self) -> None:
-        assert "set -euo pipefail" in _GIT_INIT_SETUP
-
-    def test_changes_to_workspace_source(self) -> None:
-        assert "cd /workspace/source" in _GIT_INIT_SETUP
-
-    def test_removes_nested_git_dirs(self) -> None:
-        """Nested .git dirs must be removed to avoid submodule treatment."""
-        assert "find . -mindepth 2 -name .git" in _GIT_INIT_SETUP
-
-    def test_gitignore_for_build_artifacts(self) -> None:
-        """A .gitignore must suppress build artifacts from git diff."""
-        assert "*.o" in _GIT_INIT_SETUP
-        assert ".gitignore" in _GIT_INIT_SETUP
-
-    def test_initialises_git_repo(self) -> None:
-        assert "git init" in _GIT_INIT_SETUP
-
-    def test_configures_user_email(self) -> None:
-        assert "git config user.email" in _GIT_INIT_SETUP
-
-    def test_configures_user_name(self) -> None:
-        assert "git config user.name" in _GIT_INIT_SETUP
-
-    def test_stages_all_files(self) -> None:
-        assert "git add -A" in _GIT_INIT_SETUP
-
-    def test_creates_initial_commit(self) -> None:
-        assert "git commit" in _GIT_INIT_SETUP
-
-    def test_no_vulnerability_info(self) -> None:
-        """Setup must not leak any fix / patch / CVE information."""
-        lowered = _GIT_INIT_SETUP.lower()
-        for keyword in ("cve-", "fix", "vuln", "patch", "exploit"):
-            assert keyword not in lowered, (
-                f"Setup script should not contain '{keyword}'"
-            )
-
-
-# ---------------------------------------------------------------------------
-# Sample injection tests
-# ---------------------------------------------------------------------------
-
-
-class TestSampleInjection:
-    """Verify that crsbench() injects _GIT_INIT_SETUP into every sample."""
+class TestCrsbenchTask:
+    """Validate the thin ``crsbench()`` wrapper delegates to ``create_task``."""
 
     @staticmethod
     def _make_task(samples: list[Sample]) -> Task:
         """Build a minimal Task wrapping the given samples."""
         return Task(dataset=MemoryDataset(samples))
 
-    def test_injects_setup_into_all_samples(self) -> None:
-        samples = [
-            Sample(input="q1"),
-            Sample(input="q2"),
-            Sample(input="q3"),
-        ]
-        fake_task = self._make_task(samples)
+    def test_forwards_all_kwargs(self) -> None:
+        """All kwargs should pass through to create_task unchanged."""
+        fake_task = self._make_task([Sample(input="q")])
+        with patch(_CREATE_TASK_PATCH, return_value=fake_task) as mock_ct:
+            from crsbench.crsbench import crsbench
 
-        with patch("crsbench.crsbench.create_task", return_value=fake_task):
+            crsbench(task_filter="sanity_*", dataset="lite", agent="react")
+
+        mock_ct.assert_called_once_with(
+            task_filter="sanity_*", dataset="lite", agent="react"
+        )
+
+    def test_returns_create_task_result(self) -> None:
+        """crsbench() should return exactly what create_task() returns."""
+        fake_task = self._make_task([Sample(input="q")])
+        with patch(_CREATE_TASK_PATCH, return_value=fake_task):
+            from crsbench.crsbench import crsbench
+
+            result = crsbench()
+
+        assert result is fake_task
+
+    def test_no_sample_mutation(self) -> None:
+        """crsbench() must not modify samples (setup injection removed)."""
+        samples = [Sample(input="q1"), Sample(input="q2")]
+        fake_task = self._make_task(samples)
+        with patch(_CREATE_TASK_PATCH, return_value=fake_task):
+            from crsbench.crsbench import crsbench
+
             result = crsbench()
 
         for sample in result.dataset:
-            assert sample.setup == _GIT_INIT_SETUP
+            assert sample.setup is None
 
-    def test_overwrites_existing_setup(self) -> None:
-        samples = [Sample(input="q1", setup="old script")]
-        fake_task = self._make_task(samples)
+    def test_no_domain_only_params_constant(self) -> None:
+        """_DOMAIN_ONLY_PARAMS should no longer exist in the module."""
+        import crsbench.crsbench as mod
 
-        with patch("crsbench.crsbench.create_task", return_value=fake_task):
-            result = crsbench()
+        assert not hasattr(mod, "_DOMAIN_ONLY_PARAMS")
 
-        assert list(result.dataset)[0].setup == _GIT_INIT_SETUP
+    def test_no_git_init_constant(self) -> None:
+        """_GIT_INIT_SETUP should no longer exist in the module."""
+        import crsbench.crsbench as mod
 
-    def test_preserves_sample_count(self) -> None:
-        samples = [Sample(input=f"q{i}") for i in range(5)]
-        fake_task = self._make_task(samples)
+        assert not hasattr(mod, "_GIT_INIT_SETUP")
 
-        with patch("crsbench.crsbench.create_task", return_value=fake_task):
-            result = crsbench()
+    def test_no_lite_task_ids_constant(self) -> None:
+        """_LITE_TASK_IDS should no longer exist in the module."""
+        import crsbench.crsbench as mod
 
-        assert len(list(result.dataset)) == 5
+        assert not hasattr(mod, "_LITE_TASK_IDS")
 
-    def test_forwards_kwargs_to_create_task(self) -> None:
-        fake_task = self._make_task([Sample(input="q")])
-        with patch(
-            "crsbench.crsbench.create_task", return_value=fake_task
-        ) as mock_ct:
-            crsbench(task_filter="sanity_*", build="true")
+    def test_no_domain_root_constant(self) -> None:
+        """_DOMAIN_ROOT should no longer exist in the module."""
+        import crsbench.crsbench as mod
 
-        mock_ct.assert_called_once_with(task_filter="sanity_*", build="true")
-
-    def test_handles_empty_dataset(self) -> None:
-        """inspect_ai Task rejects empty datasets, so this can't occur."""
-        with pytest.raises(ValueError, match="empty"):
-            self._make_task([])
+        assert not hasattr(mod, "_DOMAIN_ROOT")

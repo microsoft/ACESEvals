@@ -1474,19 +1474,27 @@ class TestGradleOfflineInit:
 
 
 class TestGitInitResilience:
-    """Tests for _GIT_INIT_SETUP script robustness."""
+    """Tests for git-init in the L2 overlay Dockerfile."""
 
-    def test_script_uses_allow_empty_commit(self) -> None:
-        from crsbench.crsbench import _GIT_INIT_SETUP
+    @staticmethod
+    def _overlay_dockerfile() -> str:
+        """Return the generated L2 overlay Dockerfile content."""
+        from crsbench.scripts.build_images import generate_overlay_dockerfile
 
-        assert "--allow-empty" in _GIT_INIT_SETUP
+        return generate_overlay_dockerfile("test-env:latest")
 
-    def test_script_creates_directory(self) -> None:
-        from crsbench.crsbench import _GIT_INIT_SETUP
+    def test_dockerfile_uses_allow_empty_commit(self) -> None:
+        assert "--allow-empty" in self._overlay_dockerfile()
 
-        assert "mkdir -p /workspace/source" in _GIT_INIT_SETUP
+    def test_dockerfile_removes_nested_git(self) -> None:
+        assert ".git" in self._overlay_dockerfile()
+        assert "find . -mindepth 2 -name .git" in self._overlay_dockerfile()
 
-    def test_script_uses_strict_mode(self) -> None:
-        from crsbench.crsbench import _GIT_INIT_SETUP
+    def test_dockerfile_creates_gitignore(self) -> None:
+        assert ".gitignore" in self._overlay_dockerfile()
 
-        assert "set -euo pipefail" in _GIT_INIT_SETUP
+    def test_git_init_runs_after_build_sh(self) -> None:
+        df = self._overlay_dockerfile()
+        build_pos = df.index("bash build.sh")
+        git_pos = df.index("git init")
+        assert git_pos > build_pos
