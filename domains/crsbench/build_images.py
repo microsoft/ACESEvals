@@ -265,7 +265,16 @@ ENV SNAPPY_CMAKE_OPTS="-DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF"
 # so the image is still created — the agent can fix and recompile
 # at runtime.  A non-zero exit from build.sh is recorded so the
 # harness verification step can flag it.
-RUN /workspace/build.sh || echo 'SABER_BUILD_WARNING: build.sh exited non-zero' >&2
+#
+# We use ``bash /workspace/build.sh`` instead of a direct invocation
+# because several benchmark scripts have the shebang
+# ``#!/bin/bash -euo pipefail``.  On Linux the kernel passes
+# everything after the interpreter path as a *single* argument to
+# bash, so ``-euo pipefail`` becomes one argv entry.  Bash then
+# tries ``set -o <script_path>`` and fails with "invalid option
+# name".  Running via ``bash`` avoids the kernel shebang parsing
+# entirely — the ``#!`` line is treated as a comment.
+RUN bash /workspace/build.sh || echo 'SABER_BUILD_WARNING: build.sh exited non-zero' >&2
 
 # Install Gradle init script to prevent dynamic version re-resolution.
 # Without this, Gradle tries to refresh expired cached version ranges
