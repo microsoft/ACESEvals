@@ -110,7 +110,7 @@ Cybersecurity incident response with database forensics and SQL analysis across 
 
 **Default dataset:** `latest_test_set` — running without `-T dataset` automatically selects this set.
 
-> **Cold start:** Contact the team for the excytin data files. You need `csv_files/` and `sql_files/` at `domains/excytin/data/` before running.
+> **First run:** Excytin data (`csv_files/` and `sql_files/`) is automatically downloaded from [HuggingFace](https://huggingface.co/datasets/anandmudgerikar/excytin-bench) on first run. No manual setup needed — the setup hook fetches and extracts `data.zip` (~280 MB) into `domains/excytin/data/`. To force re-download: `-T force_download=true`.
 
 ```bash
 # Latest test set (default — no flag needed)
