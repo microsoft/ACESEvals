@@ -82,11 +82,16 @@ class _PatchVerifyConfig:
     test_script: str
     patch_dir: str
     max_score: float
+    test_timeout: int
 
     @property
     def out_dir(self) -> str:
         """Output directory derived from harness path."""
-        return posixpath.dirname(self.harness_path) if self.harness_path else _DEFAULT_BUILD_DIR
+        return (
+            posixpath.dirname(self.harness_path)
+            if self.harness_path
+            else _DEFAULT_BUILD_DIR
+        )
 
     @property
     def env_prefix(self) -> str:
@@ -106,6 +111,20 @@ class _PatchVerifyConfig:
         """Build config from ``DomainCriteria.model_extra``."""
         extra = criteria.model_extra or {}
         source_dir = extra.get("source_dir") or _DEFAULT_SOURCE_DIR
+        raw_timeout = extra.get("test_timeout")
+        if raw_timeout is not None:
+            try:
+                test_timeout = int(raw_timeout)
+            except (ValueError, TypeError) as exc:
+                raise ValueError(
+                    f"test_timeout must be a numeric value, got: {raw_timeout!r}"
+                ) from exc
+            if test_timeout < 0:
+                raise ValueError(
+                    f"test_timeout must be non-negative, got: {test_timeout}"
+                )
+        else:
+            test_timeout = _TEST_TIMEOUT
         return cls(
             source_dir=source_dir,
             build_cwd=extra.get("build_cwd") or source_dir,
@@ -115,6 +134,7 @@ class _PatchVerifyConfig:
             test_script=extra.get("test_script") or "",
             patch_dir=extra.get("patch_dir") or _DEFAULT_PATCH_DIR,
             max_score=max_score,
+            test_timeout=test_timeout,
         )
 
 
@@ -150,61 +170,63 @@ def _build_normalise_script(source_dir: str) -> str:
     correctly.  Finally, ``@@`` hunk-header line counts are recalculated
     since LLMs frequently get them wrong.
     """
-    return "\n".join([
-        "import re, sys, os, pathlib",
-        f"src = {source_dir!r}",
-        "def resolve(p):",
-        "  if os.path.exists(os.path.join(src, p)): return p",
-        "  base = os.path.basename(p)",
-        "  for root, dirs, files in os.walk(src):",
-        "    if base in files:",
-        "      return os.path.relpath(os.path.join(root, base), src)",
-        "  return p",
-        "lines = pathlib.Path(sys.argv[1]).read_text()",
-        "out = []",
-        "for ln in lines.splitlines():",
-        "  m = re.match(r'^(---|\\+\\+\\+)\\s+(.*)', ln)",
-        "  if not m:",
-        "    out.append(ln + chr(10))",
-        "    continue",
-        "  raw = m.group(2).replace(src + '/', '').lstrip('/')",
-        "  raw = re.sub(r'^[ab]/', '', raw)",
-        "  raw = re.sub(r'\\t.*', '', raw)",
-        "  raw = re.sub(r'\\.(bak|orig|old|new)(\\s.*|[0-9].*)?$', '', raw)",
-        "  raw = raw.rstrip('~')",
-        "  raw = resolve(raw)",
-        "  prefix = 'a/' if m.group(1) == '---' else 'b/'",
-        "  out.append(m.group(1) + ' ' + prefix + raw + chr(10))",
-        # --- pass 2: fix hunk-header line counts ---
-        "fixed = []",
-        "i = 0",
-        "while i < len(out):",
-        "  hm = re.match(r'^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@(.*)', out[i])",
-        "  if not hm:",
-        "    fixed.append(out[i])",
-        "    i += 1",
-        "    continue",
-        "  oc = nc = 0",
-        "  j = i + 1",
-        "  while j < len(out):",
-        "    hl = out[j].rstrip(chr(10))",
-        "    if hl.startswith('@@') or hl.startswith('diff ') or re.match(r'^(---|\\+\\+\\+) [ab]/', hl):",
-        "      break",
-        "    if hl.startswith('+'):",
-        "      nc += 1",
-        "    elif hl.startswith('-'):",
-        "      oc += 1",
-        "    elif hl.startswith(chr(92)):",
-        "      pass",
-        "    else:",
-        "      oc += 1",
-        "      nc += 1",
-        "    j += 1",
-        "  fixed.append('@@ -%s,%d +%s,%d @@%s' % (hm.group(1), oc, hm.group(2), nc, hm.group(3)) + chr(10))",
-        "  i += 1",
-        "out = fixed",
-        "pathlib.Path(sys.argv[2]).write_text(''.join(out))",
-    ])
+    return "\n".join(
+        [
+            "import re, sys, os, pathlib",
+            f"src = {source_dir!r}",
+            "def resolve(p):",
+            "  if os.path.exists(os.path.join(src, p)): return p",
+            "  base = os.path.basename(p)",
+            "  for root, dirs, files in os.walk(src):",
+            "    if base in files:",
+            "      return os.path.relpath(os.path.join(root, base), src)",
+            "  return p",
+            "lines = pathlib.Path(sys.argv[1]).read_text()",
+            "out = []",
+            "for ln in lines.splitlines():",
+            "  m = re.match(r'^(---|\\+\\+\\+)\\s+(.*)', ln)",
+            "  if not m:",
+            "    out.append(ln + chr(10))",
+            "    continue",
+            "  raw = m.group(2).replace(src + '/', '').lstrip('/')",
+            "  raw = re.sub(r'^[ab]/', '', raw)",
+            "  raw = re.sub(r'\\t.*', '', raw)",
+            "  raw = re.sub(r'\\.(bak|orig|old|new)(\\s.*|[0-9].*)?$', '', raw)",
+            "  raw = raw.rstrip('~')",
+            "  raw = resolve(raw)",
+            "  prefix = 'a/' if m.group(1) == '---' else 'b/'",
+            "  out.append(m.group(1) + ' ' + prefix + raw + chr(10))",
+            # --- pass 2: fix hunk-header line counts ---
+            "fixed = []",
+            "i = 0",
+            "while i < len(out):",
+            "  hm = re.match(r'^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@(.*)', out[i])",
+            "  if not hm:",
+            "    fixed.append(out[i])",
+            "    i += 1",
+            "    continue",
+            "  oc = nc = 0",
+            "  j = i + 1",
+            "  while j < len(out):",
+            "    hl = out[j].rstrip(chr(10))",
+            "    if hl.startswith('@@') or hl.startswith('diff ') or re.match(r'^(---|\\+\\+\\+) [ab]/', hl):",
+            "      break",
+            "    if hl.startswith('+'):",
+            "      nc += 1",
+            "    elif hl.startswith('-'):",
+            "      oc += 1",
+            "    elif hl.startswith(chr(92)):",
+            "      pass",
+            "    else:",
+            "      oc += 1",
+            "      nc += 1",
+            "    j += 1",
+            "  fixed.append('@@ -%s,%d +%s,%d @@%s' % (hm.group(1), oc, hm.group(2), nc, hm.group(3)) + chr(10))",
+            "  i += 1",
+            "out = fixed",
+            "pathlib.Path(sys.argv[2]).write_text(''.join(out))",
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -233,7 +255,11 @@ async def _sandbox_network_access() -> AsyncIterator[None]:
             return
 
         proc = await asyncio.create_subprocess_exec(
-            "docker", "network", "connect", "bridge", container,
+            "docker",
+            "network",
+            "connect",
+            "bridge",
+            container,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -245,13 +271,19 @@ async def _sandbox_network_access() -> AsyncIterator[None]:
             # May already be connected, or bridge may not exist
             logger.warning(
                 "Failed to connect container %s to bridge (rc=%d): %s",
-                container, proc.returncode, stderr.decode(errors="replace").strip(),
+                container,
+                proc.returncode,
+                stderr.decode(errors="replace").strip(),
             )
         yield
     finally:
         if connected and container:
             proc = await asyncio.create_subprocess_exec(
-                "docker", "network", "disconnect", "bridge", container,
+                "docker",
+                "network",
+                "disconnect",
+                "bridge",
+                container,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -261,7 +293,9 @@ async def _sandbox_network_access() -> AsyncIterator[None]:
             else:
                 logger.warning(
                     "Failed to disconnect container %s from bridge (rc=%d): %s",
-                    container, proc.returncode, stderr.decode(errors="replace").strip(),
+                    container,
+                    proc.returncode,
+                    stderr.decode(errors="replace").strip(),
                 )
 
 
@@ -309,16 +343,15 @@ class CRSBenchPatchVerifyStrategy:
 
         # Step 2: Normalise + apply patches
         applied_count, apply_failures = await self._apply_patches(
-            sbx, found_files, cfg.source_dir,
+            sbx,
+            found_files,
+            cfg.source_dir,
         )
         if applied_count == 0:
             return Score(
                 value=_SCORE_ZERO,
                 answer=ctx.submission,
-                explanation=(
-                    f"Patch failed to apply: "
-                    f"{'; '.join(apply_failures[:3])}"
-                ),
+                explanation=(f"Patch failed to apply: {'; '.join(apply_failures[:3])}"),
             )
 
         # Step 3: Rebuild with ASAN
@@ -398,7 +431,8 @@ class CRSBenchPatchVerifyStrategy:
         # Clean .rej / .orig artefacts from earlier failed attempts
         await sbx.exec(
             [
-                "bash", "-c",
+                "bash",
+                "-c",
                 f"find {src_q} \\( -name '*.rej' -o -name '*.orig' \\) "
                 f"-delete 2>/dev/null; true",
             ],
@@ -431,7 +465,8 @@ class CRSBenchPatchVerifyStrategy:
             # Undo any previous application of this specific patch
             await sbx.exec(
                 [
-                    "bash", "-c",
+                    "bash",
+                    "-c",
                     f"cd {src_q} && "
                     f"patch -R -p1 --fuzz=3 --batch < {shlex.quote(norm_pf)} "
                     f"2>/dev/null; true",
@@ -442,7 +477,8 @@ class CRSBenchPatchVerifyStrategy:
             # Apply the patch
             apply_result = await sbx.exec(
                 [
-                    "bash", "-c",
+                    "bash",
+                    "-c",
                     f"cd {src_q} && "
                     f"git apply --whitespace=nowarn {shlex.quote(norm_pf)} 2>&1 || "
                     f"patch -p1 --fuzz=3 --forward < {shlex.quote(norm_pf)}",
@@ -453,7 +489,8 @@ class CRSBenchPatchVerifyStrategy:
                 # Check if the patch is already applied (reverse dry-run)
                 reverse_check = await sbx.exec(
                     [
-                        "bash", "-c",
+                        "bash",
+                        "-c",
                         f"cd {src_q} && patch -R -p1 --fuzz=3 --dry-run "
                         f"< {shlex.quote(norm_pf)}",
                     ],
@@ -482,13 +519,14 @@ class CRSBenchPatchVerifyStrategy:
         # Ensure $LIB_FUZZING_ENGINE resolves to an actual file.
         await sbx.exec(
             [
-                "bash", "-c",
+                "bash",
+                "-c",
                 'if [ -n "$LIB_FUZZING_ENGINE" ] && [ ! -f "$LIB_FUZZING_ENGINE" ]; then '
                 '  FUZZER_RT=$(find /usr/local/lib /usr/lib -name "libclang_rt.fuzzer.a" -path "*/x86_64*" 2>/dev/null | head -1); '
                 '  if [ -n "$FUZZER_RT" ]; then '
                 '    ln -sf "$FUZZER_RT" "$LIB_FUZZING_ENGINE"; '
-                '  fi; '
-                'fi',
+                "  fi; "
+                "fi",
             ],
             timeout=_FIND_TIMEOUT,
         )
@@ -541,9 +579,7 @@ class CRSBenchPatchVerifyStrategy:
                 timeout=_POV_TIMEOUT,
             )
             if pov_result.returncode != 0:
-                crash_details.append(
-                    f"{pov_file}: exit={pov_result.returncode}"
-                )
+                crash_details.append(f"{pov_file}: exit={pov_result.returncode}")
 
         return PovVerifyResult(
             all_passed=len(crash_details) == 0,
@@ -570,7 +606,11 @@ class CRSBenchPatchVerifyStrategy:
         # Ensure scripts are executable
         src_q = shlex.quote(cfg.source_dir)
         await sbx.exec(
-            ["bash", "-c", f"chmod +x {shlex.quote(cfg.test_script)} {src_q}/*.sh 2>/dev/null || true"],
+            [
+                "bash",
+                "-c",
+                f"chmod +x {shlex.quote(cfg.test_script)} {src_q}/*.sh 2>/dev/null || true",
+            ],
             timeout=_MISC_TIMEOUT,
         )
 
@@ -579,14 +619,18 @@ class CRSBenchPatchVerifyStrategy:
         try:
             async with _sandbox_network_access():
                 test_result = await sbx.exec(
-                    ["bash", "-c", f"cd {build_cwd_q} && {cfg.env_prefix} {shlex.quote(cfg.test_script)}"],
-                    timeout=_TEST_TIMEOUT,
+                    [
+                        "bash",
+                        "-c",
+                        f"cd {build_cwd_q} && {cfg.env_prefix} {shlex.quote(cfg.test_script)}",
+                    ],
+                    timeout=cfg.test_timeout,
                 )
         except (TimeoutError, asyncio.TimeoutError):
             return Score(
                 value=_SCORE_PARTIAL * cfg.max_score,
                 answer=None,
-                explanation=f"Patch fixes crash but test.sh timed out after {_TEST_TIMEOUT}s",
+                explanation=f"Patch fixes crash but test.sh timed out after {cfg.test_timeout}s",
             )
 
         if test_result.returncode != 0:

@@ -16,6 +16,8 @@ from inspect_ai.scorer import Score
 
 from crsbench.scoring.patch_verify import (
     CRSBenchPatchVerifyStrategy,
+    _PatchVerifyConfig,
+    _TEST_TIMEOUT,
     _build_normalise_script,
 )
 from saber.config.models import DomainCriteria, ScorerConfig
@@ -1225,3 +1227,148 @@ class TestSandboxNetworkAccess:
 
         assert result.value == pytest.approx(0.5)
         assert "timed out" in result.explanation.lower()
+
+
+# ---------------------------------------------------------------------------
+# Fix 3: Configurable test timeout
+# ---------------------------------------------------------------------------
+
+
+class TestPatchVerifyConfigTestTimeout:
+    """_PatchVerifyConfig.test_timeout — configurable per-task test timeout."""
+
+    def test_default_timeout(self) -> None:
+        """When test_timeout is not set, fall back to _TEST_TIMEOUT."""
+        extra = {**_DEFAULT_CRITERIA_EXTRA}
+        criteria = DomainCriteria(**extra)
+        cfg = _PatchVerifyConfig.from_criteria(criteria, max_score=1.0)
+        assert cfg.test_timeout == _TEST_TIMEOUT
+
+    def test_custom_timeout(self) -> None:
+        """When test_timeout is set in criteria extras, use it."""
+        extra = {**_DEFAULT_CRITERIA_EXTRA, "test_timeout": 1200}
+        criteria = DomainCriteria(**extra)
+        cfg = _PatchVerifyConfig.from_criteria(criteria, max_score=1.0)
+        assert cfg.test_timeout == 1200
+
+    def test_custom_timeout_zero(self) -> None:
+        """Zero is allowed — it means no timeout."""
+        extra = {**_DEFAULT_CRITERIA_EXTRA, "test_timeout": 0}
+        criteria = DomainCriteria(**extra)
+        cfg = _PatchVerifyConfig.from_criteria(criteria, max_score=1.0)
+        assert cfg.test_timeout == 0
+
+
+class TestPatchVerifyConfigValidation:
+    """_PatchVerifyConfig — input validation for test_timeout."""
+
+    def test_negative_timeout_raises(self) -> None:
+        """Negative test_timeout must raise ValueError."""
+        extra = {**_DEFAULT_CRITERIA_EXTRA, "test_timeout": -1}
+        criteria = DomainCriteria(**extra)
+        with pytest.raises(ValueError, match="test_timeout must be non-negative"):
+            _PatchVerifyConfig.from_criteria(criteria, max_score=1.0)
+
+    def test_non_numeric_timeout_raises(self) -> None:
+        """Non-numeric test_timeout must raise ValueError with descriptive message."""
+        extra = {**_DEFAULT_CRITERIA_EXTRA, "test_timeout": "fast"}
+        criteria = DomainCriteria(**extra)
+        with pytest.raises(ValueError, match="test_timeout must be a numeric value"):
+            _PatchVerifyConfig.from_criteria(criteria, max_score=1.0)
+
+
+class TestRunTestsUsesConfiguredTimeout:
+    """_run_tests() should use cfg.test_timeout instead of the hardcoded constant."""
+
+    @pytest.mark.asyncio
+    async def test_custom_timeout_passed_to_exec(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Verify that _run_tests passes the configured timeout to sbx.exec."""
+        ctx = _make_ctx(criteria_extra={"test_timeout": 1200})
+        exec_results = [
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
+            _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),                                      # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # run POV (no crash)
+            _make_exec_result(),                                      # test -f test.sh (exists)
+            _make_exec_result(),                                      # chmod +x scripts
+            _make_exec_result(),                                      # run test.sh (pass)
+        ]
+        sbx = _make_sandbox_mock(exec_results)
+
+        with (
+            patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx),
+            patch(
+                "crsbench.scoring.patch_verify._sandbox_network_access",
+                side_effect=_noop_cm,
+            ),
+        ):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(1.0)
+
+        # Find the test.sh exec call — it's the last one with a timeout
+        # The test.sh call should have timeout=1200
+        test_sh_calls = [
+            call for call in sbx.exec.call_args_list
+            if any("test.sh" in str(a) for a in call.args) and "timeout" in call.kwargs
+        ]
+        # The test.sh execution call should use the configured timeout
+        found_custom_timeout = any(
+            call.kwargs.get("timeout") == 1200 for call in test_sh_calls
+        )
+        assert found_custom_timeout, (
+            f"Expected timeout=1200 in a test.sh exec call, "
+            f"got: {[(c.args, c.kwargs) for c in test_sh_calls]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_timeout_in_error_message(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """When test.sh times out, the error message should show the custom timeout."""
+        ctx = _make_ctx(criteria_extra={"test_timeout": 1200})
+        exec_results = [
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
+            _make_exec_result(),                                      # normalise
+            _make_exec_result(),                                      # reverse
+            _make_exec_result(),                                      # apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE
+            _make_exec_result(),                                      # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # pov pass
+            _make_exec_result(),                                      # test -f
+            _make_exec_result(),                                      # chmod +x scripts
+        ]
+
+        call_idx = 0
+
+        async def exec_side_effect(*args: object, **kwargs: object) -> MagicMock:
+            nonlocal call_idx
+            if call_idx < len(exec_results):
+                result = exec_results[call_idx]
+                call_idx += 1
+                return result
+            raise TimeoutError("timed out after 1200 seconds")
+
+        sbx = MagicMock()
+        sbx.exec = AsyncMock(side_effect=exec_side_effect)
+
+        with (
+            patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx),
+            patch(
+                "crsbench.scoring.patch_verify._sandbox_network_access",
+                side_effect=_noop_cm,
+            ),
+        ):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(0.5)
+        assert "1200" in result.explanation

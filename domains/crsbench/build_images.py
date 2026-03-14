@@ -45,6 +45,7 @@ try:
         TimeElapsedColumn,
     )
     from rich.text import Text as RichText
+
     _HAS_RICH = True
 except ImportError:
     _HAS_RICH = False
@@ -306,7 +307,7 @@ ENV SNAPPY_CMAKE_OPTS="-DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF"
 # tries ``set -o <script_path>`` and fails with "invalid option
 # name".  Running via ``bash`` avoids the kernel shebang parsing
 # entirely — the ``#!`` line is treated as a comment.
-RUN bash /workspace/build.sh || echo 'SABER_BUILD_WARNING: build.sh exited non-zero' >&2
+RUN apt-get update -qq && bash /workspace/build.sh || echo 'SABER_BUILD_WARNING: build step exited non-zero' >&2
 
 # ── Git init — bake a clean initial commit into the image ────
 # Agents use `git diff` to generate patches.  The initial commit
@@ -577,17 +578,23 @@ async def _build_layer1(
     _write_dockerignore(benchmark_path, layer=1)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "docker", "build",
-            "-t", image_tag,
-            "-f", str(dockerfile),
+            "docker",
+            "build",
+            "-t",
+            image_tag,
+            "-f",
+            str(dockerfile),
             str(benchmark_path),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
 
         await _stream_build(
-            proc, f"L1 {benchmark_id}", timeout=timeout,
-            quiet=quiet, status_callback=status_callback,
+            proc,
+            f"L1 {benchmark_id}",
+            timeout=timeout,
+            quiet=quiet,
+            status_callback=status_callback,
         )
     finally:
         _cleanup_dockerignore(benchmark_path)
@@ -648,7 +655,9 @@ async def _build_layer2(
             shutil.copy2(src, tmp_dir / script)
         else:
             # Create a no-op placeholder so COPY doesn't fail
-            (tmp_dir / script).write_text(f"#!/bin/bash\necho '{script} not provided'\n")
+            (tmp_dir / script).write_text(
+                f"#!/bin/bash\necho '{script} not provided'\n"
+            )
 
     _write_dockerignore(tmp_dir, layer=2)
 
@@ -659,17 +668,23 @@ async def _build_layer2(
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            "docker", "build",
-            "-t", image_tag,
-            "-f", str(dockerfile),
+            "docker",
+            "build",
+            "-t",
+            image_tag,
+            "-f",
+            str(dockerfile),
             str(tmp_dir),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
 
         await _stream_build(
-            proc, f"L2 {benchmark_id}", timeout=timeout,
-            quiet=quiet, status_callback=status_callback,
+            proc,
+            f"L2 {benchmark_id}",
+            timeout=timeout,
+            quiet=quiet,
+            status_callback=status_callback,
         )
 
         if not quiet:
@@ -739,14 +754,22 @@ async def build_benchmark_image(
     try:
         # Layer 1: Build benchmark environment
         layer1_tag = await _build_layer1(
-            benchmark_path, benchmark_id, timeout=timeout,
-            quiet=quiet, status_callback=_prefixed("L1"),
+            benchmark_path,
+            benchmark_id,
+            timeout=timeout,
+            quiet=quiet,
+            status_callback=_prefixed("L1"),
         )
 
         # Layer 2: Overlay SABER tooling
         layer2_tag = await _build_layer2(
-            layer1_tag, benchmark_id, benchmark_path, domain_root,
-            timeout=timeout, quiet=quiet, status_callback=_prefixed("L2"),
+            layer1_tag,
+            benchmark_id,
+            benchmark_path,
+            domain_root,
+            timeout=timeout,
+            quiet=quiet,
+            status_callback=_prefixed("L2"),
         )
 
         elapsed = time.monotonic() - start
@@ -764,7 +787,9 @@ async def build_benchmark_image(
         elapsed = time.monotonic() - start
         logger.warning(
             "Benchmark %s: build failed after %.1fs — %s",
-            benchmark_id, elapsed, exc,
+            benchmark_id,
+            elapsed,
+            exc,
         )
         return ImageBuildResult(
             benchmark_id=benchmark_id,
@@ -831,9 +856,7 @@ async def build_all_images(
     benchmarks = _discover_benchmarks(benchmarks_dir)
 
     if prefix_filter:
-        benchmarks = [
-            b for b in benchmarks if b.name.startswith(prefix_filter)
-        ]
+        benchmarks = [b for b in benchmarks if b.name.startswith(prefix_filter)]
 
     if benchmark_names is not None:
         benchmarks = [b for b in benchmarks if b.name in benchmark_names]
@@ -858,7 +881,8 @@ async def build_all_images(
             TimeElapsedColumn(),
         )
         overall_task = bar.add_task(
-            "Building images", total=len(benchmarks),
+            "Building images",
+            total=len(benchmarks),
         )
 
         def _render() -> Group:
@@ -884,8 +908,11 @@ async def build_all_images(
                         live.update(_render())
 
                     result = await build_benchmark_image(
-                        benchmark_path, domain_root, force=force,
-                        timeout=timeout, quiet=True,
+                        benchmark_path,
+                        domain_root,
+                        force=force,
+                        timeout=timeout,
+                        quiet=True,
                         status_callback=_status_cb,
                     )
 
@@ -949,7 +976,10 @@ async def build_all_images(
     async def _bounded_build(benchmark_path: Path) -> ImageBuildResult:
         async with semaphore:
             return await build_benchmark_image(
-                benchmark_path, domain_root, force=force, timeout=timeout,
+                benchmark_path,
+                domain_root,
+                force=force,
+                timeout=timeout,
             )
 
     results = await asyncio.gather(

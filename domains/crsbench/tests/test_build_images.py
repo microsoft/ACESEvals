@@ -855,3 +855,36 @@ class TestGitInitResilience:
             assert keyword not in lowered, (
                 f"Git-init commands should not contain '{keyword}'"
             )
+
+
+# ===========================================================================
+# Apt-get update before build.sh tests (Fix 2)
+# ===========================================================================
+
+
+class TestAptGetUpdateBeforeBuildSh:
+    """Layer 2 Dockerfile must run apt-get update before build.sh.
+
+    After ``rm -rf /var/lib/apt/lists/*``, the apt cache is empty.
+    ``build.sh`` scripts that call ``apt-get install`` will fail unless
+    ``apt-get update`` is run first.
+    """
+
+    def test_apt_get_update_before_build_sh(self) -> None:
+        content = generate_overlay_dockerfile("saber/crsbench/env:test")
+        # apt-get update must appear before build.sh in the RUN instruction
+        update_pos = content.index("apt-get update")
+        build_sh_pos = content.index("bash /workspace/build.sh")
+        assert update_pos < build_sh_pos
+
+    def test_build_sh_run_contains_apt_update(self) -> None:
+        """The RUN line that invokes build.sh should contain apt-get update."""
+        content = generate_overlay_dockerfile("saber/crsbench/env:test")
+        # Find the RUN line that contains build.sh
+        for line in content.splitlines():
+            stripped = line.strip()
+            if "bash /workspace/build.sh" in stripped and stripped.startswith("RUN"):
+                assert "apt-get update" in stripped
+                break
+        else:
+            pytest.fail("No RUN line containing build.sh found in Dockerfile")
