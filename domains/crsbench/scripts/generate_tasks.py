@@ -20,7 +20,7 @@ from pathlib import Path
 
 import yaml
 
-from crsbench.scripts.build_images import image_tag_for_benchmark
+from crsbench.build_images import image_tag_for_benchmark
 from crsbench.scripts.models import CRSBenchHarness, CRSBenchMeta, CRSBenchVuln
 from saber.logging import get_logger
 

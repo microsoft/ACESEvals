@@ -30,7 +30,7 @@ from saber.hooks import SetupHook
 from saber.logging import display_progress, get_logger
 
 if TYPE_CHECKING:
-    from crsbench.scripts.build_images import ImageBuildSummary
+    from crsbench.build_images import ImageBuildSummary
 
 logger = get_logger("domains.crsbench.setup")
 

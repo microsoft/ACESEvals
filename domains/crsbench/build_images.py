@@ -29,6 +29,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 from saber.logging import display_progress, get_logger
 
@@ -180,22 +181,21 @@ DEFAULT_MAX_CONCURRENT_BUILDS = 4
 #: Set generous to accommodate parallel builds competing for CPU.
 DEFAULT_BUILD_TIMEOUT_SECONDS = 3600  # 60 minutes
 
-#: Gradle init script that tells Gradle to cache dynamic version resolutions
-#: and changing module artifacts indefinitely. This prevents Gradle from
-#: attempting to refresh version ranges (e.g. ``[1.81,1.82)``) from remote
-#: repositories when the sandbox has no network access. The script is
-#: installed AFTER ``build.sh`` warms the dependency cache during image build.
-_GRADLE_OFFLINE_INIT = """\
-// Prevent Gradle from refreshing dynamic version ranges and changing modules.
-// Installed by SABER Layer 2 build — the dependency cache is already warm.
-allprojects {
-    configurations.all {
-        resolutionStrategy {
-            cacheDynamicVersionsFor 365, 'days'
-            cacheChangingModulesFor 365, 'days'
-        }
-    }
-}
+#: Layer 1 .dockerignore — exclude staged/ (only used by Layer 2) and .aixcc/
+_DOCKERIGNORE_LAYER1 = """\
+staged/
+.aixcc/
+Dockerfile.saber
+"""
+
+#: Layer 2 .dockerignore — exclude pkgs/ and tarballs (only used by Layer 1)
+_DOCKERIGNORE_LAYER2 = """\
+pkgs/
+.aixcc/
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+Dockerfile
 """
 
 #: Layer 2 Dockerfile template — overlays SABER tooling on the env image.
@@ -209,9 +209,8 @@ allprojects {
 #: and — critically — runs ``build.sh`` so the compiled harness
 #: binaries are baked into the image at ``/out/`` (symlinked as
 #: ``/workspace/build/``).
-_LAYER2_DOCKERFILE = """\
-ARG BASE_IMAGE
-FROM ${BASE_IMAGE}
+_LAYER2_TEMPLATE = """\
+FROM __ENV_IMAGE_TAG__
 
 # Switch to root for package installation
 USER root
@@ -239,11 +238,23 @@ RUN npm install -g --ignore-scripts \\
 # Install uv package manager
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install Python packages for basic execution and agent SDKs
-RUN uv pip install --system --no-cache \\
-    requests \\
-    github-copilot-sdk==0.1.32 \\
-    claude-code-sdk
+# Install Python 3.11 via uv — the base images ship Python 3.10 but
+# github-copilot-sdk and claude-code-sdk require Python >= 3.11.
+# uv downloads a standalone CPython build; no PPA or OS packages needed.
+RUN uv python install 3.11
+
+# Install Python packages for basic execution and agent SDKs into the
+# system Python 3.10 (requests) and a Python 3.11 venv (agent SDKs).
+# The venv's site-packages is added to PYTHONPATH so `import copilot`
+# works from any script.
+RUN uv pip install --system --no-cache requests
+RUN uv venv /opt/saber-agent --python 3.11 \\
+    && uv pip install --python /opt/saber-agent/bin/python --no-cache \\
+        github-copilot-sdk==0.1.32 \\
+        claude-code-sdk \\
+        requests
+ENV PYTHONPATH="/opt/saber-agent/lib/python3.11/site-packages:${PYTHONPATH:-}"
+ENV PATH="/opt/saber-agent/bin:${PATH}"
 
 # Workspace structure — symlink /workspace/source and /workspace/build
 # to the locations used by AIxCC base-builder ($SRC=/src, $OUT=/out).
@@ -297,6 +308,18 @@ ENV SNAPPY_CMAKE_OPTS="-DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF"
 # entirely — the ``#!`` line is treated as a comment.
 RUN bash /workspace/build.sh || echo 'SABER_BUILD_WARNING: build.sh exited non-zero' >&2
 
+# ── Git init — bake a clean initial commit into the image ────
+# Agents use `git diff` to generate patches.  The initial commit
+# captures the pre-agent source state so diffs are clean.
+RUN cd /workspace/source && \\
+    find . -mindepth 2 -name .git -exec rm -rf {} + 2>/dev/null || true && \\
+    printf '*.o\\n*.a\\n*.so\\n*.class\\n*.jar\\n*.pyc\\n__pycache__/\\n' > .gitignore && \\
+    git init && git checkout -b main 2>/dev/null || true && \\
+    git config user.email 'sandbox@saber' && \\
+    git config user.name 'sandbox' && \\
+    git add -A && \\
+    git commit --allow-empty -m 'initial' --quiet
+
 # Install Gradle init script to prevent dynamic version re-resolution.
 # Without this, Gradle tries to refresh expired cached version ranges
 # from Maven Central, which fails in the offline sandbox environment.
@@ -315,6 +338,85 @@ GRADLE_INIT
 
 WORKDIR /workspace
 """
+
+
+# ---------------------------------------------------------------------------
+# .dockerignore helpers
+# ---------------------------------------------------------------------------
+
+
+def _write_dockerignore(benchmark_dir: Path, *, layer: Literal[1, 2]) -> None:
+    """Write a ``.dockerignore`` to minimize Docker build context.
+
+    Args:
+        benchmark_dir: Path to the benchmark directory (or build context dir).
+        layer: 1 for env image build, 2 for overlay image build.
+    """
+    content = _DOCKERIGNORE_LAYER1 if layer == 1 else _DOCKERIGNORE_LAYER2
+    (benchmark_dir / ".dockerignore").write_text(content)
+
+
+def _cleanup_dockerignore(benchmark_dir: Path) -> None:
+    """Remove the generated ``.dockerignore`` after building."""
+    ignore_path = benchmark_dir / ".dockerignore"
+    if ignore_path.exists():
+        ignore_path.unlink()
+
+
+# ---------------------------------------------------------------------------
+# Tag helpers
+# ---------------------------------------------------------------------------
+
+
+def image_tag_for_benchmark(benchmark_id: str) -> str:
+    """Return the full Docker image tag for a benchmark.
+
+    Args:
+        benchmark_id: Benchmark directory name (e.g. ``"afc-curl-delta-01"``).
+
+    Returns:
+        Full image tag (e.g. ``"saber/crsbench/benchmark:afc-curl-delta-01"``).
+    """
+    return f"{BENCHMARK_IMAGE_PREFIX}:{benchmark_id}"
+
+
+def env_image_tag_for_benchmark(benchmark_id: str) -> str:
+    """Return the Layer 1 env image tag for a benchmark.
+
+    Args:
+        benchmark_id: Benchmark directory name.
+
+    Returns:
+        Full image tag (e.g. ``"saber/crsbench/env:afc-curl-delta-01"``).
+    """
+    return f"{ENV_IMAGE_PREFIX}:{benchmark_id}"
+
+
+# ---------------------------------------------------------------------------
+# Overlay Dockerfile generation
+# ---------------------------------------------------------------------------
+
+
+def generate_overlay_dockerfile(env_image_tag: str) -> str:
+    """Generate the Layer 2 Dockerfile that overlays SABER tooling on the env image.
+
+    Extends the per-benchmark env image (Layer 1) with:
+    - Extra CLI tools (gdb, patch, diffutils, file)
+    - Node.js 22 + Copilot CLI + Claude Code CLI
+    - uv + Python 3.11 + agent SDKs
+    - Workspace symlinks (``/workspace/source`` → ``/src``) and
+      ``libFuzzingEngine.a``
+    - ``build.sh`` execution to warm the build cache
+    - Git init to bake a clean initial commit for agent diffs
+    - Gradle offline cache init script
+
+    Args:
+        env_image_tag: Layer 1 env image tag to extend.
+
+    Returns:
+        Dockerfile content as a string.
+    """
+    return _LAYER2_TEMPLATE.replace("__ENV_IMAGE_TAG__", env_image_tag)
 
 
 # ---------------------------------------------------------------------------
@@ -472,19 +574,23 @@ async def _build_layer1(
     if status_callback is not None:
         status_callback("building env image…")
 
-    proc = await asyncio.create_subprocess_exec(
-        "docker", "build",
-        "-t", image_tag,
-        "-f", str(dockerfile),
-        str(benchmark_path),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
+    _write_dockerignore(benchmark_path, layer=1)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "build",
+            "-t", image_tag,
+            "-f", str(dockerfile),
+            str(benchmark_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
 
-    await _stream_build(
-        proc, f"L1 {benchmark_id}", timeout=timeout,
-        quiet=quiet, status_callback=status_callback,
-    )
+        await _stream_build(
+            proc, f"L1 {benchmark_id}", timeout=timeout,
+            quiet=quiet, status_callback=status_callback,
+        )
+    finally:
+        _cleanup_dockerignore(benchmark_path)
 
     if not quiet:
         display_progress(f"Layer 1 complete: {image_tag}")
@@ -533,7 +639,7 @@ async def _build_layer2(
     tmp_dir = domain_root / ".build_tmp" / benchmark_id
     tmp_dir.mkdir(parents=True, exist_ok=True)
     dockerfile = tmp_dir / "Dockerfile"
-    dockerfile.write_text(_LAYER2_DOCKERFILE)
+    dockerfile.write_text(generate_overlay_dockerfile(base_image))
 
     # Copy benchmark scripts into the build context so COPY works
     for script in ("build.sh", "test.sh"):
@@ -544,6 +650,8 @@ async def _build_layer2(
             # Create a no-op placeholder so COPY doesn't fail
             (tmp_dir / script).write_text(f"#!/bin/bash\necho '{script} not provided'\n")
 
+    _write_dockerignore(tmp_dir, layer=2)
+
     if not quiet:
         display_progress(f"Building Layer 2 image {image_tag} (base: {base_image})")
     if status_callback is not None:
@@ -553,7 +661,6 @@ async def _build_layer2(
         proc = await asyncio.create_subprocess_exec(
             "docker", "build",
             "-t", image_tag,
-            "--build-arg", f"BASE_IMAGE={base_image}",
             "-f", str(dockerfile),
             str(tmp_dir),
             stdout=asyncio.subprocess.PIPE,
