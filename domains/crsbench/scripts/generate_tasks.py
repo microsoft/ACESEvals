@@ -200,11 +200,13 @@ def generate_bugfix_task(
                     "weight": 0.15,
                     "title": "Crash Analysis",
                     "description": (
-                        "Agent reproduces the crash and analyzes the ASAN output"
+                        "Agent reproduces the crash and analyzes the crash output "
+                        "(ASAN report or Java exception)"
                     ),
                     "hints": [
                         "Run the POV against the harness binary",
-                        "Read and interpret the AddressSanitizer crash report",
+                        "Read and interpret the crash report "
+                        "(AddressSanitizer output or Java exception stack trace)",
                     ],
                 },
                 "root_cause": {
