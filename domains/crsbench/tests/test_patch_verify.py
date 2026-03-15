@@ -1372,3 +1372,74 @@ class TestRunTestsUsesConfiguredTimeout:
 
         assert result.value == pytest.approx(0.5)
         assert "1200" in result.explanation
+
+
+# ---------------------------------------------------------------------------
+# Fix B1: _rebuild() prepends apt-get update
+# ---------------------------------------------------------------------------
+
+
+class TestRebuildAptRefresh:
+    """_rebuild() must prepend ``apt-get update`` to the build command."""
+
+    @pytest.mark.asyncio
+    async def test_rebuild_prepends_apt_update_with_build_script(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """When build_script is set, the build_cmd starts with apt-get update."""
+        ctx = _make_ctx()
+        # We need enough exec results to reach _rebuild (step 3).
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
+            _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),                                      # build (rebuild)
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # run POV (no crash)
+            _make_exec_result(),                                      # test -f test.sh (exists)
+            _make_exec_result(),                                      # chmod +x scripts
+            _make_exec_result(),                                      # bash test.sh (pass)
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            await strategy.score(ctx, None)
+
+        # The build (rebuild) call is the 7th exec call (index 6).
+        # Inspect the bash command passed to it.
+        build_call = sbx.exec.call_args_list[6]
+        build_cmd_str = build_call.args[0][2]  # ["bash", "-c", cmd] → cmd
+        assert build_cmd_str.startswith("apt-get update -qq"), (
+            f"Expected build_cmd to start with apt-get update, got: {build_cmd_str}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_rebuild_prepends_apt_update_without_build_script(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """When build_script is empty, the make-based build_cmd starts with apt-get update."""
+        ctx = _make_ctx(criteria_extra={"build_script": "", "test_script": ""})
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
+            _make_exec_result(),                                      # .rej/.orig cleanup
+            _make_exec_result(),                                      # normalise patch paths
+            _make_exec_result(),                                      # reverse + cleanup
+            _make_exec_result(),                                      # patch apply
+            _make_exec_result(),                                      # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),                                      # build (make-based)
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),   # find POVs
+            _make_exec_result(),                                      # run POV (no crash)
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            await strategy.score(ctx, None)
+
+        build_call = sbx.exec.call_args_list[6]
+        build_cmd_str = build_call.args[0][2]  # ["bash", "-c", cmd] → cmd
+        assert build_cmd_str.startswith("apt-get update -qq"), (
+            f"Expected build_cmd to start with apt-get update, got: {build_cmd_str}"
+        )

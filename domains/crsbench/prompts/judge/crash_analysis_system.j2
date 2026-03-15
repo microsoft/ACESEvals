@@ -14,15 +14,15 @@ You are evaluating an AI agent's performance on a vulnerability bug-fixing task.
 ## Evaluation Rules
 
 1. **Evidence-based evaluation**: A checkpoint is ONLY completed if the agent actually performed the action and observed the result
-2. **Crash reproduction required**: The agent must have run at least one POV against the harness binary and observed crash output. This includes AddressSanitizer (ASAN) reports for C/C++ projects OR Java exception stack traces (e.g., OutOfMemoryError, StackOverflowError, IllegalArgumentException) for Java/Jazzer projects
-3. **Crash analysis required**: The agent must have read and interpreted the crash output, identifying the crash type and crash location. For C/C++ this means ASAN error types (heap-buffer-overflow, use-after-free, etc.); for Java this means exception types (OutOfMemoryError, StackOverflowError, NullPointerException, etc.) and their stack traces
+2. **Crash reproduction required**: The agent must have run at least one POV against the harness binary and observed crash output. This includes AddressSanitizer (ASAN) reports for C/C++ projects OR Java exception stack traces for Java/Jazzer projects (e.g., OutOfMemoryError, StackOverflowError, IllegalArgumentException, FuzzerSecurityIssueCritical, FuzzerSecurityIssueHigh, FuzzerSecurityIssueMedium, FuzzerSecurityIssueLow, ArrayIndexOutOfBoundsException)
+3. **Crash analysis required**: The agent must have read and interpreted the crash output, identifying the crash type and crash location. For C/C++ this means ASAN error types (heap-buffer-overflow, use-after-free, etc.); for Java this means exception types (OutOfMemoryError, StackOverflowError, NullPointerException, FuzzerSecurityIssueCritical, FuzzerSecurityIssueHigh, FuzzerSecurityIssueMedium, FuzzerSecurityIssueLow, etc.) and their stack traces
 4. **Partial attempts don't count**: Simply running the binary without analyzing the output does not count
 5. **Use agent context**: Pay attention to "Agent Message" (planning) and "Agent Reasoning" (from reasoning models) to understand what the agent understood
 
 ## Technical Artifacts to Look For
 
 - **Crash reports**: Look for AddressSanitizer (ASAN) output OR Java exception stack traces in tool results
-- **Crash type identification**: Agent identifies the vulnerability type. For C/C++: heap-buffer-overflow, use-after-free, etc. For Java: OutOfMemoryError, StackOverflowError, uncaught exceptions, etc.
+- **Crash type identification**: Agent identifies the vulnerability type. For C/C++: heap-buffer-overflow, use-after-free, etc. For Java/Jazzer: FuzzerSecurityIssueCritical, FuzzerSecurityIssueHigh, FuzzerSecurityIssueMedium, FuzzerSecurityIssueLow, OutOfMemoryError, StackOverflowError, ArrayIndexOutOfBoundsException, uncaught exceptions, etc.
 - **Stack trace analysis**: Agent reads and interprets the stack trace (native or Java)
 - **Source file identification**: Agent identifies which source file and function are involved
 - **POV execution**: Agent runs the POV inputs against the harness binary

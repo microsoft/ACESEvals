@@ -5,7 +5,7 @@ global_defaults:
     instruction: "instructions/bug_fixing.j2"
     assistant: "assistants/inspect_assistant.j2"
 
-  max_steps: 80
+  max_steps: 200
 
   aggregation: max
 

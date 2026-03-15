@@ -532,11 +532,17 @@ class CRSBenchPatchVerifyStrategy:
         )
 
         build_cwd_q = shlex.quote(cfg.build_cwd)
+
+        # Refresh apt package lists before rebuilding — some gold-dataset
+        # build.sh scripts call ``apt-get install`` for dependencies.
+        # Without fresh lists the packages cannot be resolved.
+        apt_refresh = "apt-get update -qq 2>/dev/null; "
+
         if cfg.build_script:
-            build_cmd = f"cd {build_cwd_q} && {cfg.env_prefix} bash -eu {shlex.quote(cfg.build_script)}"
+            build_cmd = f"{apt_refresh}cd {build_cwd_q} && {cfg.env_prefix} bash -eu {shlex.quote(cfg.build_script)}"
         else:
             build_cmd = (
-                f"cd {build_cwd_q} && make clean 2>/dev/null; "
+                f"{apt_refresh}cd {build_cwd_q} && make clean 2>/dev/null; "
                 f"make CC=clang CFLAGS='-fsanitize=address -fno-omit-frame-pointer -g'"
             )
 

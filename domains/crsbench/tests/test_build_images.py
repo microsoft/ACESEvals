@@ -888,3 +888,98 @@ class TestAptGetUpdateBeforeBuildSh:
                 break
         else:
             pytest.fail("No RUN line containing build.sh found in Dockerfile")
+
+
+# ===========================================================================
+# Fix A2: sudo installed in Layer 2
+# ===========================================================================
+
+
+class TestSudoInstalledInLayer2:
+    """Layer 2 Dockerfile must install ``sudo`` for benchmarks like afc-sqlite3."""
+
+    def test_sudo_in_apt_install_line(self) -> None:
+        content = generate_overlay_dockerfile("saber/crsbench/env:test")
+        # The apt-get install block that installs gdb/patch/file spans
+        # multiple lines with backslash continuations.  Find the block
+        # and verify sudo appears in it.
+        lines = content.splitlines()
+        in_block = False
+        block_lines: list[str] = []
+        for line in lines:
+            if "apt-get install" in line and "gdb" not in line:
+                continue
+            if "gdb" in line:
+                # Walk backwards to find the apt-get install start
+                idx = lines.index(line)
+                for i in range(idx, -1, -1):
+                    if "apt-get install" in lines[i]:
+                        in_block = True
+                        block_lines = lines[i : idx + 1]
+                        break
+                # Continue forward collecting continuation lines
+                for j in range(idx + 1, len(lines)):
+                    block_lines.append(lines[j])
+                    if not lines[j].rstrip().endswith("\\"):
+                        break
+                break
+        assert in_block, "No apt-get install block with gdb found"
+        block_text = " ".join(block_lines)
+        assert "sudo" in block_text, (
+            "sudo must be installed alongside gdb/patch/file"
+        )
+
+
+# ===========================================================================
+# Fix A1: apt-get update after build.sh
+# ===========================================================================
+
+
+class TestAptRefreshAfterBuildSh:
+    """Layer 2 must refresh apt lists AFTER build.sh so runtime apt-get install works."""
+
+    def test_apt_update_qq_after_build_sh(self) -> None:
+        content = generate_overlay_dockerfile("saber/crsbench/env:test")
+        build_pos = content.index("bash /workspace/build.sh")
+        # There should be a standalone RUN apt-get update -qq after build.sh
+        remaining = content[build_pos:]
+        assert "RUN apt-get update -qq" in remaining, (
+            "Expected a RUN apt-get update -qq step after build.sh"
+        )
+
+
+# ===========================================================================
+# Fix A4: ENV PATH after build.sh
+# ===========================================================================
+
+
+class TestEnvPathAfterBuildSh:
+    """ENV PATH for the SABER agent venv must appear AFTER build.sh."""
+
+    def test_env_path_after_build_sh(self) -> None:
+        content = generate_overlay_dockerfile("saber/crsbench/env:test")
+        build_pos = content.index("bash /workspace/build.sh")
+        path_line = 'ENV PATH="/opt/saber-agent/bin:${PATH}"'
+        path_pos = content.index(path_line)
+        assert path_pos > build_pos, (
+            "ENV PATH must come after build.sh to avoid shadowing system Python"
+        )
+
+    def test_env_path_not_before_build_sh(self) -> None:
+        content = generate_overlay_dockerfile("saber/crsbench/env:test")
+        build_pos = content.index("bash /workspace/build.sh")
+        before_build = content[:build_pos]
+        assert 'ENV PATH="/opt/saber-agent/bin:${PATH}"' not in before_build, (
+            "ENV PATH must not appear before build.sh"
+        )
+
+    def test_fuzz_dir_precreated_before_build(self) -> None:
+        """A3: mkdir -p /src/cp-c-nasm-src/fuzz must appear before build.sh."""
+        from crsbench.build_images import _LAYER2_TEMPLATE
+
+        assert "mkdir -p /src/cp-c-nasm-src/fuzz" in _LAYER2_TEMPLATE
+        fuzz_pos = _LAYER2_TEMPLATE.index("mkdir -p /src/cp-c-nasm-src/fuzz")
+        build_pos = _LAYER2_TEMPLATE.index("bash /workspace/build.sh")
+        assert fuzz_pos < build_pos, (
+            "fuzz dir pre-creation must come before build.sh invocation"
+        )

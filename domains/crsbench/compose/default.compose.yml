@@ -15,8 +15,14 @@ services:
     environment:
       - CC=clang
       - CXX=clang++
-      - CFLAGS=-fsanitize=address -fno-omit-frame-pointer -g
-      - CXXFLAGS=-fsanitize=address -fno-omit-frame-pointer -g
+      # NOTE: -Wno-error=implicit-function-declaration is added globally
+      # because some gold-dataset build scripts (e.g. jq) use functions
+      # without declarations. This downgrades the implicit-function error
+      # to a warning. Trade-off: agent patches with missing declarations
+      # will still compile — POV/test verification catches actual bugs.
+      - CFLAGS=-fsanitize=address -fno-omit-frame-pointer -g -Wno-error=implicit-function-declaration
+      - CXXFLAGS=-fsanitize=address -fno-omit-frame-pointer -g -Wno-error=implicit-function-declaration
+      - LDFLAGS=-lstdc++
       - SRC=/workspace/source
       - OUT=/workspace/build
       - ASAN_OPTIONS=detect_leaks=0:abort_on_error=1
@@ -32,7 +38,7 @@ services:
         limits:
           cpus: "2.0"
           # ASAN + JVM builds need substantial memory
-          memory: 8G
+          memory: 16G
           pids: 512
 
 networks:

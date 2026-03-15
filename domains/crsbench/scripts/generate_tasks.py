@@ -107,6 +107,18 @@ def load_benchmark_meta(benchmark_path: Path) -> CRSBenchMeta:
     return CRSBenchMeta(**raw)
 
 
+# Per-benchmark test timeout overrides (seconds).  Heavy Java/C++ test
+# suites need more than the default 300 s on resource-constrained
+# containers (2 CPU, ASAN overhead).
+_TEST_TIMEOUT_OVERRIDES: dict[str, int] = {
+    "afc-curl-delta-01": 1800,
+    "atlanta-tika-delta-01": 1200,
+    "atlanta-apache-poi-full-01": 2400,
+    "atlanta-snappy-java-delta-01": 1200,
+    "asc-keycloak-delta-01": 3600,
+}
+
+
 def generate_bugfix_task(
     benchmark_path: Path,
     harness: CRSBenchHarness,
@@ -169,6 +181,9 @@ def generate_bugfix_task(
     if source_subdir:
         submission_config["build_cwd"] = f"/workspace/source/{source_subdir}"
 
+    if benchmark_id in _TEST_TIMEOUT_OVERRIDES:
+        submission_config["test_timeout"] = _TEST_TIMEOUT_OVERRIDES[benchmark_id]
+
     return {
         "task_id": task_id,
         "dataset": dataset,
@@ -190,7 +205,7 @@ def generate_bugfix_task(
                 "submission": submission_config,
             },
             "llm_judge": {
-                "model": "openai/azure/gpt-4.1",
+                "model": "openai/azure/gpt-5-mini",
                 "steps_per_message": 10,
                 "crash_analysis": {
                     "target": "trajectory",
@@ -229,7 +244,7 @@ def generate_bugfix_task(
             "tool_call": {
                 "patch_created": {
                     "target": "trajectory",
-                    "expected_tools": ["bash", "submit_patch"],
+                    "expected_tools": ["submit_patch"],
                     "max_score": 1.0,
                     "weight": 0.15,
                     "title": "Patch Created",

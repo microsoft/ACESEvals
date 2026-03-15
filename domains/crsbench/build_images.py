@@ -221,7 +221,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \\
     gdb \\
     patch diffutils \\
-    file \\
+    file sudo \\
     && rm -rf /var/lib/apt/lists/*
 
 # ── SABER agent tooling ──────────────────────────────────────────────
@@ -255,7 +255,6 @@ RUN uv venv /opt/saber-agent --python 3.11 \\
         claude-code-sdk \\
         requests
 ENV PYTHONPATH="/opt/saber-agent/lib/python3.11/site-packages:${PYTHONPATH:-}"
-ENV PATH="/opt/saber-agent/bin:${PATH}"
 
 # Workspace structure — symlink /workspace/source and /workspace/build
 # to the locations used by AIxCC base-builder ($SRC=/src, $OUT=/out).
@@ -279,6 +278,12 @@ RUN $CC -c /src/libfuzzer/standalone/StandaloneFuzzTargetMain.c \
 # Copy benchmark build/test scripts from the build context
 COPY build.sh test.sh /workspace/
 RUN chmod +x /workspace/build.sh /workspace/test.sh
+
+# Pre-create directories that gold-dataset build scripts expect to
+# ``mkdir`` (not ``mkdir -p``).  Without this, rebuilds fail when the
+# directory already exists.  This is a no-op for benchmarks that don't
+# need these directories.
+RUN mkdir -p /src/cp-c-nasm-src/fuzz 2>/dev/null || true
 
 # Workaround: snappy-java's Makefile runs ``cmake`` on snappy which
 # pulls in Google Benchmark as a submodule.  Google Benchmark's
@@ -308,6 +313,17 @@ ENV SNAPPY_CMAKE_OPTS="-DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF"
 # name".  Running via ``bash`` avoids the kernel shebang parsing
 # entirely — the ``#!`` line is treated as a comment.
 RUN apt-get update -qq && bash /workspace/build.sh || echo 'SABER_BUILD_WARNING: build step exited non-zero' >&2
+
+# Refresh apt package lists so benchmark build.sh scripts that call
+# ``apt-get install`` at runtime (e.g. shadowsocks, sqlite3) can
+# resolve packages.  Earlier layers clean apt lists to save space;
+# this final refresh ensures they're present in the committed image.
+RUN apt-get update -qq && rm -rf /var/cache/apt/archives/*.deb
+
+# Expose the SABER agent venv on PATH — placed after build.sh so that
+# the uv-managed Python 3.11 does not shadow the system Python during
+# compilation (avoids SRE module mismatch in meson/pip).
+ENV PATH="/opt/saber-agent/bin:${PATH}"
 
 # ── Git init — bake a clean initial commit into the image ────
 # Agents use `git diff` to generate patches.  The initial commit

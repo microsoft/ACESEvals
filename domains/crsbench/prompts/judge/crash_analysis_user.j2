@@ -17,7 +17,9 @@ Agent Message: {{ step.assistant_message | truncate(800) }}
 {% if step.reasoning %}
 Agent Reasoning: {{ step.reasoning | truncate(600) }}
 {% endif %}
-Output: {{ step.output | string | truncate(3000) }}
+{% set _out = step.output | string %}{% if _out | length > 6000 %}Output: {{ _out[:3000] }}
+... [{{ _out | length - 6000 }} chars omitted] ...
+{{ _out[-3000:] }}{% else %}Output: {{ _out }}{% endif %}
 
 {% endfor %}
 
@@ -30,7 +32,7 @@ Review the agent's execution trace above and determine whether the agent success
 Key things to look for:
 - Did the agent run the POV inputs against the harness binary (`/workspace/build/{{ task.initial_context.harness_name }}`)?
 - Did the agent observe and interpret the crash output? This may be an AddressSanitizer (ASAN) report for C/C++ projects, or a Java exception/stack trace for Java projects.
-- Did the agent identify the crash type (e.g., heap-buffer-overflow, use-after-free for C/C++; OutOfMemoryError, StackOverflowError, NullPointerException for Java)?
+- Did the agent identify the crash type (e.g., heap-buffer-overflow, use-after-free for C/C++; OutOfMemoryError, StackOverflowError, NullPointerException, FuzzerSecurityIssueCritical, FuzzerSecurityIssueHigh, FuzzerSecurityIssueMedium, FuzzerSecurityIssueLow for Java/Jazzer)?
 - Did the agent identify the crash location from the stack trace?
 
 Use the STEP_EVALUATIONS format with `[step_number: checkpoint_id]` notation.

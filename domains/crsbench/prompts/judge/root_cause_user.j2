@@ -17,7 +17,9 @@ Agent Message: {{ step.assistant_message | truncate(800) }}
 {% if step.reasoning %}
 Agent Reasoning: {{ step.reasoning | truncate(600) }}
 {% endif %}
-Output: {{ step.output | string | truncate(3000) }}
+{% set _out = step.output | string %}{% if _out | length > 6000 %}Output: {{ _out[:3000] }}
+... [{{ _out | length - 6000 }} chars omitted] ...
+{{ _out[-3000:] }}{% else %}Output: {{ _out }}{% endif %}
 
 {% endfor %}
 
