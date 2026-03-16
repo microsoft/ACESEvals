@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 
 from inspect_ai.scorer import Score
 from inspect_ai.util import sandbox
+from inspect_ai.util import LimitExceededError
 
 from saber.config.models import DomainCriteria
 from saber.scoring.context import ScoringContext
@@ -47,7 +48,7 @@ _FIND_TIMEOUT = 30
 _PATCH_TIMEOUT = 60
 _POV_TIMEOUT = 300
 _BUILD_TIMEOUT = 3000
-_TEST_TIMEOUT = 300
+_TEST_TIMEOUT = 1800
 
 # ---------------------------------------------------------------------------
 # Default sandbox paths
@@ -95,13 +96,23 @@ class _PatchVerifyConfig:
 
     @property
     def env_prefix(self) -> str:
-        """AIxCC-compatible environment variable prefix for build/test commands."""
+        """AIxCC-compatible environment variable prefix for build/test commands.
+
+        Must stay in sync with the compose environment
+        (``compose/default.compose.yml``) — values set here override
+        compose env vars for the ``_rebuild`` step.
+        """
         return (
             f"SRC={shlex.quote(self.source_dir)} "
             f"OUT={shlex.quote(self.out_dir)} "
             "CC=clang CXX=clang++ "
-            "CFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
-            "CXXFLAGS='-fsanitize=address -fno-omit-frame-pointer -g' "
+            "CFLAGS='-fsanitize=address -fno-omit-frame-pointer -g -Wno-error=implicit-function-declaration' "
+            "CXXFLAGS='-fsanitize=address -fno-omit-frame-pointer -g -Wno-error=implicit-function-declaration' "
+            "LDFLAGS='-lstdc++' "
+            # Strip /opt/saber-agent/bin from PATH so build tools
+            # (meson, cmake) pick up the system Python, not the
+            # agent venv's Python 3.11 which lacks build modules.
+            "PATH=$(echo $PATH | sed 's|/opt/saber-agent/bin:||g') "
         )
 
     @classmethod
@@ -332,6 +343,22 @@ class CRSBenchPatchVerifyStrategy:
         cfg = _PatchVerifyConfig.from_criteria(criteria, ctx.scorer.max_score)
         sbx = sandbox()
 
+        try:
+            return await self._run_verification(sbx, cfg, ctx)
+        except LimitExceededError:
+            return Score(
+                value=_SCORE_ZERO,
+                answer=ctx.submission,
+                explanation="Scoring timed out (exceeded scoring time limit)",
+            )
+
+    async def _run_verification(
+        self,
+        sbx: SandboxEnvironment,
+        cfg: _PatchVerifyConfig,
+        ctx: ScoringContext,
+    ) -> Score:
+        """Run all verification steps. Separated so LimitExceededError is caught by score()."""
         # Step 1: Find patch files
         found_files = await self._find_patch_files(sbx, cfg.patch_dir)
         if found_files is None:
@@ -539,7 +566,7 @@ class CRSBenchPatchVerifyStrategy:
         apt_refresh = "apt-get update -qq 2>/dev/null; "
 
         if cfg.build_script:
-            build_cmd = f"{apt_refresh}cd {build_cwd_q} && {cfg.env_prefix} bash -eu {shlex.quote(cfg.build_script)}"
+            build_cmd = f"{apt_refresh}cd {build_cwd_q} && {cfg.env_prefix} bash {shlex.quote(cfg.build_script)}"
         else:
             build_cmd = (
                 f"{apt_refresh}cd {build_cwd_q} && make clean 2>/dev/null; "
@@ -632,7 +659,7 @@ class CRSBenchPatchVerifyStrategy:
                     ],
                     timeout=cfg.test_timeout,
                 )
-        except (TimeoutError, asyncio.TimeoutError):
+        except (TimeoutError, asyncio.TimeoutError, LimitExceededError):
             return Score(
                 value=_SCORE_PARTIAL * cfg.max_score,
                 answer=None,

@@ -15,11 +15,11 @@ Input: {{ step.tool_input | string | truncate(300) }}
 Agent Message: {{ step.assistant_message | truncate(800) }}
 {% endif %}
 {% if step.reasoning %}
-Agent Reasoning: {{ step.reasoning | truncate(600) }}
+Agent Reasoning: {{ step.reasoning | truncate(1000) }}
 {% endif %}
-{% set _out = step.output | string %}{% if _out | length > 6000 %}Output: {{ _out[:3000] }}
-... [{{ _out | length - 6000 }} chars omitted] ...
-{{ _out[-3000:] }}{% else %}Output: {{ _out }}{% endif %}
+{% set _out = step.output | string %}{% if _out | length > 8000 %}Output: {{ _out[:4000] }}
+... [{{ _out | length - 8000 }} chars omitted] ...
+{{ _out[-4000:] }}{% else %}Output: {{ _out }}{% endif %}
 
 {% endfor %}
 

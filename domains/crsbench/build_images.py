@@ -270,10 +270,16 @@ RUN mkdir -p /workspace/povs /submit/patches /out \\
 # base-builder at /src/libfuzzer/standalone/) into a minimal .a
 # archive.  This provides main() → LLVMFuzzerTestOneInput() without
 # the heavy fuzzer loop or math dependencies.
+# Some harnesses (e.g. libxml2) also reference LLVMFuzzerMutate,
+# which is only provided by the full libfuzzer runtime.  We add a
+# weak no-op stub so the linker resolves the symbol without pulling
+# in the heavy fuzzer loop.
 RUN $CC -c /src/libfuzzer/standalone/StandaloneFuzzTargetMain.c \
         -o /tmp/StandaloneFuzzTargetMain.o \
-    && ar rc /usr/lib/libFuzzingEngine.a /tmp/StandaloneFuzzTargetMain.o \
-    && rm /tmp/StandaloneFuzzTargetMain.o
+    && printf '__attribute__((weak)) size_t LLVMFuzzerMutate(unsigned char *d, size_t s, size_t m){(void)d;(void)m;return s;}\n' \
+        | $CC -c -x c - -o /tmp/LLVMFuzzerMutate.o \
+    && ar rc /usr/lib/libFuzzingEngine.a /tmp/StandaloneFuzzTargetMain.o /tmp/LLVMFuzzerMutate.o \
+    && rm /tmp/StandaloneFuzzTargetMain.o /tmp/LLVMFuzzerMutate.o
 
 # Copy benchmark build/test scripts from the build context
 COPY build.sh test.sh /workspace/

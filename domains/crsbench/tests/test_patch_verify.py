@@ -1246,10 +1246,10 @@ class TestPatchVerifyConfigTestTimeout:
 
     def test_custom_timeout(self) -> None:
         """When test_timeout is set in criteria extras, use it."""
-        extra = {**_DEFAULT_CRITERIA_EXTRA, "test_timeout": 1200}
+        extra = {**_DEFAULT_CRITERIA_EXTRA, "test_timeout": 2400}
         criteria = DomainCriteria(**extra)
         cfg = _PatchVerifyConfig.from_criteria(criteria, max_score=1.0)
-        assert cfg.test_timeout == 1200
+        assert cfg.test_timeout == 2400
 
     def test_custom_timeout_zero(self) -> None:
         """Zero is allowed — it means no timeout."""
@@ -1285,7 +1285,7 @@ class TestRunTestsUsesConfiguredTimeout:
         self, strategy: CRSBenchPatchVerifyStrategy
     ) -> None:
         """Verify that _run_tests passes the configured timeout to sbx.exec."""
-        ctx = _make_ctx(criteria_extra={"test_timeout": 1200})
+        ctx = _make_ctx(criteria_extra={"test_timeout": 2400})
         exec_results = [
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
             _make_exec_result(),                                      # .rej/.orig cleanup
@@ -1314,17 +1314,17 @@ class TestRunTestsUsesConfiguredTimeout:
         assert result.value == pytest.approx(1.0)
 
         # Find the test.sh exec call — it's the last one with a timeout
-        # The test.sh call should have timeout=1200
+        # The test.sh call should have timeout=2400
         test_sh_calls = [
             call for call in sbx.exec.call_args_list
             if any("test.sh" in str(a) for a in call.args) and "timeout" in call.kwargs
         ]
         # The test.sh execution call should use the configured timeout
         found_custom_timeout = any(
-            call.kwargs.get("timeout") == 1200 for call in test_sh_calls
+            call.kwargs.get("timeout") == 2400 for call in test_sh_calls
         )
         assert found_custom_timeout, (
-            f"Expected timeout=1200 in a test.sh exec call, "
+            f"Expected timeout=2400 in a test.sh exec call, "
             f"got: {[(c.args, c.kwargs) for c in test_sh_calls]}"
         )
 
@@ -1333,7 +1333,7 @@ class TestRunTestsUsesConfiguredTimeout:
         self, strategy: CRSBenchPatchVerifyStrategy
     ) -> None:
         """When test.sh times out, the error message should show the custom timeout."""
-        ctx = _make_ctx(criteria_extra={"test_timeout": 1200})
+        ctx = _make_ctx(criteria_extra={"test_timeout": 2400})
         exec_results = [
             _make_exec_result(stdout="/submit/patches/fix.diff\n"),  # find patch
             _make_exec_result(),                                      # .rej/.orig cleanup
@@ -1356,7 +1356,7 @@ class TestRunTestsUsesConfiguredTimeout:
                 result = exec_results[call_idx]
                 call_idx += 1
                 return result
-            raise TimeoutError("timed out after 1200 seconds")
+            raise TimeoutError("timed out after 2400 seconds")
 
         sbx = MagicMock()
         sbx.exec = AsyncMock(side_effect=exec_side_effect)
@@ -1371,7 +1371,7 @@ class TestRunTestsUsesConfiguredTimeout:
             result = await strategy.score(ctx, None)
 
         assert result.value == pytest.approx(0.5)
-        assert "1200" in result.explanation
+        assert "2400" in result.explanation
 
 
 # ---------------------------------------------------------------------------
@@ -1443,3 +1443,89 @@ class TestRebuildAptRefresh:
         assert build_cmd_str.startswith("apt-get update -qq"), (
             f"Expected build_cmd to start with apt-get update, got: {build_cmd_str}"
         )
+
+
+# ===========================================================================
+# env_prefix environment variable tests
+# ===========================================================================
+
+
+class TestEnvPrefixFlags:
+    """Verify env_prefix stays in sync with compose environment."""
+
+    def test_cflags_implicit_function_declaration(self) -> None:
+        """CFLAGS must include -Wno-error=implicit-function-declaration."""
+        cfg = _PatchVerifyConfig.from_criteria(
+            DomainCriteria(**_DEFAULT_CRITERIA_EXTRA), max_score=1.0
+        )
+        assert "-Wno-error=implicit-function-declaration" in cfg.env_prefix
+        # Specifically in CFLAGS
+        assert "CFLAGS='" in cfg.env_prefix
+        cflags_start = cfg.env_prefix.index("CFLAGS='")
+        cflags_end = cfg.env_prefix.index("'", cflags_start + len("CFLAGS='"))
+        cflags_value = cfg.env_prefix[cflags_start:cflags_end]
+        assert "-Wno-error=implicit-function-declaration" in cflags_value
+
+    def test_cxxflags_implicit_function_declaration(self) -> None:
+        """CXXFLAGS must include -Wno-error=implicit-function-declaration."""
+        cfg = _PatchVerifyConfig.from_criteria(
+            DomainCriteria(**_DEFAULT_CRITERIA_EXTRA), max_score=1.0
+        )
+        cxxflags_start = cfg.env_prefix.index("CXXFLAGS='")
+        cxxflags_end = cfg.env_prefix.index("'", cxxflags_start + len("CXXFLAGS='"))
+        cxxflags_value = cfg.env_prefix[cxxflags_start:cxxflags_end]
+        assert "-Wno-error=implicit-function-declaration" in cxxflags_value
+
+    def test_ldflags_lstdcpp(self) -> None:
+        """env_prefix must set LDFLAGS='-lstdc++'."""
+        cfg = _PatchVerifyConfig.from_criteria(
+            DomainCriteria(**_DEFAULT_CRITERIA_EXTRA), max_score=1.0
+        )
+        assert "LDFLAGS='-lstdc++'" in cfg.env_prefix
+
+    def test_path_reset_strips_saber_agent(self) -> None:
+        """env_prefix must reset PATH to strip /opt/saber-agent/bin."""
+        cfg = _PatchVerifyConfig.from_criteria(
+            DomainCriteria(**_DEFAULT_CRITERIA_EXTRA), max_score=1.0
+        )
+        # Verify the full sed command is present, not just substrings
+        assert "PATH=$(echo $PATH | sed 's|/opt/saber-agent/bin:||g')" in cfg.env_prefix
+
+
+class TestRebuildBashFlags:
+    """Verify _rebuild() does not pass -eu to bash."""
+
+    @pytest.mark.asyncio
+    async def test_rebuild_bash_no_eu_flags(
+        self, strategy: CRSBenchPatchVerifyStrategy
+    ) -> None:
+        """Build command must use plain 'bash' without -eu flags."""
+        ctx = _make_ctx(
+            criteria_extra={
+                "build_script": "/workspace/source/build.sh",
+                "test_script": "",
+            },
+        )
+        sbx = _make_sandbox_mock([
+            _make_exec_result(stdout="/submit/patches/fix.diff\n"),
+            _make_exec_result(),  # .rej/.orig cleanup
+            _make_exec_result(),  # normalise patch paths
+            _make_exec_result(),  # reverse + cleanup
+            _make_exec_result(),  # patch apply
+            _make_exec_result(),  # ensure LIB_FUZZING_ENGINE symlink
+            _make_exec_result(),  # build
+            _make_exec_result(stdout="/workspace/povs/pov1.bin\n"),
+            _make_exec_result(),  # POV pass
+        ])
+
+        with patch("crsbench.scoring.patch_verify.sandbox", return_value=sbx), \
+             patch("crsbench.scoring.patch_verify._sandbox_network_access", side_effect=_noop_cm):
+            await strategy.score(ctx, None)
+
+        build_call = sbx.exec.call_args_list[6]
+        build_cmd_str = build_call.args[0][2]  # ["bash", "-c", cmd] → cmd
+        # Must contain 'bash /workspace/source/build.sh' not 'bash -eu ...'
+        assert "bash -eu" not in build_cmd_str, (
+            f"Build command should not use 'bash -eu': {build_cmd_str}"
+        )
+        assert "bash /workspace/source/build.sh" in build_cmd_str

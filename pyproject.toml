@@ -39,14 +39,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-copilot = [
-    # GitHub Copilot agent support (requires Node.js 22+ and Copilot CLI)
-    "github-copilot-sdk>=0.1.16",
-]
-claude-code = [
-    # Claude Code agent support (requires Anthropic API key)
-    "claude-code-sdk>=0.0.25",
-]
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",
@@ -67,8 +59,10 @@ package = false
 [tool.uv.sources]
 # Default: install saber from the ADO git repo.
 # To develop against a local checkout, comment the git line and uncomment the path line:
-#   saber = { path = "./external/saber", editable = true }
+# saber = { path = "./external/saber", editable = true }
 saber = { git = "https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/SABER", branch = "aces" }
+
+# inspect_ai = { path = "./external/inspect_ai", editable = true }
 inspect-ai = { git = "https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/inspect_ai", branch = "dev/aces_integration" }
 
 [dependency-groups]

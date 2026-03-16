@@ -983,3 +983,16 @@ class TestEnvPathAfterBuildSh:
         assert fuzz_pos < build_pos, (
             "fuzz dir pre-creation must come before build.sh invocation"
         )
+
+    def test_libfuzzingengine_contains_llvmfuzzermutate(self) -> None:
+        """libFuzzingEngine.a build must include weak LLVMFuzzerMutate stub."""
+        from crsbench.build_images import _LAYER2_TEMPLATE
+
+        assert "LLVMFuzzerMutate" in _LAYER2_TEMPLATE, (
+            "_LAYER2_TEMPLATE must contain LLVMFuzzerMutate stub "
+            "for harnesses (e.g. libxml2) that reference this symbol"
+        )
+        assert "__attribute__((weak))" in _LAYER2_TEMPLATE, (
+            "LLVMFuzzerMutate stub must use __attribute__((weak)) so "
+            "the linker prefers the real symbol when available"
+        )
