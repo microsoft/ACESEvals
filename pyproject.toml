@@ -60,7 +60,7 @@ package = false
 # Default: install saber from the ADO git repo.
 # To develop against a local checkout, comment the git line and uncomment the path line:
 # saber = { path = "./external/saber", editable = true }
-saber = { git = "https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/SABER", branch = "aces" }
+saber = { git = "https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/SABER", branch = "main" }
 
 # inspect_ai = { path = "./external/inspect_ai", editable = true }
 inspect-ai = { git = "https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/inspect_ai", branch = "dev/aces_integration" }
