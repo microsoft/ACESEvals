@@ -1279,13 +1279,11 @@ async def task_run_sample(
                     # mark completed
                     state.completed = True
 
-                    # set timeout for scoring. if the original timeout was hit we still
-                    # want to provide opportunity for scoring, but we don't necessarily
-                    # want to wait the full timeout again (especially in the case where
-                    # the cause of the timeout is a hung container and scoring requires
-                    # interacting with the container). as a middle ground we use half
-                    # of the original timeout value for scoring.
-                    scoring_time_limit = time_limit / 2 if time_limit else None
+                    # set timeout for scoring.  Use the full time_limit so that
+                    # scorers which perform heavy work (e.g. rebuilding and
+                    # running a test-suite inside a container) are not cut
+                    # short by an artificially reduced budget.
+                    scoring_time_limit = time_limit if time_limit else None
 
                     set_sample_state(state)
                     if state.scores is None:
