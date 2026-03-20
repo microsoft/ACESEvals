@@ -116,7 +116,7 @@ async def compose_check_running(
 ) -> list[str]:
     # Check to ensure that the status of containers is healthy
     running_services = await compose_ps(project=project, status="running")
-    exited_services = await compose_ps(project=project, status="exited")
+    exited_services = await compose_ps(project=project, status="exited", all=True)
     successful_services = running_services + [
         service for service in exited_services if service["ExitCode"] == 0
     ]
