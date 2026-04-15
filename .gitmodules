@@ -2,5 +2,6 @@
 	path = external/saber
 	# GitHub (external — default for ACESEvals):
 	url = https://github.com/microsoft/ACES.git
+	branch = main
 	# Azure DevOps (Microsoft internal — for oss_saber):
 	# url = https://MSECAIModels@dev.azure.com/MSECAIModels/Benchmarking/_git/SABER
