@@ -35,6 +35,7 @@ from inspect_ai.log._condense import (
     events_attachment_fn,
     walk_model_call,
 )
+from inspect_ai.log._recorders.journal import JournalBatchRef
 from inspect_ai.util._store import store, store_changes, store_jsonable
 
 if TYPE_CHECKING:
@@ -356,6 +357,7 @@ class Transcript:
         self._history_provider = history_provider
         self._events_view = _TranscriptEventsView(self)
         self._history = TranscriptHistory(self)
+        self._journal_refs: list[JournalBatchRef] = []
         self._attachments: dict[str, str] = {}
         self._attachment_refcount: dict[str, int] = {}
         self._event_attachment_refs: dict[str, set[str]] = {}
@@ -445,6 +447,49 @@ class Transcript:
     def pending_events(self) -> Sequence[Event]:
         """Currently-pending events in insertion order."""
         return list(self._pending_events.values())
+
+    @property
+    def journal_refs(self) -> Sequence[JournalBatchRef]:
+        return self._journal_refs
+
+    def evict_events(
+        self,
+        batch_ref: JournalBatchRef,
+        evictable_types: tuple[type[BaseEvent], ...],
+        max_working_start: float,
+    ) -> None:
+        """Remove evictable events up to a working_start cutoff.
+
+        Only events whose type matches *evictable_types* **and** whose
+        ``working_start <= max_working_start`` are removed from ``_events``.
+        The *batch_ref* is appended to ``_journal_refs`` only when at least
+        one event is actually evicted (DEC-005, DEC-010).
+
+        Args:
+            batch_ref: Metadata describing the journal batch that already
+                persisted the events being evicted.
+            evictable_types: Tuple of event types eligible for eviction.
+            max_working_start: Upper bound (inclusive) on ``working_start``
+                for events to evict.
+        """
+        evicted_event_ids = {
+            self._event_key(event)
+            for event in self._events
+            if isinstance(event, evictable_types)
+            and event.working_start <= max_working_start
+        }
+        if not evicted_event_ids:
+            return
+
+        self._events = [
+            event
+            for event in self._events
+            if self._event_key(event) not in evicted_event_ids
+        ]
+        self._resident_event_ids.difference_update(evicted_event_ids)
+        self._events_truncated = True
+        self._journal_refs.append(batch_ref)
+        self._prune_pin_state()
 
     @property
     def attachments(self) -> dict[str, str]:

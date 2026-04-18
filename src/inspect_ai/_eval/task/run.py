@@ -52,6 +52,7 @@ from inspect_ai._util.working import (
 from inspect_ai._view.notify import view_notify_eval
 from inspect_ai.dataset import Dataset, Sample
 from inspect_ai.event._error import ErrorEvent
+from inspect_ai.event._event import Event
 from inspect_ai.event._sample_init import SampleInitEvent
 from inspect_ai.event._sample_limit import SampleLimitEvent
 from inspect_ai.event._score import ScoreEvent
@@ -315,6 +316,16 @@ async def task_run(options: TaskRunOptions, task_cancel: TaskCancel | None) -> E
     log_images = config.log_images is not False
     log_model_api = config.log_model_api
     log_samples = config.log_samples is not False
+
+    # Initialize journal for incremental event writing + memory eviction.
+    # On by default; disable with --no-log-journal-events.
+    if config.log_journal_events is not False and log_samples:
+        from inspect_ai.log._recorders.journal import EventJournalConfig
+
+        journal_config = EventJournalConfig(
+            batch_size=config.journal_batch_size or 100,
+        )
+        logger.init_journal(journal_config)
 
     # slice dataset (but don't materialize all sample+state pairs upfront --
     # they are created lazily inside run_sample to keep memory at
@@ -910,9 +921,18 @@ async def task_run_sample(
         if sample_id is None:
             raise ValueError("sample must have id to run")
 
+        # Resolve journal (Phase 3 — incremental event journaling)
+        journal = logger.journal if logger is not None else None
+        evictable_types: tuple[type, ...] | None = None
+        if journal is not None:
+            evictable_types = journal.config.evictable_event_types
+
         def on_sample_event(event: Event) -> None:
             if logger:
                 logger.log_sample_event(sample_id, state.epoch, event)
+            # Sync journal buffering (DEC-007: add_event is sync)
+            if journal is not None:
+                journal.add_event(sample_id, state.epoch, event)
             emit_sample_event(
                 eval_set_id=eval_set_id,
                 run_id=run_id,
@@ -1130,6 +1150,17 @@ async def task_run_sample(
 
                                     # start background sample event emitter
                                     start_sample_event_emitter()
+
+                                    # Start background journal flush task (DEC-007, DEC-013)
+                                    if journal is not None:
+                                        journal.register_sample(sample_id, state.epoch)
+                                        tg.start_soon(
+                                            journal.run_background_flush,
+                                            sample_id,
+                                            state.epoch,
+                                            sample_transcript,
+                                            evictable_types,
+                                        )
 
                                     # set progress for plan then run it
                                     async with span("solvers"):
@@ -1447,6 +1478,28 @@ async def task_run_sample(
                         sample = sample_without_base64_content(sample)
                         state = state_without_base64_content(state)
 
+                    # Flush journal and reconstruct events (DEC-008)
+                    merged_events: list[Event] | None = None
+                    if journal is not None:
+                        await journal.flush_all(
+                            sample_id,
+                            state.epoch,
+                            sample_transcript,
+                            evictable_types,
+                        )
+                        if logger is None or logger.buffer_db is None:
+                            journaled_events = await journal.read_batches(
+                                sample_id, state.epoch
+                            )
+                            in_memory_events = list(
+                                sample_transcript.history.resident_events
+                            )
+                            merged_events = sorted(
+                                journaled_events + in_memory_events,
+                                key=lambda e: (e.working_start, e.timestamp),
+                            )
+                        journal.unregister_sample(sample_id, state.epoch)
+
                     # emit/log sample end
                     def make_eval_sample(include_events: bool = True) -> EvalSample:
                         return create_eval_sample(
@@ -1459,6 +1512,7 @@ async def task_run_sample(
                             error_retries=error_retries,
                             started_at=sample_start_datetime(),
                             include_events=include_events,
+                            events=merged_events,
                         )
 
                     if logger:
@@ -1501,6 +1555,10 @@ async def task_run_sample(
         # remove any buffered sample events
         if logger is not None:
             logger.remove_sample(state.sample_id, state.epoch)
+
+        # clean up journal state for this sample (prevent stale events leaking to retry)
+        if journal is not None:
+            journal.unregister_sample(state.sample_id, state.epoch)
 
         # recurse w/ tick down of retry_on_error and append of error to error_retries
         return await task_run_sample(
@@ -1572,6 +1630,7 @@ def create_eval_sample(
     error_retries: list[EvalRetryError],
     started_at: datetime | None = None,
     include_events: bool = True,
+    events: list[Event] | None = None,
 ) -> EvalSample:
     # sample must have id to be logged
     id = sample.id
@@ -1600,7 +1659,11 @@ def create_eval_sample(
         scores={k: v.score for k, v in scores.items()},
         store=dict(state.store.items()),
         uuid=state.uuid,
-        events=list(transcript().events) if include_events else [],
+        events=[]
+        if not include_events
+        else events
+        if events is not None
+        else list(transcript().events),
         timelines=list(transcript().timelines) or None,
         attachments=dict(transcript().attachments),
         model_usage=sample_model_usage(),

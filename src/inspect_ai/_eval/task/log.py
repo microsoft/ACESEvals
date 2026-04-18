@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from importlib import metadata as importlib_metadata
 from typing import TYPE_CHECKING, Any, cast
@@ -7,6 +9,9 @@ from shortuuid import uuid
 from inspect_ai._display.core.display import TaskDisplayMetric
 from inspect_ai._eval.task.util import slice_dataset
 from inspect_ai._util.constants import PKG_NAME
+
+if TYPE_CHECKING:
+    from inspect_ai.log._recorders.journal import EventJournal, EventJournalConfig
 from inspect_ai._util.dateutil import iso_now
 from inspect_ai._util.git import git_context
 from inspect_ai._util.path import cwd_relative_path
@@ -241,6 +246,9 @@ class TaskLogger:
         # sample buffer db
         self._buffer_db: SampleBufferDatabase | None = None
 
+        # event journal for incremental writing (Phase 3)
+        self._journal: EventJournal | None = None
+
     async def init(self) -> None:
         self._bump_created_past_existing_logs()
         self._location = await self.recorder.log_init(self.eval)
@@ -302,6 +310,23 @@ class TaskLogger:
     @property
     def buffer_db(self) -> SampleBufferDatabase | None:
         return self._buffer_db
+
+    def init_journal(self, config: "EventJournalConfig") -> None:
+        """Initialize event journal for incremental writing (DEC-012).
+
+        Only EvalRecorder supports journaling. Other recorder types silently skip.
+        """
+        from inspect_ai.log._recorders.eval import EvalRecorder
+        from inspect_ai.log._recorders.journal import EventJournal
+
+        if isinstance(self.recorder, EvalRecorder):
+            zip_log = self.recorder.get_zip_log(self.eval)
+            self._journal = EventJournal(zip_log, config)
+
+    @property
+    def journal(self) -> "EventJournal | None":
+        """The event journal, or None if journaling is not enabled."""
+        return self._journal
 
     async def log_start(self, plan: EvalPlan) -> None:
         await self.recorder.log_start(self.eval, plan)

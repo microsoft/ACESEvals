@@ -646,6 +646,21 @@ def eval_options(func: Callable[..., Any]) -> Callable[..., click.Context]:
         envvar="INSPECT_EVAL_LOG_REFUSALS",
     )
     @click.option(
+        "--log-journal-events/--no-log-journal-events",
+        type=bool,
+        default=None,
+        is_flag=True,
+        help="Incremental event journaling to reduce memory for long-running samples (enabled by default).",
+        envvar="INSPECT_EVAL_LOG_JOURNAL_EVENTS",
+    )
+    @click.option(
+        "--journal-batch-size",
+        type=int,
+        default=None,
+        help="Number of events to buffer before writing a journal batch (default: 100).",
+        envvar="INSPECT_EVAL_JOURNAL_BATCH_SIZE",
+    )
+    @click.option(
         "--log-buffer", type=int, help=LOG_BUFFER_HELP, envvar="INSPECT_EVAL_LOG_BUFFER"
     )
     @click.option(
@@ -1029,6 +1044,8 @@ def _eval_command_impl(
     log_images: bool | None,
     log_model_api: bool | None,
     log_refusals: bool | None,
+    log_journal_events: bool | None,
+    journal_batch_size: int | None,
     log_buffer: int | None,
     log_shared: int | None,
     no_score: bool | None,
@@ -1111,6 +1128,8 @@ def _eval_command_impl(
         log_images=log_images,
         log_model_api=log_model_api,
         log_refusals=log_refusals,
+        log_journal_events=log_journal_events,
+        journal_batch_size=journal_batch_size,
         log_buffer=log_buffer,
         log_shared=log_shared,
         no_score=no_score,
@@ -1631,6 +1650,8 @@ def eval_exec(
     log_images: bool | None,
     log_model_api: bool | None,
     log_refusals: bool | None,
+    log_journal_events: bool | None,
+    journal_batch_size: int | None,
     log_buffer: int | None,
     log_shared: int | None,
     no_score: bool | None,
@@ -1805,6 +1826,8 @@ def eval_exec(
             log_images=log_images,
             log_model_api=log_model_api,
             log_refusals=log_refusals,
+            log_journal_events=log_journal_events,
+            journal_batch_size=journal_batch_size,
             log_buffer=log_buffer,
             log_shared=log_shared,
             score=score,

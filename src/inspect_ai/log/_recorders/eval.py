@@ -232,6 +232,10 @@ class EvalRecorder(FileRecorder):
 
         return result
 
+    def get_zip_log(self, eval: EvalSpec) -> "ZipLogFile":
+        """Get the ZipLogFile for an eval (DEC-012)."""
+        return self.data[self._log_file_key(eval)]
+
     @classmethod
     @override
     async def read_log(
@@ -835,6 +839,20 @@ class ZipLogFile:
             mode="a",
             **zipfile_compress_kwargs,
         )
+
+    async def read_entry(self, name: str) -> bytes:
+        """Read a file from the ZIP archive, respecting the lock (DEC-014)."""
+        async with self._lock:
+            return await anyio.to_thread.run_sync(
+                lambda: self._zip.read(name) if self._zip else b"[]"
+            )
+
+    async def namelist(self) -> list[str]:
+        """List all entries in the ZIP archive, respecting the lock (DEC-014)."""
+        async with self._lock:
+            return await anyio.to_thread.run_sync(
+                lambda: self._zip.namelist() if self._zip else []
+            )
 
     # raw unsynchronized version of write
     def _zip_writestr(self, filename: str, data: Any) -> None:

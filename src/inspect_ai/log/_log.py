@@ -203,6 +203,12 @@ class EvalConfig(BaseModel):
     log_shared: int | None = Field(default=None)
     """Interval (in seconds) for syncing sample events to log directory."""
 
+    log_journal_events: bool | None = Field(default=None)
+    """Enable incremental event journaling during sample execution."""
+
+    journal_batch_size: int | None = Field(default=None)
+    """Number of events to buffer before writing a journal batch (default: 100)."""
+
     score_display: bool | None = Field(default=None)
     """Display scoring metrics realtime."""
 
