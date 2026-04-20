@@ -1794,6 +1794,30 @@ async def model_proxy_server(
                 "body": {"error": {"message": str(ex), "type": "proxy_error"}},
             }
 
+    # ---------- Azure OpenAI API routes ----------
+    # Azure OpenAI SDK sends: POST /openai/deployments/{deployment}/chat/completions?api-version=...
+    # With bridge_url including /v1 prefix, full path is: /v1/openai/deployments/{deployment}/chat/completions
+
+    def _extract_model_from_azure_deployment_path(path: str) -> str:
+        """Extract deployment name from Azure OpenAI API path.
+
+        Examples:
+            /v1/openai/deployments/gpt-4o/chat/completions -> gpt-4o
+            /v1/openai/deployments/1p-planner/chat/completions -> 1p-planner
+        """
+        match = re.search(r"deployments/([^/:]+)", path)
+        return match.group(1) if match else "inspect"
+
+    @server.route("/v1/openai/deployments/*", method="POST")
+    async def azure_chat_completions(request: dict[str, Any]) -> dict[str, Any]:
+        """Handle Azure OpenAI API requests by extracting deployment name and delegating to chat completions."""
+        path = request.get("path", "")
+        json_body = request.get("json", {}) or {}
+        model_name = _extract_model_from_azure_deployment_path(path)
+        json_body["model"] = model_name
+        request["json"] = json_body
+        return await chat_completions(request)
+
     # ---------- Google Gemini API routes ----------
     # Route patterns for Google's Gemini API using wildcard matching
     # Supports: /v1beta/models/{model}:generateContent and /models/{model}:generateContent
