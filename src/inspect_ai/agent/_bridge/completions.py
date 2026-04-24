@@ -140,6 +140,125 @@ def tools_from_openai_tools(tools: "list[ChatCompletionToolParam]") -> list[Tool
     return inspect_tools
 
 
+def _resolve_schema_refs(
+    node: Any, defs: dict[str, Any], seen: set[str] | None = None
+) -> Any:
+    """Inline all ``$ref`` pointers using the ``$defs`` definitions.
+
+    The ``JSONSchema`` Pydantic model does not support ``$defs`` / ``$ref``,
+    so references must be resolved before validation.  Circular references
+    are broken by returning an empty ``{"type": "object"}`` sentinel.
+    """
+    if not isinstance(node, dict):
+        return node
+
+    if seen is None:
+        seen = set()
+
+    if "$ref" in node:
+        ref: str = node["$ref"]
+        # Only handle local "#/$defs/Name" references.
+        prefix = "#/$defs/"
+        if ref.startswith(prefix):
+            name = ref[len(prefix):]
+            if name in seen:
+                # Circular reference – break the cycle.
+                return {"type": "object"}
+            if name in defs:
+                from copy import deepcopy
+
+                resolved = deepcopy(defs[name])
+                return _resolve_schema_refs(resolved, defs, seen | {name})
+        # Unknown $ref – return as-is (will likely be stripped by JSONSchema).
+        return node
+
+    # Recurse into standard schema keywords.
+    for key in ("properties", "items", "additionalProperties"):
+        if key not in node:
+            continue
+        val = node[key]
+        if key == "properties" and isinstance(val, dict):
+            node[key] = {
+                k: _resolve_schema_refs(v, defs, seen) for k, v in val.items()
+            }
+        elif isinstance(val, dict):
+            node[key] = _resolve_schema_refs(val, defs, seen)
+
+    for kw in ("allOf", "anyOf", "oneOf"):
+        if kw in node and isinstance(node[kw], list):
+            node[kw] = [_resolve_schema_refs(s, defs, seen) for s in node[kw]]
+
+    return node
+
+
+def _fix_strict_json_schema(node: dict[str, Any]) -> dict[str, Any]:
+    """Ensure every schema node has a 'type' key so strict mode works.
+
+    Some Pydantic models produce ``items: {}`` or bare ``{}`` for untyped
+    fields.  OpenAI structured-output strict mode rejects these.  This
+    recursively patches empty or type-less sub-schemas with a permissive
+    ``{"type": "object"}`` default.
+
+    If the schema uses ``$defs`` / ``$ref``, those references are resolved
+    inline first so that ``JSONSchema.model_validate()`` can handle the
+    result (it does not support ``$ref``).
+    """
+    if not isinstance(node, dict):
+        return node
+
+    # Phase 1: resolve $ref → inline definitions.
+    defs = node.pop("$defs", None) or node.pop("definitions", None) or {}
+    if defs:
+        from copy import deepcopy
+
+        node = _resolve_schema_refs(deepcopy(node), defs)
+
+    # Phase 2: patch type-less sub-schemas.
+    return _patch_typeless(node)
+
+
+def _patch_typeless(node: dict[str, Any]) -> dict[str, Any]:
+    """Recursively add ``"type"`` to empty / type-less sub-schemas."""
+    if not isinstance(node, dict):
+        return node
+
+    # Empty object → make it a permissive object type.
+    if node == {}:
+        return {"type": "object"}
+
+    # If there is no 'type' and no '$ref', add a default.
+    if "type" not in node and "$ref" not in node:
+        node["type"] = "object"
+
+    # Recurse into 'properties'.
+    if "properties" in node and isinstance(node["properties"], dict):
+        for key, val in node["properties"].items():
+            if isinstance(val, dict):
+                node["properties"][key] = _patch_typeless(val)
+
+    # Recurse into 'items'.
+    if "items" in node and isinstance(node["items"], dict):
+        node["items"] = _patch_typeless(node["items"])
+
+    # Recurse into composition keywords.
+    for kw in ("allOf", "anyOf", "oneOf"):
+        if kw in node and isinstance(node[kw], list):
+            node[kw] = [
+                _patch_typeless(s) if isinstance(s, dict) else s
+                for s in node[kw]
+            ]
+
+    # Recurse into 'additionalProperties' when it's a schema dict.
+    if "additionalProperties" in node and isinstance(
+        node["additionalProperties"], dict
+    ):
+        node["additionalProperties"] = _patch_typeless(
+            node["additionalProperties"]
+        )
+
+    return node
+
+
 def generate_config_from_openai_completions(
     json_data: dict[str, Any],
 ) -> GenerateConfig:
@@ -168,11 +287,17 @@ def generate_config_from_openai_completions(
     if response_format is not None:
         json_schema: dict[str, Any] | None = response_format.get("json_schema", None)
         if json_schema is not None:
+            schema_body = json_schema.get("schema", {})
+            strict = json_schema.get("strict", None)
+            # Sanitise the schema when strict mode is requested so that
+            # empty sub-schemas (items: {}, bare {}) don't cause 400s.
+            if strict:
+                schema_body = _fix_strict_json_schema(schema_body)
             config.response_schema = ResponseSchema(
                 name=json_schema.get("name", "schema"),
                 description=json_schema.get("description", None),
-                json_schema=JSONSchema.model_validate(json_schema.get("schema", {})),
-                strict=json_schema.get("strict", None),
+                json_schema=JSONSchema.model_validate(schema_body),
+                strict=strict,
             )
 
     return config
