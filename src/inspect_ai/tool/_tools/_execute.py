@@ -104,7 +104,7 @@ def bash(
         # execute the command
         try:
             result = await sandbox_env(sandbox).exec(
-                cmd=["bash", "--login", "-c", cmd], timeout=timeout, user=user
+                cmd=["bash", "--login", "-c", command], timeout=timeout, user=user
             )
         except ValueError as exc:
             return f"Error: {exc}"
