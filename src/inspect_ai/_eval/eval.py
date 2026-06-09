@@ -259,6 +259,8 @@ def eval(
             to sync every 10 seconds, otherwise an integer to sync every `n` seconds.
         log_header_only: If `True`, the function should return only log headers rather
             than full logs with samples (defaults to `False`).
+        log_journal_events: Incrementally journal sample events to the log file.
+        journal_batch_size: Number of events per incremental journal batch.
         run_samples: Run samples. If `False`, a log with `status=="started"` and an
             empty `samples` list is returned.
         score: Score output (defaults to True)
@@ -512,6 +514,8 @@ async def eval_async(
             chosen (10 for most all cases, 100 for JSON logs on remote filesystems).
         log_shared: Indicate that the log directory is shared, which results in additional syncing of realtime log data for Inspect View.
         log_header_only: If `True`, the function should return only log headers rather than full logs with samples (defaults to `False`).
+        log_journal_events: Incrementally journal sample events to the log file.
+        journal_batch_size: Number of events per incremental journal batch.
         run_samples: Run samples. If `False`, a log with `status=="started"` and an empty `samples` list is returned.
         score: Score output (defaults to True)
         score_display: Show scoring metrics in realtime (defaults to True)

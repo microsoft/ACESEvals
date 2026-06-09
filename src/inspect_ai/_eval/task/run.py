@@ -142,7 +142,6 @@ from inspect_ai.util._limit import (
     record_sample_limit_data,
 )
 from inspect_ai.util._limit import time_limit as create_time_limit
-from inspect_ai.util._limit import tool_call_limit as create_tool_call_limit
 from inspect_ai.util._limit import working_limit as create_working_limit
 from inspect_ai.util._sandbox import SandboxTimeoutError
 from inspect_ai.util._sandbox.context import sandbox_connections
@@ -564,7 +563,9 @@ async def task_run(options: TaskRunOptions, task_cancel: TaskCancel | None) -> E
                         # Extract per-sample tool call limit from metadata (fallback to global limit)
                         sample_tool_call_limit = config.tool_call_limit
                         if sample.metadata:
-                            sample_tool_call_limit = sample.metadata.get("tool_call_limit", config.tool_call_limit)
+                            sample_tool_call_limit = sample.metadata.get(
+                                "tool_call_limit", config.tool_call_limit
+                            )
                         state = deepcopy(
                             TaskState(
                                 sample_id=sample.id or 0,

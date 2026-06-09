@@ -11,9 +11,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+from inspect_ai.dataset import Sample
+from inspect_ai.event._event import Event
 from inspect_ai.event._logger import LoggerEvent, LoggingMessage
 from inspect_ai.log._log import EvalConfig
 from inspect_ai.log._recorders.journal import EventJournal, EventJournalConfig
+from inspect_ai.model import ModelName
+from inspect_ai.scorer import Score, Target
+from inspect_ai.scorer._metric import SampleScore
+from inspect_ai.solver import TaskState
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -131,11 +137,11 @@ class TestTaskLoggerJournal:
         from inspect_ai._eval.task.log import TaskLogger
 
         # Create a mock with _journal = None
-        task_logger = MagicMock(spec=TaskLogger)
+        task_logger = object.__new__(TaskLogger)
         task_logger._journal = None
 
         # journal property should return None
-        assert TaskLogger.journal.fget(task_logger) is None  # type: ignore[union-attr]
+        assert task_logger.journal is None
 
     def test_task_logger_init_journal_non_eval_recorder(self) -> None:
         """init_journal is a no-op when recorder is not an EvalRecorder."""
@@ -160,10 +166,10 @@ class TestTaskLoggerJournal:
         from inspect_ai._eval.task.log import TaskLogger
 
         mock_journal = MagicMock(spec=EventJournal)
-        task_logger = MagicMock(spec=TaskLogger)
+        task_logger = object.__new__(TaskLogger)
         task_logger._journal = mock_journal
 
-        result = TaskLogger.journal.fget(task_logger)  # type: ignore[union-attr]
+        result = task_logger.journal
         assert result is mock_journal
 
 
@@ -175,13 +181,10 @@ class TestTaskLoggerJournal:
 class TestCreateEvalSampleEvents:
     """Test that create_eval_sample uses provided events parameter."""
 
-    def _make_sample_and_state(self) -> tuple:
+    def _make_sample_and_state(
+        self,
+    ) -> tuple[Sample, TaskState, dict[str, SampleScore]]:
         """Create minimal Sample and TaskState for create_eval_sample."""
-        from inspect_ai.dataset import Sample
-        from inspect_ai.scorer import Score
-        from inspect_ai.scorer._metric import SampleScore
-        from inspect_ai.solver import TaskState
-
         sample = Sample(
             input="test input",
             target="test target",
@@ -190,9 +193,9 @@ class TestCreateEvalSampleEvents:
         state = TaskState(
             sample_id="test-1",
             epoch=1,
-            model="test/model",
+            model=ModelName("test/model"),
             input="test input",
-            target="test target",
+            target=Target("test target"),
             messages=[],
             completed=True,
         )
@@ -209,12 +212,13 @@ class TestCreateEvalSampleEvents:
         from inspect_ai._eval.task.run import create_eval_sample
 
         sample, state, scores = self._make_sample_and_state()
-        custom_events = [_make_logger_event(1.0), _make_logger_event(2.0)]
+        custom_events: list[Event] = [
+            _make_logger_event(1.0),
+            _make_logger_event(2.0),
+        ]
 
         # Patch transcript to return something different to verify we DON'T use it
-        with patch(
-            "inspect_ai._eval.task.run.transcript"
-        ) as mock_transcript:
+        with patch("inspect_ai._eval.task.run.transcript") as mock_transcript:
             mock_transcript_obj = MagicMock()
             mock_transcript_obj.events = [_make_logger_event(99.0)]
             mock_transcript_obj.timelines = []
@@ -242,9 +246,7 @@ class TestCreateEvalSampleEvents:
         sample, state, scores = self._make_sample_and_state()
         transcript_events = [_make_logger_event(5.0), _make_logger_event(6.0)]
 
-        with patch(
-            "inspect_ai._eval.task.run.transcript"
-        ) as mock_transcript:
+        with patch("inspect_ai._eval.task.run.transcript") as mock_transcript:
             mock_transcript_obj = MagicMock()
             mock_transcript_obj.events = transcript_events
             mock_transcript_obj.timelines = []

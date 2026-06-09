@@ -19,6 +19,7 @@ import anyio
 import pytest
 from pydantic import ValidationError
 
+from inspect_ai.event._base import BaseEvent
 from inspect_ai.event._event import Event
 from inspect_ai.event._info import InfoEvent
 from inspect_ai.event._logger import LoggerEvent, LoggingMessage
@@ -28,6 +29,7 @@ from inspect_ai.log._recorders.journal import (
     EventJournalConfig,
     JournalBatchRef,
 )
+from inspect_ai.log._transcript import Transcript
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -117,21 +119,19 @@ class TestEventJournalConfig:
         """Config is immutable."""
         config = EventJournalConfig()
         with pytest.raises(ValidationError):
-            config.batch_size = 50  # type: ignore[misc]
+            config.batch_size = 50
 
 
 class TestJournalBatchRef:
     def test_journal_batch_ref_frozen(self) -> None:
         """JournalBatchRef is immutable."""
-        ref = JournalBatchRef(
-            batch_index=0, event_count=10, sample_id="s1", epoch=1
-        )
+        ref = JournalBatchRef(batch_index=0, event_count=10, sample_id="s1", epoch=1)
         assert ref.batch_index == 0
         assert ref.event_count == 10
         assert ref.sample_id == "s1"
         assert ref.epoch == 1
         with pytest.raises(ValidationError):
-            ref.batch_index = 1  # type: ignore[misc]
+            ref.batch_index = 1
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +146,7 @@ class TestEventJournalAccumulation:
         config = EventJournalConfig(batch_size=100)
         journal = EventJournal(zip_log=zip_log, config=config)
 
+        result = False
         for i in range(50):
             result = journal.add_event("sample1", 1, _make_logger_event(float(i)))
 
@@ -294,10 +295,12 @@ class TestEventJournalReadBatches:
         batch2_json = to_json_safe(events_batch2, indent=None)
 
         # Mock namelist to return batch file names
-        zip_log.namelist = AsyncMock(return_value=[
-            "_journal/events/s1_epoch_1/batch_0.json",
-            "_journal/events/s1_epoch_1/batch_1.json",
-        ])
+        zip_log.namelist = AsyncMock(
+            return_value=[
+                "_journal/events/s1_epoch_1/batch_0.json",
+                "_journal/events/s1_epoch_1/batch_1.json",
+            ]
+        )
 
         # Mock read_entry to return serialized events
         async def mock_read_entry(name: str) -> bytes:
@@ -329,7 +332,7 @@ class TestEventJournalReadBatches:
     async def test_journal_serializes_all_event_types(self) -> None:
         """LoggerEvent, InfoEvent round-trip through JSON serialization."""
         from inspect_ai._util.json import to_json_safe
-        from inspect_ai.log._condense import _events_adapter
+        from inspect_ai.event._validate import validate_events_json
 
         events: list[Event] = [
             _make_logger_event(1.0),
@@ -338,7 +341,7 @@ class TestEventJournalReadBatches:
 
         # Serialize and deserialize
         serialized = to_json_safe(events, indent=None)
-        deserialized = _events_adapter().validate_json(serialized)
+        deserialized = validate_events_json(serialized.decode("utf-8"))
 
         assert len(deserialized) == 2
         assert isinstance(deserialized[0], LoggerEvent)
@@ -491,17 +494,15 @@ class TestEventJournalBackgroundFlush:
         async def counting_flush(
             sample_id: str | int,
             epoch: int,
-            transcript: object = None,
-            evictable_types: object = None,
+            transcript: Transcript | None = None,
+            evictable_types: tuple[type[BaseEvent], ...] | None = None,
         ) -> int:
             nonlocal flush_count
-            result = await original_flush(
-                sample_id, epoch, transcript, evictable_types
-            )
+            result = await original_flush(sample_id, epoch, transcript, evictable_types)
             flush_count += 1
             return result
 
-        journal.flush_pending_batches = counting_flush  # type: ignore[assignment]
+        journal.flush_pending_batches = counting_flush  # type: ignore[method-assign]
 
         async with anyio.create_task_group() as tg:
             tg.start_soon(journal.run_background_flush, "s1", 1, None, None)

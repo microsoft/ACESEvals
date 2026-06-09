@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from inspect_ai.event._base import BaseEvent
+from inspect_ai.event._event import Event
 from inspect_ai.event._info import InfoEvent
 from inspect_ai.event._logger import LoggerEvent, LoggingMessage
 from inspect_ai.event._model import ModelEvent
@@ -160,7 +161,7 @@ class TestTranscriptEviction:
 
     def test_evict_preserves_model_score_sandbox_span_events(self) -> None:
         """Model, Score, Sandbox, SpanBegin, SpanEnd events are never removed."""
-        events = [
+        events: list[Event] = [
             _make_model_event(working_start=0.0),
             _make_score_event(working_start=1.0),
             _make_sandbox_event(working_start=2.0),
@@ -267,7 +268,7 @@ class TestTranscriptEviction:
 
     def test_events_property_returns_non_evicted(self) -> None:
         """transcript.events returns only non-evicted events."""
-        events = [
+        events: list[Event] = [
             _make_logger_event(working_start=0.0),
             _make_logger_event(working_start=1.0),
             _make_model_event(working_start=2.0),
@@ -287,7 +288,7 @@ class TestTranscriptEviction:
 
     def test_evict_with_interleaved_events(self) -> None:
         """LoggerEvent-ModelEvent-LoggerEvent-ModelEvent: only eligible LoggerEvents removed."""
-        events = [
+        events: list[Event] = [
             _make_logger_event(working_start=0.0),
             _make_model_event(working_start=1.0),
             _make_logger_event(working_start=2.0),
@@ -308,7 +309,7 @@ class TestTranscriptEviction:
 
     def test_evict_respects_working_start_boundary(self) -> None:
         """Events after the cutoff stay even if they are evictable types."""
-        events = [
+        events: list[Event] = [
             _make_logger_event(working_start=1.0),
             _make_logger_event(working_start=5.0),
             _make_logger_event(working_start=10.0),
@@ -360,7 +361,7 @@ class TestTranscriptEviction:
             working_start=1.0,
             timestamp=datetime.now(tz=timezone.utc),
         )
-        events = [
+        events: list[Event] = [
             _make_logger_event(working_start=0.0),
             tool_event,
             _make_logger_event(working_start=2.0),

@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from inspect_ai.event._base import BaseEvent
 from inspect_ai.event._info import InfoEvent
 from inspect_ai.event._logger import LoggerEvent
-from inspect_ai.log._condense import _events_adapter
+from inspect_ai.event._validate import validate_events_json
 
 if TYPE_CHECKING:
     from inspect_ai.event._event import Event
@@ -185,16 +185,11 @@ class EventJournal:
         batches_written = 0
         while queue:
             batch_index, max_working_start, events = queue[0]
-            path = (
-                f"_journal/events/{sample_id}_epoch_{epoch}"
-                f"/batch_{batch_index}.json"
-            )
+            path = f"_journal/events/{sample_id}_epoch_{epoch}/batch_{batch_index}.json"
             try:
                 await self._zip_log.write(path, events)
             except Exception:
-                logger.warning(
-                    "Journal batch write failed for %s", path, exc_info=True
-                )
+                logger.warning("Journal batch write failed for %s", path, exc_info=True)
                 break
             queue.popleft()
             batches_written += 1
@@ -236,10 +231,7 @@ class EventJournal:
         buf = self._buffers.pop(key, [])
         if buf:
             batch_index = self._batch_counters.get(key, 0)
-            path = (
-                f"_journal/events/{sample_id}_epoch_{epoch}"
-                f"/batch_{batch_index}.json"
-            )
+            path = f"_journal/events/{sample_id}_epoch_{epoch}/batch_{batch_index}.json"
             try:
                 await self._zip_log.write(path, buf)
                 self._batch_counters[key] = batch_index + 1
@@ -254,9 +246,7 @@ class EventJournal:
                         sample_id=sample_id,
                         epoch=epoch,
                     )
-                    transcript.evict_events(
-                        ref, evictable_types, max_working_start
-                    )
+                    transcript.evict_events(ref, evictable_types, max_working_start)
             except Exception:
                 logger.warning(
                     "Journal final batch write failed for %s", path, exc_info=True
@@ -292,7 +282,7 @@ class EventJournal:
         all_events: list[Event] = []
         for entry_name in batch_entries:
             raw = await self._zip_log.read_entry(entry_name)
-            batch_events = _events_adapter().validate_json(raw)
+            batch_events = validate_events_json(raw.decode("utf-8"))
             all_events.extend(batch_events)
 
         all_events.sort(key=lambda e: (e.working_start, e.timestamp))
