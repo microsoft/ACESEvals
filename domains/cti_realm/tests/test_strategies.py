@@ -87,6 +87,72 @@ class TestCTIAlignmentStrategy:
 
         assert result.value == pytest.approx(0.5 * 2.5)
 
+    @pytest.mark.asyncio
+    async def test_prompt_is_bounded_and_deduplicates_assistant_messages(self) -> None:
+        prompts_dir = Path(__file__).resolve().parents[1] / "prompts" / "judge"
+        strategy = CTIAlignmentStrategy(prompts_dir=prompts_dir)
+        repeated_message = "FINAL_EXPLANATION " + ("relevant context " * 2000)
+        steps = tuple(
+            _make_tool_step(
+                step_number=index,
+                tool_name="get_cti_reports_by_tag" if index == 1 else "execute_kql_query",
+                tool_input={"tag": "apt"} if index == 1 else {"query": "x"},
+                output='{"title": "APT Report"}' if index == 1 else "",
+                assistant_message=repeated_message,
+                reasoning=repeated_message if index == 1 else f"reasoning-{index} " * 1000,
+            )
+            for index in range(1, 20)
+        )
+        criteria = DomainCriteria(detection_objective="Detect APT activity")
+        ctx = _make_ctx(tool_steps=steps, criteria=criteria)
+        mock_response = MagicMock(completion='{"score": 0.8}')
+        mock_model = AsyncMock()
+        mock_model.generate = AsyncMock(return_value=mock_response)
+
+        with patch("cti_realm.scoring._trajectory.get_model", return_value=mock_model):
+            await strategy.score(ctx, None)
+
+        messages = mock_model.generate.await_args.args[0]
+        user_prompt = messages[1].content
+        assert len(user_prompt) < 17_000
+        assert user_prompt.count("FINAL_EXPLANATION") == 1
+        assert "apt" in user_prompt
+        assert "APT Report" in user_prompt
+
+    @pytest.mark.asyncio
+    async def test_non_json_score_uses_fallback(self, strategy: CTIAlignmentStrategy) -> None:
+        step = _make_tool_step(tool_name="list_cti_report_tags")
+        ctx = _make_ctx(tool_steps=(step,), criteria=DomainCriteria(detection_objective="Detect X"))
+        mock_response = MagicMock(completion="The evidence is relevant. Score: 0.65")
+        mock_model = AsyncMock()
+        mock_model.generate = AsyncMock(return_value=mock_response)
+
+        with patch("cti_realm.scoring._trajectory.get_model", return_value=mock_model):
+            result = await strategy.score(ctx, None)
+
+        assert result.value == pytest.approx(0.65)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "completion",
+        [
+            "Your input exceeds the context window of this model. Please adjust your input and try again.",
+            "The MAXIMUM CONTEXT LENGTH was exceeded for this request.",
+        ],
+    )
+    async def test_context_window_response_raises(
+        self, strategy: CTIAlignmentStrategy, completion: str
+    ) -> None:
+        step = _make_tool_step(tool_name="list_cti_report_tags")
+        ctx = _make_ctx(tool_steps=(step,), criteria=DomainCriteria(detection_objective="Detect X"))
+        mock_response = MagicMock(completion=completion)
+        mock_model = AsyncMock()
+        mock_model.generate = AsyncMock(return_value=mock_response)
+
+        with patch("cti_realm.scoring._trajectory.get_model", return_value=mock_model):
+            with pytest.raises(RuntimeError, match="context window"):
+                await strategy.score(ctx, None)
+
 
 # =====================================================================
 # C1: MITREJaccardStrategy

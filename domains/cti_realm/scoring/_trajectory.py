@@ -23,6 +23,12 @@ from ._kql import parse_kusto_response
 
 logger = logging.getLogger("saber.domains.cti_realm.scoring.checkpoints")
 
+_OBJECTIVE_CHAR_BUDGET = 2_500
+_TAGS_CHAR_BUDGET = 1_000
+_REPORTS_CHAR_BUDGET = 3_500
+_AGENT_CONTEXT_CHAR_BUDGET = 8_500
+_EXPLANATION_CHAR_BUDGET = 3_000
+
 
 # ---------------------------------------------------------------------------
 # C0: CTI Report Usage
@@ -45,6 +51,71 @@ def _extract_reports_accessed(steps: tuple[ToolStep, ...]) -> list[str]:
     return titles
 
 
+def _truncate(text: str, char_budget: int) -> str:
+    """Truncate text deterministically to a character budget."""
+    if len(text) <= char_budget:
+        return text
+    if char_budget <= 3:
+        return text[:char_budget]
+    return f"{text[:char_budget - 3]}..."
+
+
+def _extract_cti_tags(steps: tuple[ToolStep, ...]) -> list[str]:
+    """Extract unique CTI tags in first-seen order."""
+    tags: list[str] = []
+    for step in steps:
+        if step.tool_name != "get_cti_reports_by_tag":
+            continue
+        tag = str(step.tool_input.get("tag", "")).strip()
+        if tag and tag not in tags:
+            tags.append(tag)
+    return tags
+
+
+def _build_agent_context(steps: tuple[ToolStep, ...]) -> str:
+    """Build bounded, deduplicated explanations with CTI steps first."""
+    prioritized_steps = [step for step in steps if step.tool_name in CTI_TOOLS]
+    prioritized_steps.extend(reversed(steps))
+    seen: set[str] = set()
+    evidence: list[str] = []
+    used_chars = 0
+
+    for step in prioritized_steps:
+        for kind, value in (
+            ("assistant", step.assistant_message),
+            ("reasoning", step.reasoning),
+        ):
+            text = value.strip() if value else ""
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            text = _truncate(text, _EXPLANATION_CHAR_BUDGET)
+            prefix = f"[Step {step.step_number} {kind}]: "
+            separator_size = 2 if evidence else 0
+            remaining = _AGENT_CONTEXT_CHAR_BUDGET - used_chars - separator_size
+            if remaining <= len(prefix):
+                return "\n\n".join(evidence)
+            entry = f"{prefix}{_truncate(text, remaining - len(prefix))}"
+            evidence.append(entry)
+            used_chars += separator_size + len(entry)
+            if used_chars >= _AGENT_CONTEXT_CHAR_BUDGET:
+                return "\n\n".join(evidence)
+
+    return "\n\n".join(evidence) or "No agent explanation found."
+
+
+def _is_context_window_error(completion: str) -> bool:
+    """Return whether a judge completion is a context-limit provider error."""
+    patterns = (
+        r"your input exceeds? the context window",
+        r"maximum context length",
+        r"context length (?:has been |was )?exceeded",
+        r"exceeded (?:the )?context length",
+        r"context_length_exceeded",
+    )
+    return any(re.search(pattern, completion, re.IGNORECASE) for pattern in patterns)
+
+
 async def score_cti_alignment(
     detection_objective: str,
     steps: tuple[ToolStep, ...],
@@ -54,10 +125,8 @@ async def score_cti_alignment(
     """LLM-judge: evaluate CTI research relevance via Jinja2 templates.
 
     Uses ``cti_alignment_system.j2`` / ``cti_alignment_user.j2``.
-    Returns 0.0 on template or LLM errors.
+    Returns 0.0 on template errors and raises on provider context-limit errors.
     """
-    from saber.scoring.context import EpisodeContext
-
     from ._parsing import extract_score_and_reasoning_from_text
 
     reports = _extract_reports_accessed(steps)
@@ -68,9 +137,10 @@ async def score_cti_alignment(
     )
 
     ctx: dict[str, object] = {
-        "question": detection_objective,
-        "episode": EpisodeContext(steps=steps),
-        "reports_summary": reports_summary,
+        "question": _truncate(detection_objective, _OBJECTIVE_CHAR_BUDGET),
+        "cti_tags": _truncate(", ".join(_extract_cti_tags(steps)) or "None", _TAGS_CHAR_BUDGET),
+        "reports_summary": _truncate(reports_summary, _REPORTS_CHAR_BUDGET),
+        "agent_context": _build_agent_context(steps),
     }
 
     try:
@@ -87,6 +157,11 @@ async def score_cti_alignment(
         [ChatMessageSystem(content=system_prompt), ChatMessageUser(content=user_prompt)],
         config=GenerateConfig(temperature=0.0, max_tokens=5000),
     )
+
+    if _is_context_window_error(response.completion):
+        raise RuntimeError(
+            "C0 CTI alignment judge failed because the provider rejected its context window"
+        )
 
     match = re.search(r"\{[\s\S]*\}", response.completion)
     if match:

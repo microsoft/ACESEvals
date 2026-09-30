@@ -1,10 +1,9 @@
 Now evaluate:
 
 Detection Objective: {{ question }}
-CTI Tags Searched: {% set tag_steps = episode.steps | selectattr("tool_name", "equalto", "get_cti_reports_by_tag") | list %}{% if tag_steps %}{% for step in tag_steps %}{{ step.tool_input.tag | default("unknown") }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}None{% endif %}
+CTI Tags Searched: {{ cti_tags }}
 Reports Accessed: {{ reports_summary | default("No reports accessed") }}
-Assistant Messages: {% set assistant_msgs = [] %}{% for step in episode.steps %}{% if step.assistant_message %}{% if assistant_msgs.append("[Step " ~ step.step_number ~ "]: " ~ step.assistant_message) %}{% endif %}{% endif %}{% endfor %}{% if assistant_msgs %}{{ assistant_msgs | join('\n\n') }}{% else %}No assistant messages found.{% endif %}
-Agent's Reasoning: {% set reasoning_parts = [] %}{% for step in episode.steps %}{% if step.reasoning %}{% if reasoning_parts.append(step.reasoning) %}{% endif %}{% endif %}{% if step.assistant_message %}{% if reasoning_parts.append(step.assistant_message) %}{% endif %}{% endif %}{% endfor %}{% if reasoning_parts %}{{ reasoning_parts | join('\n\n') }}{% else %}No reasoning found in messages.{% endif %}
+Agent Context: {{ agent_context }}
 
 Output ONLY a JSON object with this exact format:
 {"score": <float between 0.0 and 1.0>, "reasoning": "<brief explanation covering tags, reports, AND agent reasoning>"}
