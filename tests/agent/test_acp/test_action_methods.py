@@ -201,6 +201,25 @@ async def test_cancel_sample_error_action_allowed_when_fails_on_error_false(
     sample.interrupt.assert_called_once_with("error")
 
 
+async def test_cancel_sample_cancel_action_not_gated_by_fails_on_error(
+    patch_active_samples,
+) -> None:
+    """action='cancel' accepted even when fails_on_error=True; calls interrupt.
+
+    A cancelled sample is not counted toward the fail-on-error
+    threshold, so unlike action='error' there is no polarity gate —
+    mirrors the control layer's
+    ``test_cancel_sample_cancel_action_not_gated_by_fails_on_error``,
+    which covers a separate implementation of the same rule.
+    """
+    sample = _stub_active_sample(fails_on_error=True)
+    patch_active_samples(sample)
+    h = _handler()
+    result = await h.cancel_sample(session_id="wire", action="cancel")
+    assert result == {}
+    sample.interrupt.assert_called_once_with("cancel")
+
+
 async def test_cancel_sample_allowed_on_observe_only_binding(
     patch_active_samples,
 ) -> None:
@@ -216,6 +235,64 @@ async def test_cancel_sample_allowed_on_observe_only_binding(
     result = await h.cancel_sample(session_id="wire", action="score")
     assert result == {}
     sample.interrupt.assert_called_once_with("score")
+
+
+async def test_cancel_sample_on_initializing_sample_defers_until_start(
+    patch_active_samples,
+) -> None:
+    """cancel_sample on an observe-only-attached *initializing* sample defers.
+
+    The ACP session opens inside ``active_sample()`` before the sample
+    starts, so an observe-only attach can bind a sample with no task group.
+    The handler has no ``started`` guard; ``interrupt`` used to stamp the
+    intent and then raise (a dangling stamp that suppressed a later retry
+    and never fired). It now defers: the intent is stamped, the hook waits,
+    and the interrupt fires when the runner starts the sample
+    (design/ctl/initializing-sample-cancel.md).
+    """
+    from inspect_ai.dataset._dataset import Sample
+    from inspect_ai.log._samples import ActiveSample
+    from inspect_ai.util._checkpoint.checkpointer_noop import _NoopCheckpointer
+
+    sample = ActiveSample(
+        task="t",
+        log_location="mem://test",
+        model="mockllm/model",
+        sample=Sample(id=1, input="hi"),
+        epoch=1,
+        message_limit=None,
+        token_limit=None,
+        cost_limit=None,
+        time_limit=None,
+        working_limit=None,
+        fails_on_error=False,
+        transcript=Transcript(),
+        sandboxes={},
+        checkpointer=_NoopCheckpointer(),
+        eval_id="eval-1",
+        sample_uuid="sample-uuid-1",
+    )
+    sess = MagicMock()
+    sess.session_id = "tgt"
+    sample.acp_transport = sess
+    causes: list[str] = []
+    sample.on_interrupt = lambda cause: causes.append(cause)
+    patch_active_samples(sample)
+
+    h = _handler(interactive=False)
+    result = await h.cancel_sample(session_id="wire", action="cancel")
+    assert result == {}
+    assert sample.interrupt_action == "cancel" and sample.terminal
+    assert causes == []  # the hook fires when the interrupt does
+
+    # the runner starts the sample and fires the pending intent, which
+    # cancels the sample's task group before any of its plan runs
+    async with anyio.create_task_group() as tg:
+        sample.start(tg)
+        assert sample.interrupt_action is not None
+        sample.interrupt(sample.interrupt_action)
+        await anyio.sleep_forever()
+    assert causes == ["user_cancel"]
 
 
 # Note: the prior ``test_cancel_sample_also_cancels_current_turn`` was

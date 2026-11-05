@@ -1,3 +1,4 @@
+from inspect_ai._sentinel._config import SentinelConfig, SentinelEntry
 from inspect_ai._util.deprecation import relocated_module_attribute
 from inspect_ai._util.error import EvalError, WriteConflictError
 
@@ -7,6 +8,12 @@ from ._condense import (
     condense_sample,
     expand_events,
     resolve_sample_attachments,
+)
+from ._config_update import (
+    ConfigUpdate,
+    ConfigValueChange,
+    effective_eval_config,
+    effective_generate_config,
 )
 from ._convert import convert_eval_logs
 from ._edit import (
@@ -21,16 +28,24 @@ from ._edit import (
 )
 from ._file import (
     EvalLogInfo,
+    WriteEvalLogResult,
     list_eval_logs,
+    list_eval_logs_async,
     read_eval_log,
     read_eval_log_async,
+    read_eval_log_headers_async,
     read_eval_log_sample,
+    read_eval_log_sample_async,
     read_eval_log_sample_summaries,
+    read_eval_log_sample_summaries_async,
     read_eval_log_samples,
+    read_eval_log_samples_by_id,
+    read_eval_log_samples_by_id_async,
     write_eval_log,
     write_eval_log_async,
     write_log_dir_manifest,
 )
+from ._headline import ResolvedHeadlineMetric, headline_metric
 from ._log import (
     ConnectionLimitChange,
     EvalConfig,
@@ -48,15 +63,20 @@ from ._log import (
     EvalSampleScore,
     EvalSampleSummary,
     EvalScore,
+    EvalShardEntry,
+    EvalShards,
     EvalSpec,
     EvalStats,
     EvalStatus,
     EventsData,
+    HeadlineMetric,
 )
 from ._metric import recompute_metrics
 from ._recover import (
+    IncompleteAction,
     RecoverableEvalLog,
     RecoveryNotAvailable,
+    RecoveryThresholdExceeded,
     recover_eval_log,
     recoverable_eval_logs,
 )
@@ -66,12 +86,19 @@ from ._score import edit_score
 from ._transcript import (
     Transcript,
     TranscriptHistory,
+    TranscriptHistoryUnavailableError,
     transcript,
 )
 
 __all__ = [
     "WriteConflictError",
+    "ConfigUpdate",
+    "ConfigValueChange",
+    "effective_eval_config",
+    "effective_generate_config",
     "EvalConfig",
+    "SentinelConfig",
+    "SentinelEntry",
     "EvalError",
     "EvalDataset",
     "EvalLog",
@@ -87,20 +114,33 @@ __all__ = [
     "EvalSampleReductions",
     "EvalSampleSummary",
     "EvalScore",
+    "EvalShardEntry",
+    "EvalShards",
     "EvalSpec",
     "EvalStats",
     "EvalStatus",
     "EvalLogInfo",
+    "WriteEvalLogResult",
+    "HeadlineMetric",
+    "ResolvedHeadlineMetric",
+    "headline_metric",
     "Transcript",
     "TranscriptHistory",
+    "TranscriptHistoryUnavailableError",
     "transcript",
     "convert_eval_logs",
     "list_eval_logs",
+    "list_eval_logs_async",
     "read_eval_log",
     "read_eval_log_async",
+    "read_eval_log_headers_async",
     "read_eval_log_sample",
-    "read_eval_log_samples",
+    "read_eval_log_sample_async",
     "read_eval_log_sample_summaries",
+    "read_eval_log_sample_summaries_async",
+    "read_eval_log_samples",
+    "read_eval_log_samples_by_id",
+    "read_eval_log_samples_by_id_async",
     "condense_sample",
     "condense_events",
     "EventsData",
@@ -124,8 +164,10 @@ __all__ = [
     "uninvalidate_samples",
     "recover_eval_log",
     "recoverable_eval_logs",
+    "IncompleteAction",
     "RecoverableEvalLog",
     "RecoveryNotAvailable",
+    "RecoveryThresholdExceeded",
     "ConnectionLimitChange",
 ]
 

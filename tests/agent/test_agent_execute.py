@@ -187,6 +187,18 @@ def test_agent_as_tool():
     check_agent_as_tool(as_tool)
 
 
+def test_agent_as_tool_result_not_truncated():
+    # the agent's report is the payload the caller asked for, so it is exempt
+    # from max_tool_output (0 disables truncation)
+    assert ToolDef(as_tool(web_surfer())).max_output == 0
+
+
+def test_agent_as_tool_max_output_overridable():
+    # callers who do want a cap can ask for one
+    assert ToolDef(as_tool(web_surfer(), max_output=2048)).max_output == 2048
+    assert ToolDef(as_tool(web_surfer(), max_output=None)).max_output is None
+
+
 def test_agent_as_tool_curry():
     check_agent_as_tool_curry(as_tool)
 
@@ -200,7 +212,7 @@ def test_agent_as_tool_no_docs_error():
 
 
 def test_agent_as_tool_no_param_docs_error():
-    check_agent_as_tool_no_docs_error(as_tool)
+    check_agent_as_tool_no_param_docs_error(as_tool)
 
 
 def test_agent_as_tool_respects_limits() -> None:
@@ -265,7 +277,7 @@ def test_agent_handoff_no_docs_error():
 
 
 def test_agent_handoff_no_param_docs_error():
-    check_agent_as_tool_no_docs_error(handoff)
+    check_agent_as_tool_no_param_docs_error(handoff)
 
 
 def test_agent_handoff_respects_limits():
@@ -337,6 +349,40 @@ def check_agent_as_solver(agent_solver: Solver):
 def test_agent_as_solver():
     agent_solver = as_solver(web_surfer())
     check_agent_as_solver(agent_solver)
+
+
+@pytest.mark.parametrize("override_tools", [False, True])
+def test_agent_as_solver_passes_tools_only_when_declared(
+    override_tools: bool,
+) -> None:
+    from test_helpers.tools import addition
+
+    @agent
+    def tools_agent() -> Agent:
+        async def execute(state: AgentState, tools: list[object]) -> AgentState:
+            """Report the number of tools passed to the agent.
+
+            Args:
+                state: Input conversation.
+                tools: Available tools.
+            """
+            state.output.completion = str(len(tools))
+            return state
+
+        return execute
+
+    agent_solver = (
+        as_solver(tools_agent(), tools=[])
+        if override_tools
+        else as_solver(tools_agent())
+    )
+    log = eval(
+        Task(solver=[use_tools(addition()), agent_solver]),
+        model="mockllm/model",
+    )[0]
+    assert log.status == "success"
+    assert log.samples is not None
+    assert log.samples[0].output.completion == ("0" if override_tools else "1")
 
 
 def test_agent_as_solver_with_param():
@@ -435,7 +481,7 @@ async def test_agent_run_parent_limit_hit() -> None:
             await run(looping_agent(), "This is the input", limits=[token_limit(100)])
 
     assert exc_info.value.type == "token"
-    assert exc_info.value.value == 11
+    assert exc_info.value.value == 10
     assert exc_info.value.limit == 10
 
 

@@ -9,13 +9,16 @@ The implementations skip the network entirely when the destination already
 exists with a matching checksum, retry on transient HTTP failures (408, 429,
 5xx) using the same policy as model providers, and write atomically via a
 sibling tempfile + rename so a failed download never leaves a partial file
-in place.
+in place. Each call gets its own uniquely named `<name>.<random>.partial`
+tempfile, so concurrent calls for the same destination don't collide; a
+process killed mid-download can leave one behind, and it is safe to delete.
 """
 
 from __future__ import annotations
 
 import hashlib
 import os
+import uuid
 from pathlib import Path
 
 import httpx
@@ -39,6 +42,7 @@ def download(
     dest: Path,
     *,
     headers: dict[str, str] | None = None,
+    timeout: float = 5.0,
 ) -> Path:
     """Download a file and verify its SHA256 checksum.
 
@@ -57,6 +61,9 @@ def download(
         sha256: Expected SHA256 hex digest of the file contents.
         dest: Destination path. Parent directory is created if missing.
         headers: Optional HTTP headers to include with the request.
+        timeout: Per-operation socket timeout in seconds (connect/read/write),
+            forwarded to the HTTP client. Defaults to 5s; raise it for large
+            artifacts fetched over slow links.
 
     Returns:
         The destination path.
@@ -70,7 +77,7 @@ def download(
         return dest
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".partial")
+    tmp = _partial_path(dest)
 
     @retry(
         wait=wait_exponential_jitter(),
@@ -81,7 +88,7 @@ def download(
     def _stream_to_tmp() -> str:
         hasher = hashlib.sha256()
         with httpx.stream(
-            "GET", url, headers=headers, follow_redirects=True
+            "GET", url, headers=headers, follow_redirects=True, timeout=timeout
         ) as response:
             response.raise_for_status()
             with open(tmp, "wb") as f:
@@ -137,7 +144,7 @@ def gdrive_download(file_id: str, sha256: str, dest: Path) -> Path:
         raise pip_dependency_error("Google Drive download", ["gdown"])
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".partial")
+    tmp = _partial_path(dest)
 
     try:
         gdown.download(id=file_id, output=str(tmp), quiet=False)
@@ -153,6 +160,14 @@ def gdrive_download(file_id: str, sha256: str, dest: Path) -> Path:
             tmp.unlink()
 
     return dest
+
+
+def _partial_path(dest: Path) -> Path:
+    # Unique per call so concurrent downloads of the same `dest` never share
+    # (and rename or unlink) each other's tempfile. Only the name is chosen
+    # here: creating the file with mkstemp would make it (and so `dest`) 0600
+    # rather than respecting the umask.
+    return dest.with_name(f"{dest.name}.{uuid.uuid4().hex}.partial")
 
 
 def _sha256_of(path: Path) -> str:

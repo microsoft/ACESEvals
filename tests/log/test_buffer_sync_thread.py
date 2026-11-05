@@ -1,3 +1,5 @@
+import gc
+import sqlite3
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -8,7 +10,10 @@ import pytest
 from inspect_ai.event._info import InfoEvent
 from inspect_ai.log._log import EvalSampleSummary
 from inspect_ai.log._recorders.buffer import database as database_module
-from inspect_ai.log._recorders.buffer.database import SampleBufferDatabase
+from inspect_ai.log._recorders.buffer.database import (
+    SampleBufferDatabase,
+    sample_buffer_shutdown_pending,
+)
 from inspect_ai.log._recorders.buffer.filestore import SampleBufferFilestore
 from inspect_ai.log._recorders.types import SampleEvent
 
@@ -341,21 +346,149 @@ def test_sync_request_pending_when_thread_reference_exists_but_not_alive(
     assert shared_db._sync_pending is True
 
 
-def test_cleanup_skips_deletion_when_sync_remains_active(
+def test_close_waits_for_sync_without_deleting_recovery_files(
     shared_db: SampleBufferDatabase,
     monkeypatch: pytest.MonkeyPatch,
     cleanup_recorder: CleanupRecorder,
     sync_releases: list[threading.Event],
 ) -> None:
     release = threading.Event()
-    monkeypatch.setattr(database_module, "SYNC_CLEANUP_TIMEOUT", 0.01)
     _start_blocked_sync(shared_db, monkeypatch, release, sync_releases)
+    sync_thread = _current_sync_thread(shared_db)
+    join_started = _signal_when_join_starts(monkeypatch, sync_thread)
+    closer, finished, errors = _run_in_thread(shared_db.close)
+    try:
+        _assert_event(join_started, "close did not wait for sync")
+        assert not finished.is_set()
+        assert not shared_db._closed
+    finally:
+        release.set()
+        closer.join(timeout=2)
+
+    assert finished.is_set() and not errors
+    assert not sync_thread.is_alive()
+    assert shared_db._closed and not shared_db._connections
+    assert shared_db.db_path.exists()
+    assert cleanup_recorder.calls == []
+
+
+def test_close_drains_a_pending_upload_before_stopping(
+    shared_db: SampleBufferDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+    cleanup_recorder: CleanupRecorder,
+) -> None:
+    # a completion requested an upload that is not yet due (30s interval);
+    # close preserves recovery data, so the worker uploads at once before it
+    # stops rather than abandoning the shared copy another host recovers from
+    synced: list[str] = []
+
+    def record_sync(db: SampleBufferDatabase, filestore: SampleBufferFilestore) -> None:
+        synced.append("sync")
+
+    monkeypatch.setattr(database_module, "sync_to_filestore", record_sync)
+    _write_event(shared_db, "pending")
+    assert shared_db._sync_pending is True
+
+    shared_db.close()
+
+    assert synced == ["sync"]
+    assert shared_db._sync_pending is False
+    assert shared_db._sync_thread is None
+    assert shared_db.db_path.exists()
+    assert cleanup_recorder.calls == []
+
+
+def test_cleanup_drops_a_pending_upload(
+    shared_db: SampleBufferDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+    cleanup_recorder: CleanupRecorder,
+) -> None:
+    # destructive cleanup deletes the files the upload would mirror
+    synced: list[str] = []
+
+    def record_sync(db: SampleBufferDatabase, filestore: SampleBufferFilestore) -> None:
+        synced.append("sync")
+
+    monkeypatch.setattr(database_module, "sync_to_filestore", record_sync)
+    _write_event(shared_db, "pending")
 
     shared_db.cleanup()
 
+    assert synced == []
+    assert shared_db._sync_thread is None
+
+
+@pytest.mark.parametrize("keep_files", [False, True])
+def test_cleanup_skips_deletion_when_sync_remains_active(
+    shared_db: SampleBufferDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+    cleanup_recorder: CleanupRecorder,
+    sync_releases: list[threading.Event],
+    keep_files: bool,
+) -> None:
+    release = threading.Event()
+    monkeypatch.setattr(database_module, "SYNC_CLEANUP_TIMEOUT", 0.01)
+    _start_blocked_sync(shared_db, monkeypatch, release, sync_releases)
+
+    if keep_files:
+        shared_db.close()
+    else:
+        shared_db.cleanup()
+
     assert cleanup_recorder.calls == []
     assert shared_db._sync_closed is True
+    assert not shared_db._closed
+    # retry cleanup must not sweep the files the worker still uses
+    assert sample_buffer_shutdown_pending(shared_db.location)
     release.set()
+    _current_sync_thread(shared_db).join(timeout=5)
+    shared_db.close()
+    assert not sample_buffer_shutdown_pending(shared_db.location)
+
+
+@pytest.mark.parametrize("keep_files", [False, True])
+def test_timed_out_shutdown_is_finalized_once_worker_and_owner_let_go(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keep_files: bool
+) -> None:
+    # the running worker holds the buffer, so it stays pending; once the worker
+    # exits and the owner has dropped it, it is finalized with no second close
+    started = threading.Event()
+    release = threading.Event()
+    monkeypatch.setattr(database_module, "SYNC_CLEANUP_TIMEOUT", 0.01)
+    monkeypatch.setattr(
+        database_module, "sync_to_filestore", _blocking_sync(started, release)
+    )
+    db = SampleBufferDatabase(
+        location=str(tmp_path / "shared.eval"),
+        create=True,
+        log_shared=30,
+        db_dir=tmp_path / "db",
+    )
+    location = db.location
+    try:
+        db.start_sample(
+            EvalSampleSummary(id="sample", epoch=1, input="in", target="out")
+        )
+        _request_sync(db, "blocked")
+        _assert_event(started, "sync worker did not start")
+        conn = db._connections[0]
+        worker = _current_sync_thread(db)
+        if keep_files:
+            db.close()
+        else:
+            db.cleanup()
+        del db
+        gc.collect()
+        assert sample_buffer_shutdown_pending(location)
+    finally:
+        release.set()
+
+    worker.join(timeout=5)
+    assert not worker.is_alive()
+    gc.collect()
+    assert not sample_buffer_shutdown_pending(location)
+    with pytest.raises(sqlite3.ProgrammingError):
+        conn.execute("SELECT 1")
 
 
 def test_cleanup_from_sync_worker_does_not_delete_while_worker_is_on_stack(
@@ -496,6 +629,21 @@ def test_base_exception_finalizes_sync_worker_state(
 
     monkeypatch.setattr(database_module, "sync_to_filestore", sync_that_stops)
 
+    # The shared_db fixture's start_sample() spawns a live background sync
+    # worker. Shut it down before driving _sync_to_filestore() synchronously,
+    # otherwise that worker can win the race for the forced-due sync request,
+    # consume it, and exit — leaving this thread's direct call blocked forever
+    # in _sync_wakeup.wait(timeout=None).
+    with shared_db._sync_lock:
+        shared_db._sync_closed = True
+        shared_db._sync_wakeup.notify_all()
+        background_worker = shared_db._sync_thread
+    if background_worker is not None and (
+        background_worker is not threading.current_thread()
+    ):
+        background_worker.join(timeout=5)
+    shared_db._sync_closed = False
+
     shared_db._sync_thread = threading.current_thread()
     shared_db._sync_requested = True
     shared_db._sync_pending = True
@@ -509,3 +657,58 @@ def test_base_exception_finalizes_sync_worker_state(
 
     assert shared_db._sync_thread is None
     assert shared_db._sync_pending is False
+
+
+def test_set_sync_interval_retunes_shared_sync(
+    shared_db: SampleBufferDatabase,
+) -> None:
+    assert shared_db.log_shared == 30
+
+    assert shared_db.set_sync_interval(5) is True
+    assert shared_db.log_shared == 5
+    assert shared_db._sync_filestore is not None
+    assert shared_db._sync_filestore.update_interval == 5
+
+    # clamped to a minimum of 1 second
+    assert shared_db.set_sync_interval(0) is True
+    assert shared_db.log_shared == 1
+
+
+def test_set_sync_interval_noop_without_shared_sync(tmp_path: Path) -> None:
+    # a buffer opened without `log_shared` has no shared filestore to retune
+    db = SampleBufferDatabase(
+        location=str(tmp_path / "local.eval"),
+        create=True,
+        db_dir=tmp_path / "db",
+    )
+    try:
+        assert db.log_shared is None
+        assert db.set_sync_interval(5) is False
+        assert db.log_shared is None
+    finally:
+        db.cleanup()
+
+
+def test_shared_sync_interval_reports_active_value(
+    shared_db: SampleBufferDatabase,
+) -> None:
+    # shared sync is configured (filestore created) → report the interval
+    assert shared_db._sync_filestore is not None
+    assert shared_db.shared_sync_interval == 30
+
+
+def test_shared_sync_interval_off_normalizes_to_none(tmp_path: Path) -> None:
+    # log_shared=0 ("off" from a normal CLI run) stores 0 but creates no
+    # filestore; the effective interval must read as None, not 0
+    db = SampleBufferDatabase(
+        location=str(tmp_path / "local.eval"),
+        create=True,
+        log_shared=0,
+        db_dir=tmp_path / "db",
+    )
+    try:
+        assert db.log_shared == 0
+        assert db._sync_filestore is None
+        assert db.shared_sync_interval is None
+    finally:
+        db.cleanup()

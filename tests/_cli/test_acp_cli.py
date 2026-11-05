@@ -64,7 +64,7 @@ def mock_stdio_streams(monkeypatch):
         writer = _aio.StreamWriter(_NullTransport(), _NoopProtocol(), None, loop)
         return reader, writer
 
-    monkeypatch.setattr("inspect_ai._cli.acp.stdio_streams", _mock)
+    monkeypatch.setattr("acp.stdio.stdio_streams", _mock)
 
 
 @pytest.fixture
@@ -86,7 +86,7 @@ def short_data_dir(monkeypatch):
         _stub,
     )
     monkeypatch.setattr(
-        "inspect_ai.agent._acp.discovery.pid_alive",
+        "inspect_ai._util.process.pid_alive",
         lambda pid: pid > 0,
     )
     try:

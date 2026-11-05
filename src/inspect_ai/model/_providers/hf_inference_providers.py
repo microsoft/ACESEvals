@@ -1,11 +1,9 @@
-import os
-from typing import Any
+from typing import Any, Literal
 
 from typing_extensions import override
 
 from .._generate_config import GenerateConfig
 from .openai_compatible import OpenAICompatibleAPI
-from .util import environment_prerequisite_error
 
 HF_TOKEN = "HF_TOKEN"
 
@@ -17,26 +15,23 @@ class HFInferenceProvidersAPI(OpenAICompatibleAPI):
         base_url: str | None = None,
         api_key: str | None = None,
         config: GenerateConfig = GenerateConfig(),
-        stream: bool | None = None,
+        stream: bool | Literal["auto"] | None = None,
         **model_args: Any,
     ) -> None:
-        # Handle API key before calling super() to avoid the automatic key generation
-        if not api_key:
-            api_key = os.environ.get(HF_TOKEN, None)
-            if not api_key:
-                raise environment_prerequisite_error(
-                    "HF Inference Providers",
-                    [HF_TOKEN],
-                )
-
+        # hf-inference streams by default: unset means always stream;
+        # explicit true/false overrides and "auto" defers to the base class
+        # (stream only when the caller passes on_stream)
+        if stream is None:
+            stream = True
         super().__init__(
             model_name=model_name,
             base_url=base_url or "https://router.huggingface.co/v1",
             api_key=api_key,
+            api_key_var=HF_TOKEN,
             config=config,
             service="HF Inference Providers",
             service_base_url="https://router.huggingface.co/v1",
-            stream=stream is not False,
+            stream=stream,
             **model_args,
         )
 

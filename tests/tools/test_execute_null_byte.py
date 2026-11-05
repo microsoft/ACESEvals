@@ -1,4 +1,4 @@
-"""Tests for ValueError handling in bash() and python() tool execute functions.
+r"""Tests for ValueError handling in bash() and python() tool execute functions.
 
 When an LLM agent generates a command containing a null byte (``\\x00``),
 ``subprocess.Popen`` raises ``ValueError: embedded null byte``.  The tool
@@ -30,7 +30,7 @@ class TestBashValueErrorHandling:
         mock_sandbox_env.return_value = mock_env
 
         tool_fn = bash()
-        result = await tool_fn(cmd="echo hello\x00world")
+        result = await tool_fn(command="echo hello\x00world")
 
         assert result == "Error: embedded null byte"
 
@@ -45,7 +45,7 @@ class TestBashValueErrorHandling:
         mock_sandbox_env.return_value = mock_env
 
         tool_fn = bash()
-        result = await tool_fn(cmd="bad command")
+        result = await tool_fn(command="bad command")
 
         assert result == "Error: some other value error"
 
@@ -64,7 +64,7 @@ class TestBashValueErrorHandling:
         mock_sandbox_env.return_value = mock_env
 
         tool_fn = bash()
-        result = await tool_fn(cmd="echo hello")
+        result = await tool_fn(command="echo hello")
 
         assert result == "hello\n"
 
@@ -83,8 +83,9 @@ class TestBashValueErrorHandling:
         mock_sandbox_env.return_value = mock_env
 
         tool_fn = bash()
-        result = await tool_fn(cmd="cat /etc/shadow")
+        result = await tool_fn(command="cat /etc/shadow")
 
+        assert isinstance(result, str)
         assert "permission denied" in result
 
     @pytest.mark.anyio
@@ -99,7 +100,7 @@ class TestBashValueErrorHandling:
 
         tool_fn = bash()
         with pytest.raises(RuntimeError, match="docker daemon crashed"):
-            await tool_fn(cmd="echo hi")
+            await tool_fn(command="echo hi")
 
 
 class TestPythonValueErrorHandling:

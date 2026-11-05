@@ -1,17 +1,29 @@
 import datetime
+import glob
 import hashlib
 import json
 import os
 import sqlite3
 import threading
 import time
-from collections.abc import Sequence
 from contextlib import contextmanager
 from logging import getLogger
 from pathlib import Path
 from sqlite3 import Connection, OperationalError
-from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Literal, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Literal,
+    TypeAlias,
+    TypeVar,
+)
+from weakref import WeakSet
 
+import anyio
+import anyio.to_thread
 import psutil
 from pydantic import BaseModel, JsonValue
 from shortuuid import uuid
@@ -29,9 +41,16 @@ from inspect_ai._util.json import to_json_str_safe
 from inspect_ai._util.trace import trace_action
 from inspect_ai.event._model import ModelEvent
 from inspect_ai.event._pool import (
-    _compress_refs,
-    condense_model_event_calls,
-    condense_model_event_inputs,
+    _call_pool_json,
+    _msg_pool_json,
+    _msg_pool_jsonable,
+    collect_pool_ref_positions,
+    remap_pool_refs,
+)
+from inspect_ai.event._pool_index import (
+    CallPoolIndex,
+    MessagePoolIndex,
+    condense_model_event_with_indices,
 )
 from inspect_ai.log._recorders.buffer.history import SampleHistory
 from inspect_ai.model import ChatMessage
@@ -39,19 +58,25 @@ from inspect_ai.model import ChatMessage
 from ..._condense import (
     ATTACHMENT_PROTOCOL,
     WalkContext,
+    attachment_refs_from_value,
     attachments_content_fn,
+    walk_chat_message,
     walk_events,
     walk_input,
     walk_json_dict,
+    walk_json_value,
 )
 from ..._log import EvalSampleSummary
 from ..types import SampleEvent
 from .filestore import (
+    SAMPLE_METADATA_IN_SUMMARY,
     Manifest,
     SampleBufferFilestore,
     SampleManifest,
+    SampleSegment,
     Segment,
     SegmentFile,
+    sample_segment_cursor,
 )
 from .types import (
     AttachmentData,
@@ -62,10 +87,14 @@ from .types import (
     SampleBuffer,
     SampleData,
     Samples,
+    parse_sample_metadata,
 )
 
 logger = getLogger(__name__)
 SYNC_CLEANUP_TIMEOUT = 30
+
+SampleKey: TypeAlias = tuple[str, int]
+"""In-memory key for one sample: ``(str(sample_id), epoch)``."""
 
 if TYPE_CHECKING:
     from .types import TranscriptEventSink
@@ -89,6 +118,8 @@ class SampleBufferDatabase(SampleBuffer):
         id TEXT,
         epoch INTEGER,
         data TEXT, -- JSON containing all other sample fields
+        sample_metadata TEXT, -- full sample metadata (summaries are intentionally thinned)
+        sample_metadata_hash TEXT, -- sidecar lookup key or exact-summary marker
         PRIMARY KEY (id, epoch)
     );
 
@@ -143,18 +174,58 @@ class SampleBufferDatabase(SampleBuffer):
         location: str,
         *,
         create: bool = True,
+        read_only: bool = False,
         log_images: bool = True,
         log_shared: int | None = None,
         update_interval: int = 2,
         db_dir: Path | None = None,
     ):
+        """Open (or create) the sample buffer database for ``location``.
+
+        Args:
+            location: Eval log location the buffer belongs to.
+            create: Create the database (and schema) if it doesn't exist.
+            read_only: Open connections with SQLite ``mode=ro``. A read-only
+                connection can never (re-)create the database file, so a
+                reader racing the buffer's deletion (eval teardown, stale
+                sweep) fails with ``OperationalError`` instead of leaving an
+                empty database behind that makes the task look running.
+                Incompatible with ``create``.
+            log_images: Log image attachments.
+            log_shared: Sync interval for shared log directories.
+            update_interval: Version update interval.
+            db_dir: Override the database directory (defaults to the
+                inspect data dir).
+        """
+        if create and read_only:
+            raise ValueError("read_only is incompatible with create")
         self.location = filesystem(location).path_as_uri(location)
+        self._read_only = read_only
         self.log_images = log_images
         self.log_shared = log_shared
         self.update_interval = update_interval
 
         # warn at most once per database if WAL journal mode can't be enabled
         self._wal_checked = False
+
+        # Persistent per-thread SQLite connections. Each thread reuses one
+        # connection across operations instead of opening/closing per call
+        # (a large throughput win, especially under WAL). Connections are
+        # tracked so they can all be closed at cleanup. Initialized before the
+        # schema-creation _get_connection() call below.
+        #
+        # Safety rests on two invariants (see _get_connection): (a) all writes
+        # and explicit-transaction reads run on the single anyio event-loop
+        # thread; the only other DB-touching thread is the read-only filestore
+        # sync worker, so no two threads ever touch the same connection
+        # concurrently. (b) _get_connection() bodies are await-free, so no other
+        # task can interleave a statement onto the shared connection mid-txn.
+        # check_same_thread=False is set purely so cleanup can close a (dead)
+        # thread's handle, not to enable concurrent use.
+        self._local = threading.local()
+        self._connections: list[Connection] = []
+        self._connections_lock = threading.Lock()
+        self._closed = False
 
         # location subdir and file
         dir, file = location_dir_and_file(self.location)
@@ -181,18 +252,45 @@ class SampleBufferDatabase(SampleBuffer):
             if len(logs) > 0:
                 self.db_path = logs[0]
             else:
-                raise FileNotFoundError("Log database for '{location}' not found.")
+                raise FileNotFoundError(f"Log database for '{location}' not found.")
 
-        # Per-sample hash → pool index maps; full pool entries live in SQLite.
-        self._msg_indices: dict[tuple[str, int], dict[str, int]] = {}
-        self._call_indices: dict[tuple[str, int], dict[str, int]] = {}
+        # Per-sample pool indices; full pool entries live in SQLite.
+        self._msg_indices: dict[tuple[str, int], MessagePoolIndex] = {}
+        self._call_indices: dict[tuple[str, int], CallPoolIndex] = {}
 
         # Prevent late ModelEvents from restarting indices at 0 after completion.
         self._completed_samples: set[tuple[str, int]] = set()
 
+        # Attachment content already shipped per sample (see
+        # _insert_unseen_attachments and _staged_attachment_marks). str(id):
+        # SQLite TEXT affinity collides 5/'5' in the UNIQUE constraint, so the
+        # in-memory key must too. No lock: all writers run on the event-loop
+        # thread (see the _get_connection invariants above). Skipping a shipped
+        # hash is sound only because a live sample's attachment rows outlive
+        # its marks: nothing deletes them short of _remove_samples_now, which
+        # drops this entry with them (and complete_sample drops the entry
+        # alone, which only re-ships).
+        self._inserted_attachment_hashes: dict[SampleKey, set[str]] = {}
+        self._pending_seen_hashes: list[tuple[SampleKey, str]] | None = None
+
         self._sample_read_leases: dict[tuple[str, int], int] = {}
         self._pending_sample_removals: set[tuple[str, int]] = set()
+
+        # Samples removed since the last filestore sync (see
+        # take_removed_since_sync), recorded only once a sync has run so the
+        # set stays empty when nothing syncs. The lock is needed because the
+        # sync worker thread takes the set while the event loop adds to it.
+        self._removed_since_sync: set[SampleKey] = set()
+        self._track_removals = False
+        self._removed_since_sync_lock = threading.Lock()
         self._cleanup_pending = False
+        self._close_pending = False
+        # set under _lease_lock the moment a close or cleanup decides to
+        # proceed (no reader holds a lease): from then on lease admission is
+        # refused, so no read can start between that decision and the
+        # connections closing — which may now happen on a worker thread
+        # (aclose/acleanup) while the event loop keeps serving readers
+        self._closing = False
         self._lease_lock = threading.Lock()
 
         # create sync filestore if log_shared
@@ -208,6 +306,10 @@ class SampleBufferDatabase(SampleBuffer):
         self._sync_pending = False
         self._sync_closed = False
         self._sync_requested = False
+        # whether the sync worker performs a requested-but-not-yet-due upload
+        # before it stops (close preserves recovery data, so it drains;
+        # cleanup deletes it, so it does not)
+        self._sync_drain = False
 
     def start_sample(self, sample: EvalSampleSummary) -> None:
         with self._get_connection(write=True) as conn:
@@ -221,72 +323,123 @@ class SampleBufferDatabase(SampleBuffer):
             )
 
     def log_events(self, events: list[SampleEvent]) -> None:
-        index_snapshots: dict[
-            tuple[str, int], tuple[dict[str, int] | None, dict[str, int] | None]
-        ] = {}
+        # `None` mark = the index didn't exist before this batch (pop on restore)
+        index_snapshots: dict[tuple[str, int], tuple[int | None, int | None]] = {}
 
         def restore_index_snapshots() -> None:
-            for key, (msg_index, call_index) in index_snapshots.items():
-                if msg_index is None:
+            for key, (msg_mark, call_mark) in index_snapshots.items():
+                if msg_mark is None:
                     self._msg_indices.pop(key, None)
                 else:
-                    self._msg_indices[key] = msg_index
+                    msg_index = self._msg_indices.get(key)
+                    if msg_index is not None:
+                        msg_index.restore(msg_mark)
 
-                if call_index is None:
+                if call_mark is None:
                     self._call_indices.pop(key, None)
                 else:
-                    self._call_indices[key] = call_index
+                    call_index = self._call_indices.get(key)
+                    if call_index is not None:
+                        call_index.restore(call_mark)
 
-        with self._get_connection(
-            write=True, on_rollback=restore_index_snapshots
-        ) as conn:
-            # collect the values for all events
-            values: list[str | int] = []
-            for event in events:
-                if isinstance(event.event, ModelEvent):
-                    key = (str(event.id), event.epoch)
-                    if key not in index_snapshots:
-                        msg_index = self._msg_indices.get(key)
-                        call_index = self._call_indices.get(key)
-                        index_snapshots[key] = (
-                            None if msg_index is None else dict(msg_index),
-                            None if call_index is None else dict(call_index),
+        with self._staged_attachment_marks():
+            with self._get_connection(
+                write=True, on_rollback=restore_index_snapshots
+            ) as conn:
+                # collect the values for all events
+                values: list[str | int] = []
+                for event in events:
+                    if isinstance(event.event, ModelEvent):
+                        key = (str(event.id), event.epoch)
+                        if key not in index_snapshots:
+                            msg_index = self._msg_indices.get(key)
+                            call_index = self._call_indices.get(key)
+                            index_snapshots[key] = (
+                                None if msg_index is None else msg_index.mark(),
+                                None if call_index is None else call_index.mark(),
+                            )
+
+                    event = self._condense_event(conn, event)
+                    values.extend(
+                        (
+                            event.event.uuid or uuid(),
+                            str(event.id),
+                            event.epoch,
+                            to_json_str_safe(event.event),
                         )
-
-                event = self._condense_event(conn, event)
-                values.extend(
-                    (
-                        event.event.uuid or uuid(),
-                        str(event.id),
-                        event.epoch,
-                        to_json_str_safe(event.event),
                     )
-                )
 
-            # dynamically create the SQL query
-            placeholders = ", ".join(["(?, ?, ?, ?)"] * len(events))
-            sql = f"""
-            INSERT INTO events (event_id, sample_id, sample_epoch, data)
-            VALUES {placeholders}
-            """
+                # dynamically create the SQL query
+                placeholders = ", ".join(["(?, ?, ?, ?)"] * len(events))
+                sql = f"""
+                INSERT INTO events (event_id, sample_id, sample_epoch, data)
+                VALUES {placeholders}
+                """
 
-            # Insert all rows
-            conn.execute(sql, values)
+                # Insert all rows
+                conn.execute(sql, values)
 
-    def complete_sample(self, summary: EvalSampleSummary) -> None:
+    @contextmanager
+    def _staged_attachment_marks(self) -> Iterator[None]:
+        """Stage attachment seen-marks, applying them only on a clean exit.
+
+        ``_insert_unseen_attachments`` records what it shipped here rather
+        than marking it seen directly. The marks are applied only if the block
+        completes — i.e. the enclosing transaction committed. A rolled-back
+        batch must leave no marks: buffer-write errors are swallowed upstream,
+        and a stale mark would make the retry silently skip real content.
+        """
+        staged: list[tuple[SampleKey, str]] = []
+        self._pending_seen_hashes = staged
+        try:
+            yield
+        finally:
+            self._pending_seen_hashes = None
+        for key, attachment_hash in staged:
+            self._inserted_attachment_hashes.setdefault(key, set()).add(attachment_hash)
+
+    def complete_sample(
+        self,
+        summary: EvalSampleSummary,
+        *,
+        sample_metadata: dict[str, Any] | None,
+    ) -> None:
+        metadata_json = (
+            to_json_str_safe(sample_metadata) if sample_metadata is not None else None
+        )
+        metadata_hash = (
+            SAMPLE_METADATA_IN_SUMMARY
+            if sample_metadata is not None and sample_metadata == summary.metadata
+            else (
+                hashlib.sha256(metadata_json.encode("utf-8")).hexdigest()
+                if metadata_json is not None
+                else None
+            )
+        )
         with self._get_connection(write=True) as conn:
             summary = self._condense_sample(conn, summary)
             conn.execute(
                 """
-                UPDATE samples SET data = ? WHERE id = ? and epoch = ?
+                UPDATE samples
+                SET data = ?,
+                    sample_metadata = COALESCE(?, sample_metadata),
+                    sample_metadata_hash = COALESCE(?, sample_metadata_hash)
+                WHERE id = ? and epoch = ?
             """,
-                (to_json_str_safe(summary), str(summary.id), summary.epoch),
+                (
+                    to_json_str_safe(summary),
+                    metadata_json,
+                    metadata_hash,
+                    str(summary.id),
+                    summary.epoch,
+                ),
             )
 
             key = (str(summary.id), summary.epoch)
             self._msg_indices.pop(key, None)
             self._call_indices.pop(key, None)
             self._completed_samples.add(key)
+            self._inserted_attachment_hashes.pop(key, None)
 
     def update_metrics(self, metrics: list[TaskDisplayMetric]) -> None:
         with self._get_connection(write=True) as conn:
@@ -323,6 +476,7 @@ class SampleBufferDatabase(SampleBuffer):
             self._msg_indices.pop(key, None)
             self._call_indices.pop(key, None)
             self._completed_samples.discard(key)
+            self._inserted_attachment_hashes.pop(key, None)
 
         with self._get_connection(write=True) as conn:
             cursor = conn.cursor()
@@ -363,27 +517,121 @@ class SampleBufferDatabase(SampleBuffer):
             finally:
                 cursor.close()
 
-    @override
-    def cleanup(self) -> None:
-        if not self._close_sync_worker_for_cleanup():
+        # after the delete commits, so a sync that takes the set sees no row
+        with self._removed_since_sync_lock:
+            if self._track_removals:
+                self._removed_since_sync.update(samples)
+
+    def take_removed_since_sync(self) -> set[SampleKey]:
+        """Take the samples removed from the buffer since the last call.
+
+        ``sync_to_filestore`` drops these samples' manifest entries so that a
+        sample removed and restarted between two syncs (a retry or a requeue)
+        starts with no segments instead of inheriting the previous attempt's.
+        Keys are ``(str(id), epoch)``.
+
+        Removals are recorded only after the first call: before any sync there
+        is no manifest entry to drop, and a buffer that never syncs keeps no
+        record of its removals.
+        """
+        with self._removed_since_sync_lock:
+            self._track_removals = True
+            removed = self._removed_since_sync
+            self._removed_since_sync = set()
+            return removed
+
+    def restore_removed_since_sync(self, removed: set[SampleKey]) -> None:
+        """Return keys from ``take_removed_since_sync`` after a failed sync."""
+        with self._removed_since_sync_lock:
+            self._removed_since_sync.update(removed)
+
+    def removed_since_sync(self) -> set[SampleKey]:
+        """Samples removed since the last ``take_removed_since_sync``, left recorded."""
+        with self._removed_since_sync_lock:
+            return set(self._removed_since_sync)
+
+    async def aclose(self) -> None:
+        """:meth:`close` off the event loop.
+
+        Closing joins the sync worker for up to ``SYNC_CLEANUP_TIMEOUT``, and
+        a close first drains a pending shared upload, so the join can span a
+        whole upload; on the event loop that would stall every sibling task
+        and control request. The upload itself runs on the worker's own
+        thread either way, so this hop only waits for it.
+        """
+        await anyio.to_thread.run_sync(self.close)
+
+    async def acleanup(self) -> None:
+        """:meth:`cleanup` with its worker join and local deletion off the event loop.
+
+        The shared filestore's removal stays on the loop: it is synchronous
+        fsspec work on a possibly remote filesystem, which must not run in a
+        worker thread (fsspec's own background loop — see AGENTS.md). It is
+        one ``rm``, as on the sync path.
+        """
+        if await anyio.to_thread.run_sync(self._cleanup_local):
+            self._cleanup_filestore()
+
+    def close(self) -> None:
+        """Stop syncing and close connections while preserving recovery files.
+
+        A requested shared-buffer upload that is not yet due is performed
+        before the worker stops: the buffer may hold completed samples that
+        never reached the destination, and the shared copy is how another
+        host recovers them. Active sample readers retain their connections
+        until their leases end. SQLite data and shared buffer files remain
+        available for recovery.
+        """
+        _unfinished_shutdowns.add(self)
+        if not self._close_sync_worker_for_cleanup(drain=True):
             return
 
         with self._lease_lock:
             if self._sample_read_leases:
-                self._cleanup_pending = True
+                self._close_pending = True
                 return
+            self._closing = True
 
-        self._cleanup_now()
+        self._close_all_connections()
 
-    def _close_sync_worker_for_cleanup(self) -> bool:
-        """Close the sync worker before destructive cleanup.
+    @override
+    def cleanup(self) -> None:
+        if self._cleanup_local():
+            self._cleanup_filestore()
 
-        Returns True when cleanup may proceed. Returns False when cleanup should
-        be skipped because cleanup was requested from the sync worker itself or
-        the worker did not stop within the cleanup timeout.
+    def _cleanup_local(self) -> bool:
+        """Join the sync worker and delete the SQLite files; True when done now.
+
+        False when skipped (called from the sync worker itself, or it did not
+        stop in time) or deferred until the last sample reader's lease ends —
+        the lease release then runs :meth:`_cleanup_now`, filestore included.
+        """
+        _unfinished_shutdowns.add(self)
+        if not self._close_sync_worker_for_cleanup():
+            return False
+
+        with self._lease_lock:
+            if self._sample_read_leases:
+                self._cleanup_pending = True
+                return False
+            self._closing = True
+
+        self._delete_local_files()
+        return True
+
+    def _close_sync_worker_for_cleanup(self, *, drain: bool = False) -> bool:
+        """Stop the sync worker before closing or cleaning up.
+
+        With ``drain`` the worker first performs a requested upload that is
+        not yet due (see :meth:`close`); without it (destructive cleanup) a
+        pending upload is dropped along with the files. Returns True when the
+        caller may proceed. Returns False when it should skip because it was
+        called from the sync worker itself or the worker did not stop within
+        the cleanup timeout.
         """
         sync_thread: threading.Thread | None = None
         with self._sync_lock:
+            self._sync_drain = drain
             self._sync_closed = True
             self._sync_wakeup.notify_all()
             sync_thread = self._sync_thread
@@ -407,14 +655,37 @@ class SampleBufferDatabase(SampleBuffer):
         return True
 
     def _cleanup_now(self) -> None:
+        self._delete_local_files()
+        self._cleanup_filestore()
+
+    def _delete_local_files(self) -> None:
+        # Close all persistent connections BEFORE unlinking. This is required
+        # for correctness on Windows (unlink fails on an open file) and to allow
+        # removal of the WAL -wal/-shm sidecars, which stay open as long as a
+        # connection is open. The sync worker is already joined by this point
+        # (see _cleanup_local -> _close_sync_worker_for_cleanup), so closing
+        # its handle cross-thread is safe.
+        self._close_all_connections()
         cleanup_sample_buffer_db(self.db_path)
+
+    def _cleanup_filestore(self) -> None:
         if self._sync_filestore is not None:
             self._sync_filestore.cleanup()
+
+    def __del__(self) -> None:
+        # Best-effort close in case cleanup() was never called (e.g. tests that
+        # construct a database without tearing it down). Guard against partial
+        # __init__ where connection state may not exist yet.
+        if getattr(self, "_connections", None) is not None:
+            try:
+                self._close_all_connections()
+            except Exception:
+                pass
 
     @classmethod
     @override
     def running_tasks(cls, log_dir: str) -> list[str] | None:
-        log_subdir = log_dir_hash(log_dir)
+        log_subdir = log_dir_hash(filesystem(log_dir).path_as_uri(log_dir))
         db_dir = resolve_db_dir() / log_subdir
 
         if db_dir.exists():
@@ -464,6 +735,11 @@ class SampleBufferDatabase(SampleBuffer):
 
         try:
             with self._get_connection() as conn:
+                # One snapshot for all the queries below: the eval process removes
+                # flushed samples concurrently, which could otherwise pair events
+                # with an already emptied message pool.
+                conn.execute("BEGIN")
+
                 # This should be checking whether the sample data actually
                 # exists in the database, otherwise once the sample is deleted
                 # this will just return no events and no attachments until the
@@ -487,6 +763,47 @@ class SampleBufferDatabase(SampleBuffer):
                         self._get_call_pool(conn, id, epoch, after_call_pool_id)
                     ),
                 )
+        except FileNotFoundError:
+            return None
+
+    @override
+    def get_sample_metadata(self, id: str | int, epoch: int) -> dict[str, Any] | None:
+        metadata_json = self._get_sample_metadata_json(id, epoch)
+        if metadata_json is None:
+            return None
+        return parse_sample_metadata(metadata_json, id=id, epoch=epoch)
+
+    def _get_sample_metadata_json(self, id: str | int, epoch: int) -> str | None:
+        return self._get_sample_metadata_value(id, epoch, "sample_metadata")
+
+    def _get_sample_metadata_hash(self, id: str | int, epoch: int) -> str | None:
+        return self._get_sample_metadata_value(id, epoch, "sample_metadata_hash")
+
+    def _get_sample_metadata_value(
+        self,
+        id: str | int,
+        epoch: int,
+        column: Literal["sample_metadata", "sample_metadata_hash"],
+    ) -> str | None:
+        if not self.db_path.exists():
+            return None
+
+        try:
+            with self._get_connection() as conn:
+                try:
+                    row = conn.execute(
+                        f"SELECT {column} FROM samples WHERE id = ? AND epoch = ?",
+                        (str(id), epoch),
+                    ).fetchone()
+                except OperationalError as ex:
+                    # Older buffers may lack either metadata column. Recovery
+                    # can fall back to sample_init; sync can derive the hash.
+                    if "no such column" in str(ex).lower():
+                        return None
+                    raise
+                if row is None or row[column] is None:
+                    return None
+                return str(row[column])
         except FileNotFoundError:
             return None
 
@@ -600,9 +917,7 @@ class SampleBufferDatabase(SampleBuffer):
                     for row in self._get_events(conn, id, epoch, latest_only=True):
                         transcript_store.merge_condensed_event(
                             row.event_id,
-                            self._remap_pool_refs(
-                                row.event, message_pos_map, call_pos_map
-                            ),
+                            remap_pool_refs(row.event, message_pos_map, call_pos_map),
                             attachment_lookup,
                         )
                         seed_count += 1
@@ -612,27 +927,6 @@ class SampleBufferDatabase(SampleBuffer):
                     conn.rollback()
                     raise
 
-    @staticmethod
-    def _remap_pool_refs(
-        event: JsonData, message_pos_map: dict[int, int], call_pos_map: dict[int, int]
-    ) -> JsonData:
-        """Rewrite a condensed event's pool refs after exporting its pool entries."""
-        remapped = dict(event)
-        input_refs = remapped.get("input_refs")
-        if isinstance(input_refs, list):
-            remapped["input_refs"] = cast(
-                JsonValue, _remap_refs(input_refs, message_pos_map)
-            )
-        call = remapped.get("call")
-        if isinstance(call, dict):
-            call_refs = call.get("call_refs")
-            if isinstance(call_refs, list):
-                remapped["call"] = {
-                    **call,
-                    "call_refs": cast(JsonValue, _remap_refs(call_refs, call_pos_map)),
-                }
-        return remapped
-
     @contextmanager
     def open_sample_history_tail(
         self,
@@ -641,14 +935,18 @@ class SampleBufferDatabase(SampleBuffer):
         n: int,
     ) -> Iterator[SampleHistory]:
         if n <= 0:
-            yield SampleHistory([], [], [], {})
+            yield SampleHistory([], {}, {}, {}, page_scoped=True)
             return
 
         with self._acquire_sample_read_lease(id, epoch):
             with self._get_connection() as conn:
                 conn.execute("BEGIN")
                 history = self._sample_history(
-                    conn, id, epoch, self._get_events_tail(conn, id, epoch, n)
+                    conn,
+                    id,
+                    epoch,
+                    self._get_events_tail(conn, id, epoch, n),
+                    page_scoped=True,
                 )
                 conn.commit()
             yield history
@@ -659,12 +957,17 @@ class SampleBufferDatabase(SampleBuffer):
         id: str | int,
         epoch: int,
         start: int,
+        limit: int | None = None,
     ) -> Iterator[SampleHistory]:
         with self._acquire_sample_read_lease(id, epoch):
             with self._get_connection() as conn:
                 conn.execute("BEGIN")
                 history = self._sample_history(
-                    conn, id, epoch, self._get_events_from(conn, id, epoch, start)
+                    conn,
+                    id,
+                    epoch,
+                    self._get_events_from(conn, id, epoch, start, limit),
+                    page_scoped=True,
                 )
                 conn.commit()
             yield history
@@ -693,18 +996,107 @@ class SampleBufferDatabase(SampleBuffer):
         id: str | int,
         epoch: int,
         events: Iterable[EventData],
+        *,
+        page_scoped: bool = False,
     ) -> SampleHistory:
-        message_pool = [
-            json.loads(entry.data) for entry in self._get_message_pool(conn, id, epoch)
-        ]
-        call_pool = [
-            json.loads(entry.data) for entry in self._get_call_pool(conn, id, epoch)
-        ]
-        attachments = {
-            entry.hash: entry.content
-            for entry in self._get_attachments(conn, id, epoch)
-        }
-        return SampleHistory(list(events), message_pool, call_pool, attachments)
+        """Assemble a ``SampleHistory`` for the given event rows.
+
+        With ``page_scoped``, only the pool entries and attachments actually
+        referenced by ``events`` are loaded, keeping per-page read cost
+        proportional to the page rather than the whole sample. Whole-history
+        reads load everything: their events reference (nearly) all of it
+        anyway, and the .eval recorder needs the complete pools to serialize
+        ``events_data``.
+        """
+        event_rows = list(events)
+        if page_scoped:
+            positions = collect_pool_ref_positions(row.event for row in event_rows)
+            message_pool = {
+                pos: json.loads(data)
+                for pos, data in self._get_pool_entries_at(
+                    conn, "message_pool", id, epoch, positions.message_positions
+                )
+            }
+            call_pool = {
+                pos: json.loads(data)
+                for pos, data in self._get_pool_entries_at(
+                    conn, "call_pool", id, epoch, positions.call_positions
+                )
+            }
+            hashes: set[str] = set()
+            for row in event_rows:
+                hashes.update(attachment_refs_from_value(row.event))
+            for pool_value in (*message_pool.values(), *call_pool.values()):
+                hashes.update(attachment_refs_from_value(pool_value))
+            attachments = self._get_sample_attachments_content(conn, id, epoch, hashes)
+        else:
+            message_pool = {
+                pos: json.loads(entry.data)
+                for pos, entry in enumerate(self._get_message_pool(conn, id, epoch))
+            }
+            call_pool = {
+                pos: json.loads(entry.data)
+                for pos, entry in enumerate(self._get_call_pool(conn, id, epoch))
+            }
+            attachments = {
+                entry.hash: entry.content
+                for entry in self._get_attachments(conn, id, epoch)
+            }
+        return SampleHistory(
+            event_rows, message_pool, call_pool, attachments, page_scoped=page_scoped
+        )
+
+    def _get_pool_entries_at(
+        self,
+        conn: Connection,
+        table: Literal["message_pool", "call_pool"],
+        id: str | int,
+        epoch: int,
+        positions: set[int],
+    ) -> Iterator[tuple[int, str]]:
+        """Pool entries at the given .eval positional indices.
+
+        Position equals insertion rank within the sample (rows are inserted in
+        pool-position order — see ``_condense_model_event``), so rank is
+        recovered with ROW_NUMBER over the autoincrement id.
+        """
+        if not positions:
+            return
+        query = f"""
+            WITH ordered AS (
+                SELECT ROW_NUMBER() OVER (ORDER BY id) - 1 AS pos, data
+                FROM {table}
+                WHERE sample_id = ? AND sample_epoch = ?
+            )
+            SELECT pos, data FROM ordered WHERE pos IN
+        """
+        for chunk in _chunked(sorted(positions), _SQLITE_MAX_VARIABLES):
+            placeholders = ",".join("?" * len(chunk))
+            for row in conn.execute(
+                f"{query} ({placeholders})", [str(id), epoch, *chunk]
+            ):
+                yield int(row["pos"]), str(row["data"])
+
+    def _get_sample_attachments_content(
+        self,
+        conn: Connection,
+        id: str | int,
+        epoch: int,
+        hashes: set[str],
+    ) -> dict[str, str]:
+        """The sample's attachment bodies for the given hashes (missing omitted)."""
+        attachments: dict[str, str] = {}
+        for chunk in _chunked(sorted(hashes), _SQLITE_MAX_VARIABLES):
+            placeholders = ",".join("?" * len(chunk))
+            for row in conn.execute(
+                f"""
+                SELECT hash, content FROM attachments
+                WHERE sample_id = ? AND sample_epoch = ? AND hash IN ({placeholders})
+                """,
+                [str(id), epoch, *chunk],
+            ):
+                attachments[str(row["hash"])] = str(row["content"])
+        return attachments
 
     @contextmanager
     def _acquire_sample_read_lease(
@@ -714,12 +1106,19 @@ class SampleBufferDatabase(SampleBuffer):
     ) -> Iterator[None]:
         key = (str(id), epoch)
         with self._lease_lock:
+            # atomic with a close's no-leases decision (see _closing): a read
+            # is admitted before that decision, deferring the close until it
+            # ends, or refused after it — never started against connections
+            # that a worker thread is about to close
+            if self._closing or self._closed:
+                raise RuntimeError("SampleBufferDatabase used after cleanup")
             self._sample_read_leases[key] = self._sample_read_leases.get(key, 0) + 1
         try:
             yield
         finally:
             ready_remove = False
             cleanup_ready = False
+            close_ready = False
             with self._lease_lock:
                 lease_count = self._sample_read_leases[key] - 1
                 if lease_count > 0:
@@ -732,19 +1131,26 @@ class SampleBufferDatabase(SampleBuffer):
                     if self._cleanup_pending and not self._sample_read_leases:
                         self._cleanup_pending = False
                         cleanup_ready = True
+                    if self._close_pending and not self._sample_read_leases:
+                        self._close_pending = False
+                        close_ready = True
+                    if cleanup_ready or close_ready:
+                        self._closing = True
             if ready_remove:
                 self._remove_samples_now([key])
             if cleanup_ready:
                 self._cleanup_now()
+            elif close_ready:
+                self._close_all_connections()
 
-    @contextmanager
-    def _get_connection(
-        self,
-        *,
-        write: bool = False,
-        on_rollback: Callable[[], None] | None = None,
-    ) -> Iterator[Connection]:
-        """Get a database connection."""
+    def _open_connection(self) -> Connection:
+        """Open and configure a new SQLite connection (with connect-time retry).
+
+        Opened with check_same_thread=False so the cleanup/finalizer path can
+        close a connection owned by another (by then dead) thread. This does
+        NOT make the connection safe for concurrent use across threads — each
+        connection is only ever used by the thread that opened it.
+        """
         max_retries = 5
         retry_delay = 0.1
 
@@ -753,7 +1159,25 @@ class SampleBufferDatabase(SampleBuffer):
 
         for attempt in range(max_retries):
             try:
-                conn = sqlite3.connect(self.db_path, timeout=30)
+                # Re-create the parent directory immediately before connecting
+                # (writable connections only).
+                if not self._read_only:
+                    self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # mode=ro can never (re-)create the file: a connect after
+                # the database was deleted raises OperationalError rather
+                # than leaving an empty database behind
+                database = (
+                    f"{self.db_path.as_uri()}?mode=ro"
+                    if self._read_only
+                    else self.db_path
+                )
+                conn = sqlite3.connect(
+                    database,
+                    uri=self._read_only,
+                    timeout=30,
+                    check_same_thread=False,
+                )
                 conn.row_factory = sqlite3.Row  # enable row factory for named columns
 
                 # Enable foreign key constraints
@@ -771,48 +1195,146 @@ class SampleBufferDatabase(SampleBuffer):
                 # as the prior delete+OFF mode (corruption only on OS/power
                 # loss, not on a clean process crash) while avoiding the
                 # per-commit fsync cost that dominates inference-light evals.
-                try:
-                    journal_mode = conn.execute("PRAGMA journal_mode=WAL").fetchone()[0]
-                except sqlite3.OperationalError as ex:
-                    if "locked" in str(ex):
-                        raise
-                    journal_mode = f"unavailable: {ex}"
+                # (Read-only connections skip these journal/durability writes —
+                # they read whatever mode the writer established.)
+                if not self._read_only:
+                    try:
+                        journal_mode = conn.execute(
+                            "PRAGMA journal_mode=WAL"
+                        ).fetchone()[0]
+                    except sqlite3.OperationalError as ex:
+                        if "locked" in str(ex):
+                            raise
+                        journal_mode = f"unavailable: {ex}"
 
-                if not self._wal_checked:
-                    self._wal_checked = True
-                    if str(journal_mode).lower() != "wal":
-                        logger.warning(
-                            "Sample buffer database at %s could not enable WAL "
-                            "journal mode (using '%s'); this may lead to "
-                            "'database is locked' errors under concurrent "
-                            "access. This typically happens when the inspect "
-                            "data directory is on a network filesystem.",
-                            self.db_path,
-                            journal_mode,
-                        )
-                conn.execute("PRAGMA synchronous=OFF")
-                # cap WAL growth: truncate the -wal file back down after
-                # checkpoints rather than letting it grow without bound
-                conn.execute("PRAGMA journal_size_limit=134217728")
+                    if not self._wal_checked:
+                        self._wal_checked = True
+                        if str(journal_mode).lower() != "wal":
+                            logger.warning(
+                                "Sample buffer database at %s could not enable WAL "
+                                "journal mode (using '%s'); this may lead to "
+                                "'database is locked' errors under concurrent "
+                                "access. This typically happens when the inspect "
+                                "data directory is on a network filesystem.",
+                                self.db_path,
+                                journal_mode,
+                            )
+                    conn.execute("PRAGMA synchronous=OFF")
+                    # cap WAL growth: truncate the -wal file back down after
+                    # checkpoints rather than letting it grow without bound
+                    conn.execute("PRAGMA journal_size_limit=134217728")
                 conn.execute("PRAGMA cache_size=-64000")
                 conn.execute("PRAGMA temp_store=MEMORY")
 
-                break
+                return conn
 
             except sqlite3.OperationalError as e:
                 last_error = e
-                if "locked" in str(e) and attempt < max_retries - 1:
-                    if conn:
-                        conn.close()
+                if conn is not None:
+                    conn.close()
+                    conn = None
+                # "locked" is always transient. "unable to open database file"
+                # is retryable only for writable connections: it usually means a
+                # sibling rmdir'd our shared log directory, which the mkdir above
+                # re-creates on the next attempt. For read_only connections it is
+                # the intended "buffer is gone" signal and must propagate so
+                # callers can degrade (see _control/events.py).
+                msg = str(e)
+                retryable = "locked" in msg or (
+                    not self._read_only and "unable to open database file" in msg
+                )
+                if retryable and attempt < max_retries - 1:
                     time.sleep(retry_delay * (2**attempt))
                     continue
                 raise
+            except BaseException:
+                # close any half-open connection before propagating a
+                # non-retryable error raised during connect/PRAGMA setup
+                if conn is not None:
+                    conn.close()
+                raise
 
-        # ensure we have a connection
+        raise sqlite3.OperationalError(
+            f"Failed to establish connection after {max_retries} attempts"
+        ) from last_error
+
+    def _thread_connection(self) -> Connection:
+        """Return this thread's persistent connection, opening one if needed."""
+        if self._closed:
+            raise RuntimeError("SampleBufferDatabase used after cleanup")
+        conn: Connection | None = getattr(self._local, "conn", None)
         if conn is None:
-            raise sqlite3.OperationalError(
-                f"Failed to establish connection after {max_retries} attempts"
-            ) from last_error
+            conn = self._open_connection()
+            with self._connections_lock:
+                # re-check under the lock: if cleanup() won the race while we
+                # were opening, discard this connection rather than tracking and
+                # using a handle to an already-unlinked database
+                if self._closed:
+                    conn.close()
+                    raise RuntimeError("SampleBufferDatabase used after cleanup")
+                self._local.conn = conn
+                self._connections.append(conn)
+        return conn
+
+    def _discard_thread_connection(self, conn: Connection) -> None:
+        """Drop a (possibly poisoned) connection so the next op reopens a fresh one."""
+        if getattr(self._local, "conn", None) is conn:
+            self._local.conn = None
+        with self._connections_lock:
+            try:
+                self._connections.remove(conn)
+            except ValueError:
+                pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    def _close_all_connections(self) -> None:
+        """Close every tracked connection (cleanup/finalizer).
+
+        Precondition: no other thread may be mid-operation on a tracked
+        connection when this runs (closing a connection in use from another
+        thread is undefined even with check_same_thread=False). This holds
+        because callers (a) join the filestore sync worker first
+        (_close_sync_worker_for_cleanup, which aborts if the join times out)
+        and (b) decide to proceed only when no reader holds a lease, setting
+        _closing under _lease_lock in the same step so no leased read is
+        admitted afterwards — which matters now that aclose/acleanup run
+        this on a worker thread while the event loop keeps serving readers.
+        Non-leased operations reach the buffer only through TaskLogger, which
+        drops its reference before tearing down. The _closed flag (set here,
+        re-checked under the lock in _thread_connection) closes the remaining
+        "open racing with close" window.
+        """
+        with self._connections_lock:
+            self._closed = True
+            conns, self._connections = self._connections, []
+        for conn in conns:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        # clear the calling thread's handle (other threads are no longer running)
+        self._local.conn = None
+        _unfinished_shutdowns.discard(self)
+
+    @contextmanager
+    def _get_connection(
+        self,
+        *,
+        write: bool = False,
+        on_rollback: Callable[[], None] | None = None,
+    ) -> Iterator[Connection]:
+        """Get this thread's persistent database connection.
+
+        The connection is reused across operations rather than opened/closed per
+        call. IMPORTANT: the body of a `with _get_connection()` block must remain
+        await-free — an `await` between acquiring the connection and committing
+        would let another anyio task run a statement on the same shared
+        connection mid-transaction.
+        """
+        conn = self._thread_connection()
 
         try:
             # do work
@@ -830,20 +1352,64 @@ class SampleBufferDatabase(SampleBuffer):
             conn.commit()
 
         except Exception:
-            # rollback on any error
+            # roll back, then self-heal by discarding the connection so the next
+            # op on this thread transparently reopens a fresh one. Buffer-write
+            # errors are swallowed by the caller (Transcript._notify_subscribers),
+            # so a wedged connection would otherwise silently disable realtime
+            # logging for the rest of the run. on_rollback always fires (even if
+            # rollback() raises) and the original exception is re-raised.
             try:
                 conn.rollback()
+            except Exception:
+                pass
             finally:
+                self._discard_thread_connection(conn)
                 if on_rollback is not None:
                     on_rollback()
             raise
         finally:
-            # close the connection
-            conn.close()
-
-            # if this was for write then sync (throttled)
+            # if this was for write then sync (throttled). Note: no conn.close()
+            # here — the connection persists and is closed at cleanup.
             if write:
                 self._sync()
+
+    @property
+    def shared_sync_interval(self) -> int | None:
+        """Effective shared-log sync interval in seconds, or None when off.
+
+        ``log_shared`` carries the raw configured value, but a normal CLI run
+        passes ``0`` ("off") which is stored as ``0`` yet never creates a
+        filestore. Shared sync is actually running only when a filestore was
+        created (``log_shared`` truthy at construction). This collapses both
+        ``0`` and "no filestore" to ``None`` so callers report a single "off"
+        signal rather than a misleading ``0s`` interval.
+        """
+        return self.log_shared if self._sync_filestore is not None else None
+
+    def set_sync_interval(self, seconds: int) -> bool:
+        """Change the interval for syncing buffered events to the shared log dir.
+
+        Only meaningful when this buffer is syncing to a shared (eg. S3) log
+        directory — i.e. it was opened with a ``log_shared`` interval. Lowering
+        the interval makes in-progress sample events appear in the shared log
+        sooner; raising it reduces remote-write frequency. The running sync
+        worker picks up the new interval on its next wake-up.
+
+        Args:
+            seconds: New sync interval, in seconds (clamped to a minimum of 1).
+
+        Returns:
+            True if the interval was updated, False if this buffer has no
+            shared-log sync configured (nothing to retune).
+        """
+        if self.log_shared is None or self._sync_filestore is None:
+            return False
+        with self._sync_lock:
+            self.log_shared = max(1, seconds)
+            self._sync_filestore.update_interval = self.log_shared
+            # wake the worker so it recomputes its wait against the new interval
+            self._sync_wakeup.notify_all()
+        return True
 
     def _sync(self) -> None:
         sync_filestore = self._sync_filestore
@@ -871,10 +1437,18 @@ class SampleBufferDatabase(SampleBuffer):
     def _sync_to_filestore(self, sync_filestore: SampleBufferFilestore) -> None:
         while True:
             with self._sync_lock:
-                while not self._sync_closed:
+                while True:
+                    # a draining close runs a requested upload at once instead
+                    # of waiting out the interval, then stops
+                    drain = (
+                        self._sync_closed and self._sync_drain and self._sync_requested
+                    )
+                    if self._sync_closed and not drain:
+                        self._sync_thread = None
+                        return
                     assert self.log_shared is not None
                     remaining = self.log_shared - (time.monotonic() - self._sync_time)
-                    if self._sync_requested and remaining <= 0:
+                    if self._sync_requested and (remaining <= 0 or drain):
                         self._sync_requested = False
                         self._sync_pending = False
                         self._sync_time = time.monotonic()
@@ -882,9 +1456,6 @@ class SampleBufferDatabase(SampleBuffer):
 
                     timeout = max(remaining, 0) if self._sync_requested else None
                     self._sync_wakeup.wait(timeout=timeout)
-                else:
-                    self._sync_thread = None
-                    return
 
             try:
                 with trace_action(logger, "Log Sync", self.location):
@@ -897,13 +1468,6 @@ class SampleBufferDatabase(SampleBuffer):
                     self._sync_pending = False
                     self._sync_thread = None
                 raise
-
-    def _increment_version(self, conn: Connection) -> None:
-        conn.execute("""
-        UPDATE task_database
-        SET version = version + 1,
-            last_updated = CURRENT_TIMESTAMP;
-        """)
 
     def _get_task_data(self, conn: Connection) -> TaskData:
         row = conn.execute("SELECT version, metrics FROM task_database").fetchone()
@@ -970,7 +1534,7 @@ class SampleBufferDatabase(SampleBuffer):
 
         cursor = conn.execute(query, params)
 
-        message_cache: dict[str, ChatMessage] = {}
+        message_cache: dict[str, tuple[ChatMessage, ChatMessage]] = {}
 
         for row in cursor:
             event = json.loads(row["data"])
@@ -1029,7 +1593,10 @@ class SampleBufferDatabase(SampleBuffer):
         id: str | int,
         epoch: int,
         start: int,
+        limit: int | None = None,
     ) -> Iterator[EventData]:
+        # LIMIT -1 is SQLite's "no limit", so the cap can ride the query
+        # unconditionally.
         query = """
             WITH first_rows AS (
                 SELECT
@@ -1048,8 +1615,11 @@ class SampleBufferDatabase(SampleBuffer):
             JOIN events e ON e.id = ordered_rows.latest_id
             WHERE ordered_rows.row_num > ?
             ORDER BY ordered_rows.row_num
+            LIMIT ?
         """
-        cursor = conn.execute(query, [str(id), epoch, start])
+        cursor = conn.execute(
+            query, [str(id), epoch, start, -1 if limit is None else limit]
+        )
 
         for row in cursor:
             event = json.loads(row["data"])
@@ -1176,6 +1746,9 @@ class SampleBufferDatabase(SampleBuffer):
         )
 
     def _condense_event(self, conn: Connection, event: SampleEvent) -> SampleEvent:
+        if isinstance(event.event, ModelEvent):
+            return self._condense_model_event(conn, event, event.event)
+
         # alias attachments
         attachments: dict[str, str] = {}
         event.event = walk_events(
@@ -1185,42 +1758,69 @@ class SampleBufferDatabase(SampleBuffer):
         )[0]
 
         # insert attachments
-        self._insert_attachments(conn, event.id, event.epoch, attachments)
-
-        # message/call pool dedup for ModelEvents
-        if isinstance(event.event, ModelEvent):
-            key = (str(event.id), event.epoch)
-            if key in self._completed_samples:
-                raise RuntimeError(
-                    f"ModelEvent for sample {key} arrived after "
-                    "complete_sample; this would corrupt buffer DB pool "
-                    "indices."
-                )
-
-            # message pool
-            msg_index = self._msg_indices.get(key, {})
-            [condensed_event], msg_index, new_msgs = condense_model_event_inputs(
-                [event.event], len(msg_index), msg_index
-            )
-            event = SampleEvent(id=event.id, epoch=event.epoch, event=condensed_event)
-            for h, msg in new_msgs:
-                self._insert_message_pool_entry(conn, event.id, event.epoch, h, msg)
-            self._msg_indices[key] = msg_index
-
-            # call pool
-            call_index = self._call_indices.get(key, {})
-            [condensed_event], call_index, new_calls = condense_model_event_calls(
-                [event.event], len(call_index), call_index
-            )
-            event = SampleEvent(id=event.id, epoch=event.epoch, event=condensed_event)
-            for h, call_msg in new_calls:
-                self._insert_call_pool_entry(conn, event.id, event.epoch, h, call_msg)
-            self._call_indices[key] = call_index
-
+        self._insert_unseen_attachments(conn, event.id, event.epoch, attachments)
         return event
 
+    def _condense_model_event(
+        self, conn: Connection, event: SampleEvent, model_event: ModelEvent
+    ) -> SampleEvent:
+        key = (str(event.id), event.epoch)
+        if key in self._completed_samples:
+            raise RuntimeError(
+                f"ModelEvent for sample {key} arrived after "
+                "complete_sample; this would corrupt buffer DB pool "
+                "indices."
+            )
+
+        msg_index = self._msg_indices.get(key)
+        if msg_index is None:
+            msg_index = self._msg_indices[key] = MessagePoolIndex()
+        call_index = self._call_indices.get(key)
+        if call_index is None:
+            call_index = self._call_indices[key] = CallPoolIndex()
+
+        attachments: dict[str, str] = {}
+        content_fn = self._create_attachments_content_fn(attachments)
+        context = WalkContext(message_cache={}, only_core=False)
+
+        # positions derive from index size: valid only because the condense
+        # helper registers each add_message/add_call result in the index
+        # before the next call (see condense_model_event_with_indices), so
+        # size == rows already inserted for this sample
+        def add_message(hash_value: str, walked: ChatMessage) -> int:
+            index = msg_index.size
+            self._insert_message_pool_entry(
+                conn, event.id, event.epoch, hash_value, walked
+            )
+            return index
+
+        def add_call(hash_value: str, walked: JsonValue) -> int:
+            index = call_index.size
+            self._insert_call_pool_entry(
+                conn, event.id, event.epoch, hash_value, walked
+            )
+            return index
+
+        condensed = condense_model_event_with_indices(
+            model_event,
+            messages=msg_index,
+            calls=call_index,
+            walk_message=lambda m: walk_chat_message(m, content_fn, context),
+            walk_call_message=lambda v: walk_json_value(v, content_fn, context),
+            add_message=add_message,
+            add_call=add_call,
+        )
+
+        # walk the remainder (input now [], call request without messages)
+        condensed_event = walk_events([condensed], content_fn, context)[0]
+        self._insert_unseen_attachments(conn, event.id, event.epoch, attachments)
+        return SampleEvent(id=event.id, epoch=event.epoch, event=condensed_event)
+
     def _resolve_event_attachments(
-        self, conn: Connection, event: JsonData, message_cache: dict[str, ChatMessage]
+        self,
+        conn: Connection,
+        event: JsonData,
+        message_cache: dict[str, tuple[ChatMessage, ChatMessage]],
     ) -> JsonData:
         return walk_json_dict(
             event,
@@ -1263,6 +1863,34 @@ class SampleBufferDatabase(SampleBuffer):
             parameters,
         )
 
+    def _insert_unseen_attachments(
+        self, conn: Connection, id: int | str, epoch: int, attachments: dict[str, str]
+    ) -> None:
+        """Insert attachments whose content this sample hasn't shipped yet.
+
+        Purely an optimization over ``INSERT OR IGNORE`` (which already
+        collapses duplicates — but only after the full duplicate content has
+        crossed into SQLite, which event updates re-trigger every turn). Only
+        the ``log_events`` path uses this, because the filtering is only sound
+        when the seen-marks it produces are staged until commit (see
+        :meth:`_staged_attachment_marks`) — a caller that filtered without
+        staging would let a rolled-back batch's marks make the retry skip real
+        content. The ``start_sample``/``complete_sample`` sample condense path
+        keeps plain ``_insert_attachments`` (no rollback hook there, and it
+        runs once per sample).
+        """
+        key = (str(id), epoch)
+        seen = self._inserted_attachment_hashes.get(key)
+        if seen:
+            attachments = {
+                h: content for h, content in attachments.items() if h not in seen
+            }
+        if not attachments:
+            return
+        self._insert_attachments(conn, id, epoch, attachments)
+        if self._pending_seen_hashes is not None:
+            self._pending_seen_hashes.extend((key, h) for h in attachments)
+
     def _insert_message_pool_entry(
         self,
         conn: Connection,
@@ -1273,7 +1901,7 @@ class SampleBufferDatabase(SampleBuffer):
     ) -> None:
         conn.execute(
             "INSERT OR IGNORE INTO message_pool (sample_id, sample_epoch, msg_id, data) VALUES (?, ?, ?, ?)",
-            (str(sample_id), epoch, msg_id, msg.model_dump_json()),
+            (str(sample_id), epoch, msg_id, _msg_pool_json(_msg_pool_jsonable(msg))),
         )
 
     def _insert_call_pool_entry(
@@ -1286,7 +1914,7 @@ class SampleBufferDatabase(SampleBuffer):
     ) -> None:
         conn.execute(
             "INSERT OR IGNORE INTO call_pool (sample_id, sample_epoch, hash, data) VALUES (?, ?, ?, ?)",
-            (str(sample_id), epoch, hash, json.dumps(call_msg)),
+            (str(sample_id), epoch, hash, _call_pool_json(call_msg)),
         )
 
     def _get_attachments_content(
@@ -1317,12 +1945,28 @@ class SampleBufferDatabase(SampleBuffer):
 def sync_to_filestore(
     db: SampleBufferDatabase, filestore: SampleBufferFilestore
 ) -> None:
+    # taken before the db samples are read: a removal after this point stays
+    # recorded for the next sync
+    removed = db.take_removed_since_sync()
+    try:
+        _sync_samples_to_filestore(db, filestore, removed)
+    except BaseException:
+        db.restore_removed_since_sync(removed)
+        raise
+
+
+def _sync_samples_to_filestore(
+    db: SampleBufferDatabase,
+    filestore: SampleBufferFilestore,
+    removed: set[SampleKey],
+) -> None:
     # read existing manifest (create an empty one if there is none)
     manifest = filestore.read_manifest() or Manifest()
 
     # prepare a list of buffered samples from the db
     samples = db.get_samples()
     if samples is None:
+        db.restore_removed_since_sync(removed)
         return
     assert isinstance(samples, Samples)
 
@@ -1331,17 +1975,27 @@ def sync_to_filestore(
     # segment lists from the existing sample manifests
     sample_manifests: list[SampleManifest] = []
     for sample in samples.samples:
-        # lookup sample segments in the existing manifest
-        segments: list[int] = next(
+        # lookup sample segments in the existing manifest (none for a sample
+        # removed since the last sync: a restarted attempt starts empty)
+        # Copy before appending the next segment below.
+        existing = next(
             (
-                s.segments
+                s
                 for s in manifest.samples
-                if s.summary.id == sample.id and s.summary.epoch == sample.epoch
+                if s.summary.id == sample.id
+                and s.summary.epoch == sample.epoch
+                and (str(s.summary.id), s.summary.epoch) not in removed
             ),
-            [],
+            None,
         )
         # add to manifests
-        sample_manifests.append(SampleManifest(summary=sample, segments=segments))
+        sample_manifests.append(
+            SampleManifest(
+                summary=sample,
+                segments=list(existing.segments) if existing is not None else [],
+                metadata_hash=existing.metadata_hash if existing is not None else None,
+            )
+        )
 
     # draft of new manifest has the new sample list and the existing segments
     manifest.metrics = samples.metrics
@@ -1351,7 +2005,7 @@ def sync_to_filestore(
     # sample queries accordingly
     if len(manifest.segments) > 0:
         last_segment = manifest.segments[-1]
-        last_segment_id = last_segment.id
+        last_segment_id = last_segment["id"]
     else:
         last_segment_id = 0
 
@@ -1364,8 +2018,31 @@ def sync_to_filestore(
     last_message_pool_id = 0
     last_call_pool_id = 0
     segment_files: list[SegmentFile] = []
-    segment_by_id = {seg.id: seg for seg in manifest.segments}
+    segment_by_id = {seg["id"]: seg for seg in manifest.segments}
     for manifest_sample in manifest.samples:
+        metadata_hash = db._get_sample_metadata_hash(
+            manifest_sample.summary.id, manifest_sample.summary.epoch
+        )
+        if metadata_hash == SAMPLE_METADATA_IN_SUMMARY:
+            manifest_sample.metadata_hash = SAMPLE_METADATA_IN_SUMMARY
+        elif (
+            metadata_hash is not None and metadata_hash != manifest_sample.metadata_hash
+        ):
+            metadata_json = db._get_sample_metadata_json(
+                manifest_sample.summary.id, manifest_sample.summary.epoch
+            )
+            if metadata_json is not None:
+                metadata_hash = hashlib.sha256(
+                    metadata_json.encode("utf-8")
+                ).hexdigest()
+                filestore.write_sample_metadata(
+                    manifest_sample.summary.id,
+                    manifest_sample.summary.epoch,
+                    metadata_hash,
+                    metadata_json.encode("utf-8"),
+                )
+                manifest_sample.metadata_hash = metadata_hash
+
         # take the max of last_*_id across all of this sample's segments, not
         # just the latest: each segment's last_*_id is 0 if no items of that
         # type were added there, so the latest alone can regress the cursor.
@@ -1373,15 +2050,19 @@ def sync_to_filestore(
         after_attachment_id = 0
         after_message_pool_id = 0
         after_call_pool_id = 0
-        for seg_id in manifest_sample.segments:
-            seg = segment_by_id.get(seg_id)
+        for sample_segment in manifest_sample.segments:
+            seg = sample_segment_cursor(sample_segment, segment_by_id)
             if seg is not None:
-                after_event_id = max(after_event_id, seg.last_event_id)
-                after_attachment_id = max(after_attachment_id, seg.last_attachment_id)
-                after_message_pool_id = max(
-                    after_message_pool_id, seg.last_message_pool_id
+                after_event_id = max(after_event_id, seg["last_event_id"])
+                after_attachment_id = max(
+                    after_attachment_id, seg["last_attachment_id"]
                 )
-                after_call_pool_id = max(after_call_pool_id, seg.last_call_pool_id)
+                after_message_pool_id = max(
+                    after_message_pool_id, seg.get("last_message_pool_id", 0)
+                )
+                after_call_pool_id = max(
+                    after_call_pool_id, seg.get("last_call_pool_id", 0)
+                )
 
         # get sample data
         sample_data = db.get_sample_data(
@@ -1399,6 +2080,13 @@ def sync_to_filestore(
             or len(sample_data.message_pool) > 0
             or len(sample_data.call_pool) > 0
         ):
+            (
+                segment_last_event_id,
+                segment_last_attachment_id,
+                segment_last_message_pool_id,
+                segment_last_call_pool_id,
+            ) = maximum_ids(0, 0, 0, 0, sample_data)
+
             # add to segment file
             segment_files.append(
                 SegmentFile(
@@ -1408,21 +2096,37 @@ def sync_to_filestore(
                 )
             )
             # update manifest
-            manifest_sample.segments.append(segment_id)
+            manifest_sample.segments.append(
+                SampleSegment(
+                    id=segment_id,
+                    last_event_id=segment_last_event_id,
+                    last_attachment_id=segment_last_attachment_id,
+                    last_message_pool_id=segment_last_message_pool_id,
+                    last_call_pool_id=segment_last_call_pool_id,
+                )
+            )
 
             # update maximums
-            (
-                last_event_id,
-                last_attachment_id,
-                last_message_pool_id,
-                last_call_pool_id,
-            ) = maximum_ids(
-                last_event_id,
-                last_attachment_id,
-                last_message_pool_id,
-                last_call_pool_id,
-                sample_data,
+            last_event_id = max(last_event_id, segment_last_event_id)
+            last_attachment_id = max(last_attachment_id, segment_last_attachment_id)
+            last_message_pool_id = max(
+                last_message_pool_id, segment_last_message_pool_id
             )
+            last_call_pool_id = max(last_call_pool_id, segment_last_call_pool_id)
+
+    # A sample removed while this sync was reading may have been restarted, so
+    # its row could pair the previous attempt's segments or summary with the
+    # new attempt's data. Leave it out; the next sync takes the removal and
+    # rebuilds the row from the start. (The segment's maxima may still count
+    # its data, which only makes them over-inclusive.)
+    raced = db.removed_since_sync()
+    if raced:
+        manifest.samples = [
+            s
+            for s in manifest.samples
+            if (str(s.summary.id), s.summary.epoch) not in raced
+        ]
+        segment_files = [f for f in segment_files if (str(f.id), f.epoch) not in raced]
 
     # write the segment file and update the manifest
     if len(segment_files) > 0:
@@ -1448,6 +2152,7 @@ def maximum_ids(
     call_pool_id: int,
     sample_data: SampleData,
 ) -> tuple[int, int, int, int]:
+    # SampleData lists must be ordered by row id; latest_only event lists are not.
     if sample_data.events:
         event_id = max(event_id, sample_data.events[-1].id)
     if sample_data.attachments:
@@ -1459,19 +2164,15 @@ def maximum_ids(
     return event_id, attachment_id, message_pool_id, call_pool_id
 
 
-def _remap_refs(
-    refs: Sequence[object], pos_map: dict[int, int]
-) -> list[tuple[int, int]]:
-    """Translate pooled ref ranges after exporting pool entries into a new store."""
-    indices: list[int] = []
-    for ref in refs:
-        if not isinstance(ref, (list, tuple)) or len(ref) != 2:
-            continue
-        start, end = ref
-        if not isinstance(start, int) or not isinstance(end, int):
-            continue
-        indices.extend(pos_map[index] for index in range(start, end))
-    return _compress_refs(indices)
+# stay safely under SQLite's historical 999 bound-parameter limit
+_SQLITE_MAX_VARIABLES = 500
+
+_T = TypeVar("_T")
+
+
+def _chunked(items: list[_T], size: int) -> Iterator[list[_T]]:
+    for i in range(0, len(items), size):
+        yield items[i : i + size]
 
 
 def cleanup_sample_buffer_databases(db_dir: Path | None = None) -> None:
@@ -1508,6 +2209,47 @@ def cleanup_sample_buffer_db(path: Path) -> None:
             pass
     except Exception as ex:
         logger.warning(f"Error cleaning up sample buffer database at {path}: {ex}")
+
+
+def sample_buffer_dbs(location: str, db_dir: Path | None = None) -> list[Path]:
+    """Buffer databases opened for the log at ``location``, one per process.
+
+    Args:
+        location: Eval log location the buffers belong to.
+        db_dir: Override the database directory (defaults to the inspect
+            data dir).
+
+    Returns:
+        Paths of the ``<log file>.<pid>.db`` files, in no particular order.
+    """
+    dir, file = location_dir_and_file(filesystem(location).path_as_uri(location))
+    # the log file name is a literal, not a pattern (it may contain brackets)
+    return list((resolve_db_dir(db_dir) / dir).glob(f"{glob.escape(file)}.*.db"))
+
+
+# Buffers whose close or cleanup started in this process but has not finished:
+# the sync worker outlived its join, or a sample reader's lease deferred it. A
+# buffer leaves once its connections close. Weak, so that a buffer whose owner
+# let go after a timed-out join is still finalized (by __del__) once its worker
+# and readers, which hold it while they run, are done. No lock: add/discard are
+# atomic under the GIL, and sample_buffer_shutdown_pending iterates a copy.
+_unfinished_shutdowns: WeakSet[SampleBufferDatabase] = WeakSet()
+
+
+def sample_buffer_shutdown_pending(location: str) -> bool:
+    """Whether a buffer this process opened for ``location`` is still shutting down.
+
+    Such a buffer's files are still in use (by its sync worker or a sample
+    reader), so they must not be removed by path.
+
+    Args:
+        location: Eval log location the buffer belongs to.
+
+    Returns:
+        True when a close or cleanup of the log's buffer has not finished.
+    """
+    location = filesystem(location).path_as_uri(location)
+    return any(db.location == location for db in tuple(_unfinished_shutdowns))
 
 
 def resolve_db_dir(db_dir: Path | None = None) -> Path:

@@ -6,6 +6,7 @@ from functools import reduce
 from typing import Any
 
 import numpy as np
+import pytest
 
 from inspect_ai import Epochs, Task, eval
 from inspect_ai._eval.score import score
@@ -14,8 +15,11 @@ from inspect_ai.dataset import Sample
 from inspect_ai.scorer import (
     Score,
     ScoreReducer,
+    Value,
     ValueToFloat,
     at_least,
+    collect_score,
+    majority_score,
     match,
     max_score,
     mean_score,
@@ -26,11 +30,12 @@ from inspect_ai.scorer import (
 )
 from inspect_ai.scorer._reducer import create_reducers
 from inspect_ai.scorer._reducer.reducer import pass_at, pass_k
-from inspect_ai.scorer._reducer.registry import REDUCER_NAME, reducer_log_name
+from inspect_ai.scorer._reducer.registry import reducer_log_name
 
 avg_reducer = mean_score()
 median_reducer = median_score()
 mode_reducer = mode_score()
+majority_reducer = majority_score()
 max_reducer = max_score()
 at_least_3_reducer = at_least(3)
 at_least_4_reducer = at_least(4)
@@ -43,6 +48,7 @@ pass_k_2_no_threshold = pass_k(2)
 pass_k_3_threshold = pass_k(3, 2)
 pass_k_5_no_threshold = pass_k(5)
 pass_k_5_threshold = pass_k(5, 2)
+collect_reducer = collect_score()
 
 
 def test_simple_reducers() -> None:
@@ -73,6 +79,26 @@ def test_all_nan_simple_reducers() -> None:
     assert _is_nan(pass_k_3_threshold(simple_scores).value)
     assert _is_nan(pass_k_5_no_threshold(simple_scores).value)
     assert _is_nan(pass_k_5_threshold(simple_scores).value)
+
+
+def test_empty_simple_reducers() -> None:
+    # An empty score list reaches the reducer when a sample produced no scores;
+    # every reducer should fall back to NaN instead of raising IndexError.
+    empty_scores: list[Score] = []
+
+    assert _is_nan(avg_reducer(empty_scores).value)
+    assert _is_nan(median_reducer(empty_scores).value)
+    assert _is_nan(mode_reducer(empty_scores).value)
+    assert _is_nan(max_reducer(empty_scores).value)
+    assert _is_nan(at_least_3_reducer(empty_scores).value)
+    assert _is_nan(pass_at_2_no_threshhold(empty_scores).value)
+    assert _is_nan(pass_at_3_threshhold(empty_scores).value)
+    assert _is_nan(pass_at_5_no_threshhold(empty_scores).value)
+    assert _is_nan(pass_at_5_threshhold(empty_scores).value)
+    assert _is_nan(pass_k_2_no_threshold(empty_scores).value)
+    assert _is_nan(pass_k_3_threshold(empty_scores).value)
+    assert _is_nan(pass_k_5_no_threshold(empty_scores).value)
+    assert _is_nan(pass_k_5_threshold(empty_scores).value)
 
 
 def test_list_reducers() -> None:
@@ -107,6 +133,65 @@ def test_all_nan_list_reducers() -> None:
     assert_list_nan(reduced)
     reduced = pass_k_2_no_threshold(list_scores).value
     assert_list_nan(reduced)
+
+
+def test_list_reducers_mismatched_lengths_raise() -> None:
+    # Lists that differ in length across epochs can't be reduced index-by-index.
+    # Depending on which epoch came first this previously either crashed with a
+    # cryptic IndexError or silently dropped the trailing values; now it should
+    # raise a clear ValueError pointing at the inconsistency.
+    list_score_sets = [
+        [
+            Score(value=[1, 2, 3]),
+            Score(value=[1, 2]),
+        ],
+        [
+            Score(value=[1, 2]),
+            Score(value=[1, 2, 3]),
+        ],
+    ]
+
+    for list_scores in list_score_sets:
+        for reducer in [
+            avg_reducer,
+            median_reducer,
+            mode_reducer,
+            max_reducer,
+            at_least_3_reducer,
+            pass_at_2_no_threshhold,
+            pass_k_2_no_threshold,
+        ]:
+            with pytest.raises(ValueError, match="mismatched length"):
+                reducer(list_scores)
+
+
+def test_dict_reducers_mismatched_keys_raise() -> None:
+    # Dicts with different keys across epochs can't be reduced key-by-key. The
+    # missing key previously surfaced as a cryptic KeyError (or was silently
+    # ignored); now it should raise a clear ValueError.
+    dict_score_sets = [
+        [
+            Score(value={"coolness": 5, "spiciness": 1}),
+            Score(value={"coolness": 4}),
+        ],
+        [
+            Score(value={"coolness": 4}),
+            Score(value={"coolness": 5, "spiciness": 1}),
+        ],
+    ]
+
+    for dict_scores in dict_score_sets:
+        for reducer in [
+            avg_reducer,
+            median_reducer,
+            mode_reducer,
+            max_reducer,
+            at_least_3_reducer,
+            pass_at_2_no_threshhold,
+            pass_k_2_no_threshold,
+        ]:
+            with pytest.raises(ValueError, match="mismatched key"):
+                reducer(dict_scores)
 
 
 def test_nan_root_list_reducers() -> None:
@@ -245,6 +330,19 @@ def test_nan_root_first_score_dict_reducers() -> None:
     assert max_reducer(dict_scores).value == {"coolness": 4, "spiciness": 1}
 
 
+def test_dict_reducer_value_to_float_applied_once() -> None:
+    # A custom value_to_float should be applied once per value, like the scalar
+    # and list branches. Halving isn't idempotent, so applying it twice in the
+    # dict branch halves each value again (mean 1.5 instead of 3.0).
+    def half(value: Value) -> float:
+        assert isinstance(value, (int, float))
+        return value / 2
+
+    dict_scores = [Score(value={"x": 4}), Score(value={"x": 8})]
+    assert mean_score(value_to_float=half)(dict_scores).value == {"x": 3.0}
+    assert median_score(value_to_float=half)(dict_scores).value == {"x": 3.0}
+
+
 def test_score_unscored() -> None:
     # Score.unscored() constructs a NaN-valued Score and preserves
     # answer/explanation/metadata.
@@ -261,25 +359,46 @@ def test_reducer_preserve_metadata() -> None:
     simple_scores = [
         # first five scores are identical
         Score(
-            value=1, answer="1", explanation="An explanation", metadata={"foo": "bar"}
+            value=1,
+            answer="1",
+            explanation="An explanation",
+            reason="no_response",
+            metadata={"foo": "bar"},
         ),
         Score(
-            value=1, answer="1", explanation="An explanation", metadata={"foo": "bar"}
+            value=1,
+            answer="1",
+            explanation="An explanation",
+            reason="no_response",
+            metadata={"foo": "bar"},
         ),
         Score(
-            value=1, answer="1", explanation="An explanation", metadata={"foo": "bar"}
+            value=1,
+            answer="1",
+            explanation="An explanation",
+            reason="no_response",
+            metadata={"foo": "bar"},
         ),
         Score(
-            value=1, answer="1", explanation="An explanation", metadata={"foo": "bar"}
+            value=1,
+            answer="1",
+            explanation="An explanation",
+            reason="no_response",
+            metadata={"foo": "bar"},
         ),
         Score(
-            value=1, answer="1", explanation="An explanation", metadata={"foo": "bar"}
+            value=1,
+            answer="1",
+            explanation="An explanation",
+            reason="no_response",
+            metadata={"foo": "bar"},
         ),
         # last score is different
         Score(
             value=2,
             answer="2",
             explanation="Different explanation",
+            reason="refusal",
             metadata={"foo": "BAZ"},
         ),
     ]
@@ -300,11 +419,13 @@ def test_reducer_preserve_metadata() -> None:
         reduced = reducer(simple_scores)
         assert reduced.answer is None
         assert reduced.explanation is None
+        assert reduced.reason is None
         assert reduced.metadata == simple_scores[0].metadata
         # reduce all scores _except_ the last one
         reduced = reducer(simple_scores[:-1])
         assert reduced.answer == simple_scores[0].answer
         assert reduced.explanation == simple_scores[0].explanation
+        assert reduced.reason == simple_scores[0].reason
         assert reduced.metadata == simple_scores[0].metadata
 
     # verify that other fields are preserved for a single epoch
@@ -312,7 +433,46 @@ def test_reducer_preserve_metadata() -> None:
         reduced = reducer([simple_scores[0]])
         assert reduced.answer == simple_scores[0].answer
         assert reduced.explanation == simple_scores[0].explanation
+        assert reduced.reason == simple_scores[0].reason
         assert reduced.metadata == simple_scores[0].metadata
+
+
+def test_reducer_preserve_reason_all_nan() -> None:
+    """Reason retention across epochs when all scores are unscored (NaN).
+
+    The `_nan_score` path (all epochs unscored) should follow the same
+    "retain only if equal across all Scores" rule for `reason` as the
+    ordinary reduce path.
+    """
+    same_reason_scores = [
+        Score.unscored(reason="no_response"),
+        Score.unscored(reason="no_response"),
+        Score.unscored(reason="no_response"),
+    ]
+    different_reason_scores = [
+        Score.unscored(reason="no_response"),
+        Score.unscored(reason="refusal"),
+        Score.unscored(reason="no_response"),
+    ]
+
+    reducers = [
+        avg_reducer,
+        median_reducer,
+        mode_reducer,
+        max_reducer,
+        at_least_3_reducer,
+        pass_at_2_no_threshhold,
+        pass_k_2_no_threshold,
+    ]
+
+    for reducer in reducers:
+        reduced = reducer(same_reason_scores)
+        assert _is_nan(reduced.value)
+        assert reduced.reason == "no_response"
+
+        reduced = reducer(different_reason_scores)
+        assert _is_nan(reduced.value)
+        assert reduced.reason is None
 
 
 @dataclass
@@ -431,23 +591,18 @@ def test_create_reducers_exact_name_with_trailing_digits() -> None:
     assert create_reducers("pass_k_3")
 
 
-def test_at_least_reducer_name_includes_k() -> None:
-    # Regression: the REDUCER_NAME override inside at_least()/pass_at() was
-    # being written to the global factory wrapper rather than the returned
-    # reducer closure, so the registry name never picked up the `k` suffix
-    # and each call leaked global state onto the factory.
+def test_parameterized_reducer_log_name_includes_k() -> None:
+    # Registry metadata keeps the stable factory lookup name while log names
+    # are derived from the registered parameters.
     r3 = at_least(3)
-    assert registry_info(r3).name.endswith("at_least_3")
+    assert registry_info(r3).name.endswith("at_least")
     # creating another instance must not retroactively affect r3
     _ = at_least(7)
-    assert registry_info(r3).name.endswith("at_least_3")
-    # the factory itself should not accumulate per-call state
-    assert not hasattr(at_least, REDUCER_NAME)
-    # log name must not double-append the suffix
+    assert registry_info(r3).name.endswith("at_least")
+    # log names remain parameterized without replacing the registry key
     assert reducer_log_name(r3) == "at_least_3"
     assert reducer_log_name(pass_at(4)) == "pass_at_4"
     assert reducer_log_name(pass_k(4)) == "pass_k_4"
-    assert not hasattr(pass_k, REDUCER_NAME)
 
 
 def test_max_reducer_dict_per_key_nan_order_independent() -> None:
@@ -471,6 +626,126 @@ def test_max_reducer_dict_per_key_nan_order_independent() -> None:
     all_nan = [Score(value={"x": float("nan")}), Score(value={"x": float("nan")})]
     reduced = max_reducer(all_nan).value
     assert isinstance(reduced, dict) and _is_nan(reduced["x"])
+
+
+def test_majority_reducer_requires_more_than_half() -> None:
+    correct = Score(value="C")
+    incorrect = Score(value="I")
+    partial = Score(value="P")
+
+    # 2 of 3 is a majority, 1 of 3 (three-way split) is not
+    assert majority_reducer([correct, correct, incorrect]).value == "C"
+    assert _is_nan(majority_reducer([correct, incorrect, partial]).value)
+
+    # an even panel that splits evenly has no majority, in either order
+    assert _is_nan(majority_reducer([correct, incorrect]).value)
+    assert _is_nan(majority_reducer([incorrect, correct]).value)
+
+
+def test_majority_reducer_unscored_withholds_a_vote() -> None:
+    # An unscored member takes its vote out of the panel without lowering the
+    # bar for the rest: 2 of 3 still wins, 1 of 3 no longer does. `mode`
+    # filters the unscored score out entirely, so the survivors tie and
+    # Counter.most_common breaks that tie by insertion order.
+    unscored = Score.unscored(metadata=dict(unscored_reason="grade_parse_failure"))
+    correct = Score(value="C")
+    incorrect = Score(value="I")
+
+    assert majority_reducer([correct, unscored, correct]).value == "C"
+    assert _is_nan(majority_reducer([correct, unscored, incorrect]).value)
+    assert _is_nan(majority_reducer([incorrect, unscored, correct]).value)
+
+    # the legacy reducer is unchanged, order-dependence included
+    assert mode_reducer([correct, unscored, incorrect]).value == "C"
+    assert mode_reducer([incorrect, unscored, correct]).value == "I"
+
+
+def test_majority_reducer_records_votes_in_metadata() -> None:
+    scores = [
+        Score(value="C", metadata=dict(grader="a")),
+        Score.unscored(
+            explanation="Grade not found in model output: nope",
+            metadata=dict(unscored_reason="grade_parse_failure"),
+        ),
+        Score(value="C"),
+    ]
+    reduced = majority_reducer(scores)
+
+    assert reduced.value == "C"
+    assert reduced.metadata is not None
+    assert reduced.metadata["panel"] == dict(
+        votes=["C", None, "C"],
+        size=3,
+        failures=[
+            dict(
+                index=1,
+                reason="grade_parse_failure",
+                explanation="Grade not found in model output: nope",
+            )
+        ],
+    )
+    # metadata carried over from the first score survives alongside it, and
+    # annotating the reduced score doesn't reach back into the scores reduced
+    assert reduced.metadata["grader"] == "a"
+    assert scores[0].metadata == dict(grader="a")
+
+
+def test_majority_reducer_dict_and_list_values() -> None:
+    dict_scores = [
+        Score(value={"cool": 1, "spicy": 1}),
+        Score(value={"cool": 1, "spicy": 2}),
+        Score(value={"cool": 2, "spicy": 3}),
+    ]
+    reduced = majority_reducer(dict_scores).value
+    assert isinstance(reduced, dict)
+    assert reduced["cool"] == 1  # 2 of 3
+    assert _is_nan(reduced["spicy"])  # three-way split
+
+    list_scores = [Score(value=[1, 1]), Score(value=[1, 2]), Score(value=[2, 3])]
+    reduced_list = majority_reducer(list_scores).value
+    assert isinstance(reduced_list, list)
+    assert reduced_list[0] == 1
+    assert _is_nan(reduced_list[1])
+
+
+def test_majority_reducer_dict_unscored_counts_against_every_key() -> None:
+    # The threshold is per key, but the total is the number of scores reduced:
+    # a NaN under one key withholds a vote for that key, and a NaN at the root
+    # withholds one for every key.
+    scores = [
+        Score(value={"a": 1, "b": 1}),
+        Score(value={"a": 1, "b": float("nan")}),
+        Score(value=float("nan")),
+    ]
+    reduced = majority_reducer(scores).value
+    assert isinstance(reduced, dict)
+    assert reduced["a"] == 1  # 2 of 3
+    assert _is_nan(reduced["b"])  # 1 of 3
+
+
+def test_majority_reducer_votes_do_not_alias_reduced_scores() -> None:
+    # The recorded votes are an audit trail, so mutating one must not reach
+    # back into the score it came from (and vice versa).
+    scores = [Score(value={"a": 1}), Score(value={"a": 1}), Score(value={"a": 2})]
+    reduced = majority_reducer(scores)
+    assert reduced.metadata is not None
+    votes = reduced.metadata["panel"]["votes"]
+
+    votes[0]["a"] = 999
+    assert scores[0].value == {"a": 1}
+
+    score_value = scores[1].value
+    assert isinstance(score_value, dict)
+    score_value["a"] = 999
+    assert votes[1] == {"a": 1}
+
+
+def test_majority_reducer_all_unscored() -> None:
+    scores = [Score.unscored(), Score.unscored()]
+    reduced = majority_reducer(scores)
+    assert _is_nan(reduced.value)
+    assert reduced.metadata is not None
+    assert reduced.metadata["panel"]["votes"] == [None, None]
 
 
 def test_pass_at_k_insufficient_scored_epochs() -> None:
@@ -555,7 +830,9 @@ def test_no_reducer():
 def test_default_reducer():
     task = Task(dataset=[Sample(input="Say hello.", target="Hello")], scorer=match())
     log = eval(task, model="mockllm/model", epochs=4)[0]
-    assert log.eval.config.epochs_reducer == ["mean"]
+    # the default is not recorded so that recompute can distinguish an
+    # explicit reducer choice from the (per-scorer) auto-selected default
+    assert log.eval.config.epochs_reducer is None
 
 
 def test_eval_reducer():
@@ -675,6 +952,53 @@ def _test_dict_reducers_impl(include_nan: bool = False) -> None:
     assert at_least_5_reducer(dict_scores).value == {"coolness": 0, "spiciness": 0}
     assert pass_at_2_no_threshhold(dict_scores).value == {"coolness": 1, "spiciness": 1}
     assert pass_k_2_no_threshold(dict_scores).value == {"coolness": 1, "spiciness": 1}
+
+
+def test_collect_scalar() -> None:
+    scores = [Score(value=1), Score(value=0), Score(value=1)]
+    assert collect_reducer(scores).value == [1, 0, 1]
+
+
+def test_collect_strings() -> None:
+    scores = [Score(value="a"), Score(value="b")]
+    assert collect_reducer(scores).value == ["a", "b"]
+
+
+def test_collect_drops_nan() -> None:
+    scores = [Score(value=1), Score(value=float("nan")), Score(value=0)]
+    assert collect_reducer(scores).value == [1, 0]
+
+
+def test_collect_all_nan() -> None:
+    scores = [Score(value=float("nan")), Score(value=float("nan"))]
+    assert _is_nan(collect_reducer(scores).value)
+
+
+def test_collect_lookup_by_name() -> None:
+    reducer = create_reducers("collect")[0]
+    assert reducer([Score(value=1), Score(value=2)]).value == [1, 2]
+
+
+def test_collect_non_scalar_raises() -> None:
+    for non_scalar in (Score(value={"a": 1}), Score(value=[1, 2])):
+        with pytest.raises(ValueError, match="requires scalar score values"):
+            collect_reducer([Score(value=1), non_scalar])
+
+
+def test_collect_preserve_metadata() -> None:
+    scores = [
+        Score(
+            value=1, answer="1", explanation="An explanation", metadata={"foo": "bar"}
+        ),
+        Score(
+            value=0, answer="1", explanation="An explanation", metadata={"foo": "bar"}
+        ),
+    ]
+    reduced = collect_reducer(scores)
+    assert reduced.value == [1, 0]
+    assert reduced.answer == "1"
+    assert reduced.explanation == "An explanation"
+    assert reduced.metadata == {"foo": "bar"}
 
 
 def _is_nan(x: Any) -> bool:

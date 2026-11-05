@@ -1,11 +1,11 @@
 import math
 import statistics
 from collections import Counter
-from typing import Callable, cast
+from typing import Any, Callable, cast
 
 from inspect_ai.scorer._metric import Score, Value, ValueToFloat, value_to_float
 
-from .registry import REDUCER_NAME, score_reducer
+from .registry import score_reducer
 from .types import ScoreReducer
 
 
@@ -34,6 +34,50 @@ def mode_score() -> ScoreReducer:
             return _count_list(scores, most_common)
         else:
             return _count_scalar(scores, most_common)
+
+    return reduce
+
+
+@score_reducer(name="majority")
+def majority_score() -> ScoreReducer:
+    r"""Take the strict majority of a panel of scores.
+
+    A value wins only if more than half of the scores carry it. Unscored
+    (NaN) scores count towards the total rather than being filtered out of
+    it, so a panel member that fails to produce a value withholds a vote
+    without lowering the bar for the remaining values. Where nothing reaches
+    a majority the reduced score is unscored, rather than being decided by
+    the order the panel was declared in.
+
+    For dict and list values the threshold applies per key and per index, and
+    the total is still the number of scores reduced: a value missing from one
+    key (or a score that is unscored at the root) withholds a vote for that
+    key alone, or for every key, respectively.
+
+    The reduced score's metadata records the individual votes under a
+    `panel` key (replacing any `panel` carried over from the first score),
+    since a majority is only auditable alongside what was cast.
+    """
+
+    def reduce(scores: list[Score]) -> Score:
+        panel_size = len(scores)
+
+        def strict_majority(
+            counts: Counter[str | int | float | bool],
+        ) -> str | int | float | bool:
+            value, count = counts.most_common(1)[0]
+            return value if count * 2 > panel_size else float("nan")
+
+        representative = _first_scored(scores)
+        if representative is None:
+            reduced = _nan_score(scores)
+        elif isinstance(representative.value, dict):
+            reduced = _count_dict(scores, strict_majority)
+        elif isinstance(representative.value, list):
+            reduced = _count_list(scores, strict_majority)
+        else:
+            reduced = _count_scalar(scores, strict_majority)
+        return _with_panel_metadata(reduced, scores)
 
     return reduce
 
@@ -113,7 +157,6 @@ def at_least(
         else:
             return _count_scalar(scores, gte_n)
 
-    setattr(reduce, REDUCER_NAME, f"at_least_{k}")
     return reduce
 
 
@@ -159,7 +202,6 @@ def pass_at(
         else:
             return _compute_scalar_stat(scores, value_to_float, pass_at_k)
 
-    setattr(reduce, REDUCER_NAME, f"pass_at_{k}")
     return reduce
 
 
@@ -199,7 +241,6 @@ def pass_k(
         else:
             return _compute_scalar_stat(scores, value_to_float, pass_k_k)
 
-    setattr(reduce, REDUCER_NAME, f"pass_k_{k}")
     return reduce
 
 
@@ -256,6 +297,34 @@ def max_score(value_to_float: ValueToFloat = value_to_float()) -> ScoreReducer:
                 scalar_scores, key=lambda score: value_to_float(score.value)
             )
             return _reduced_score(max_score.value, scores)
+
+    return reduce
+
+
+@score_reducer(name="collect")
+def collect_score() -> ScoreReducer:
+    r"""Collect each score's value into a list, preserving every value.
+
+    Keeps the individual values intact instead of aggregating them into one.
+    Score values must be scalar; unscored (NaN) scores are dropped.
+    """
+
+    def reduce(scores: list[Score]) -> Score:
+        values: list[str | int | float | bool] = []
+        for score in scores:
+            try:
+                value = score._as_scalar()
+            except ValueError:
+                raise ValueError(
+                    "collect reducer requires scalar score values, but got "
+                    f"{type(score.value).__name__}. It preserves each scorer's "
+                    "scalar value as a list and cannot collect dict/list values."
+                ) from None
+            if _is_reducible(value):
+                values.append(value)
+        if not values:
+            return _nan_score(scores)
+        return _reduced_score(values, scores)
 
     return reduce
 
@@ -373,7 +442,7 @@ def _compute_dict_stat(
         for score in dict_scores:
             key_value = value_to_float(score.value[key])  # type: ignore
             if _is_reducible(key_value):
-                values.append(value_to_float(key_value))
+                values.append(key_value)
 
         if len(values) == 0:
             dict_result[key] = float("nan")
@@ -457,7 +526,8 @@ def _partition_dict_scores(scores: list[Score]) -> list[Score]:
     r"""Return the subset of scores whose value is a dict.
 
     Skips scores with NaN-at-root (treated as unscored). Raises ValueError
-    if any score has a value that is neither a dict nor a NaN scalar.
+    if any score has a value that is neither a dict nor a NaN scalar, or if the
+    dict-shaped scores don't all share the same keys.
     """
     result: list[Score] = []
     for score in scores:
@@ -469,6 +539,21 @@ def _partition_dict_scores(scores: list[Score]) -> list[Score]:
             raise ValueError(
                 "Attempting to reduce a dictionary score for a non-dictionary value"
             )
+
+    # Reducers walk the keys of the first dict and look them up in every other
+    # dict, so differing keys across epochs either crash with a KeyError or
+    # silently drop the extra keys. Reject the inconsistency up front.
+    if result:
+        keys = set(result[0].as_dict().keys())
+        for score in result[1:]:
+            score_keys = set(score.as_dict().keys())
+            if score_keys != keys:
+                raise ValueError(
+                    "Cannot reduce dictionary scores with mismatched keys: "
+                    f"{sorted(keys)} vs {sorted(score_keys)}. "
+                    "Every epoch must score the same keys; return a NaN score to "
+                    "mark an individual epoch as unscored."
+                )
     return result
 
 
@@ -476,7 +561,8 @@ def _partition_list_scores(scores: list[Score]) -> list[Score]:
     r"""Return the subset of scores whose value is a list.
 
     Skips scores with NaN-at-root (treated as unscored). Raises ValueError
-    if any score has a value that is neither a list nor a NaN scalar.
+    if any score has a value that is neither a list nor a NaN scalar, or if the
+    list-shaped scores don't all share the same length.
     """
     result: list[Score] = []
     for score in scores:
@@ -486,6 +572,21 @@ def _partition_list_scores(scores: list[Score]) -> list[Score]:
             continue
         else:
             raise ValueError("Attempting to reduce a list score for a non-list value")
+
+    # Reducers walk the indices of the first list and read them from every other
+    # list, so differing lengths across epochs either crash with an IndexError
+    # or silently drop the trailing values. Reject the inconsistency up front.
+    if result:
+        length = len(result[0].as_list())
+        for score in result[1:]:
+            score_length = len(score.as_list())
+            if score_length != length:
+                raise ValueError(
+                    "Cannot reduce list scores with mismatched lengths: "
+                    f"{length} vs {score_length}. "
+                    "Every epoch must produce the same number of values; return a "
+                    "NaN score to mark an individual epoch as unscored."
+                )
     return result
 
 
@@ -505,7 +606,64 @@ def _reduced_score(value: Value, scores: list[Score]) -> Score:
         explanation=scores[0].explanation
         if len(set(score.explanation for score in scores)) == 1
         else None,
+        reason=scores[0].reason
+        if len(set(score.reason for score in scores)) == 1
+        else None,
         metadata=scores[0].metadata,
+    )
+
+
+def _unscored_reason(score: Score) -> str | None:
+    """Machine-readable reason a score is unscored, or None.
+
+    Reads the first-class `Score.reason` field where it exists, falling back to
+    the legacy `metadata["unscored_reason"]` convention. Checks `is None` rather
+    than truthiness so an explicitly-set empty reason is not overridden by a
+    stale legacy value.
+    """
+    reason = getattr(score, "reason", None)
+    if reason is not None:
+        return reason if isinstance(reason, str) else None
+    legacy = (score.metadata or {}).get("unscored_reason")
+    return legacy if isinstance(legacy, str) else None
+
+
+def _with_panel_metadata(reduced: Score, scores: list[Score]) -> Score:
+    r"""Record the votes behind a reduced panel score in its metadata.
+
+    Reduction otherwise carries over only the first score's metadata, which
+    for a panel loses what a majority has to be read against: which member
+    voted for what, and which ones didn't vote at all.
+
+    Args:
+        reduced: the reduced Score to annotate
+        scores: the list of scores that produced it
+    """
+    votes: list[Value | None] = []
+    failures: list[dict[str, Any]] = []
+    for index, score in enumerate(scores):
+        unscored = _is_unscored(score.value)
+        # copy container values: the record is an audit trail of what was cast,
+        # so it must not alias (and drift with) the score it came from
+        if unscored:
+            votes.append(None)
+        elif isinstance(score.value, dict):
+            votes.append(dict(score.value))
+        elif isinstance(score.value, list):
+            votes.append(list(score.value))
+        else:
+            votes.append(score.value)
+        if unscored:
+            failures.append(
+                dict(
+                    index=index,
+                    reason=_unscored_reason(score),
+                    explanation=score.explanation,
+                )
+            )
+    panel = dict(votes=votes, size=len(scores), failures=failures)
+    return reduced.model_copy(
+        update=dict(metadata={**(reduced.metadata or {}), "panel": panel})
     )
 
 
@@ -516,6 +674,11 @@ def _nan_score(scores: list[Score]) -> Score:
         value: the reduced Value
         scores: ths list of scores being reduced
     """
+    # An empty list still routes here via `_first_scored` returning None; there
+    # are no fields to carry over, so return a bare NaN score rather than
+    # indexing `scores[0]`.
+    if not scores:
+        return Score(value=float("nan"))
     return Score(
         value=float("nan"),
         # retain remaining fields only if equal across all Scores
@@ -524,6 +687,9 @@ def _nan_score(scores: list[Score]) -> Score:
         else None,
         explanation=scores[0].explanation
         if len(set(score.explanation for score in scores)) == 1
+        else None,
+        reason=scores[0].reason
+        if len(set(score.reason for score in scores)) == 1
         else None,
         metadata=scores[0].metadata,
     )

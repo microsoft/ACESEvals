@@ -34,7 +34,7 @@ from ..columns import Column, ColumnError, ColumnType
 from ..evals.columns import EvalColumn
 from ..evals.table import EVAL_ID, EVAL_SUFFIX, _read_evals_df, ensure_eval_data
 from ..events.columns import EventColumn
-from ..extract import message_as_str
+from ..extract import message_as_str, message_render_cache
 from ..messages.columns import MessageColumn
 from ..record import import_record, resolve_duplicate_columns
 from ..util import (
@@ -64,6 +64,7 @@ def samples_df(
     strict: Literal[True] = True,
     parallel: bool | int = False,
     quiet: bool | None = None,
+    exclude_fields: set[str] | None = None,
 ) -> "pd.DataFrame": ...
 
 
@@ -75,6 +76,7 @@ def samples_df(
     strict: Literal[False] = False,
     parallel: bool | int = False,
     quiet: bool | None = None,
+    exclude_fields: set[str] | None = None,
 ) -> tuple["pd.DataFrame", list[ColumnError]]: ...
 
 
@@ -85,6 +87,7 @@ def samples_df(
     strict: bool = True,
     parallel: bool | int = False,
     quiet: bool | None = None,
+    exclude_fields: set[str] | None = None,
 ) -> "pd.DataFrame" | tuple["pd.DataFrame", list[ColumnError]]:
     """Read a dataframe containing samples from a set of evals.
 
@@ -105,6 +108,9 @@ def samples_df(
           do not read in parallel.
        quiet: If `True`, do not show any output or progress. Defaults to `False`
           for terminal environments, and `True` for notebooks.
+       exclude_fields: Set of EvalSample field names to skip when loading
+          samples (e.g. {"messages", "events", "store", "attachments"}).
+          Ignored for .json format logs (only applies to .eval logs).
 
     Returns:
        For `strict`, a Pandas `DataFrame` with information for the specified logs.
@@ -123,6 +129,7 @@ def samples_df(
         strict=strict,
         progress=not quiet,
         parallel=parallel,
+        exclude_fields=exclude_fields,
     )
 
 
@@ -149,6 +156,7 @@ def _read_samples_df(
     detail: MessagesDetail | EventsDetail | None = None,
     progress: bool = True,
     parallel: bool | int = False,
+    exclude_fields: set[str] | None = None,
 ) -> "pd.DataFrame" | tuple["pd.DataFrame", list[ColumnError]]:
     import pandas as pd
 
@@ -185,6 +193,7 @@ def _read_samples_df(
                         strict=strict,
                         detail=detail,
                         progress=False,
+                        exclude_fields=exclude_fields,
                     ): idx
                     for idx, log_path in enumerate(log_paths)
                 }
@@ -203,7 +212,10 @@ def _read_samples_df(
             executor.shutdown(wait=False, cancel_futures=True)
 
         # recombine df
-        df = pd.concat(df_results, ignore_index=True)
+        df = pd.concat(
+            _reconcile_string_columns(cast(list[pd.DataFrame], df_results)),
+            ignore_index=True,
+        )
         subset = f"{detail.name}_id" if detail else SAMPLE_ID
         try:
             df.drop_duplicates(subset=subset, ignore_index=True, inplace=True)
@@ -236,6 +248,7 @@ def _read_samples_df(
             strict=strict,
             detail=detail,
             progress=progress,
+            exclude_fields=exclude_fields,
         )
 
 
@@ -247,6 +260,7 @@ def _read_samples_df_serial(
     strict: bool = True,
     detail: MessagesDetail | EventsDetail | None = None,
     progress: bool = True,
+    exclude_fields: set[str] | None = None,
 ) -> "pd.DataFrame" | tuple["pd.DataFrame", list[ColumnError]]:
     # split columns by type
     columns_eval: list[Column] = []
@@ -318,7 +332,9 @@ def _read_samples_df_serial(
                 samples: Iterable[EvalSample | EvalSampleSummary] = eval_log.samples
             elif require_full_samples:
                 full_log = await read_eval_log_async(
-                    eval_log.location, resolve_attachments=True
+                    eval_log.location,
+                    resolve_attachments=True,
+                    exclude_fields=exclude_fields,
                 )
                 samples = full_log.samples or []
             else:
@@ -326,20 +342,17 @@ def _read_samples_df_serial(
             p.update()
             return samples
 
+        eval_ids = evals_table[EVAL_ID].to_list() if EVAL_ID in evals_table else []
         log_samples = run_coroutine(
             tg_collect(
                 [
                     partial(read_samples_async, eval_id, eval_log)
-                    for eval_id, eval_log in zip(
-                        evals_table[EVAL_ID].to_list(), eval_logs
-                    )
+                    for eval_id, eval_log in zip(eval_ids, eval_logs)
                 ]
             )
         )
 
-        for samples, eval_id, eval_log in zip(
-            log_samples, evals_table[EVAL_ID].to_list(), eval_logs
-        ):
+        for samples, eval_id, eval_log in zip(log_samples, eval_ids, eval_logs):
             for sample in samples:
                 if strict:
                     record = import_record(
@@ -379,38 +392,39 @@ def _read_samples_df_serial(
                         detail_items = []
 
                     # read detail records (provide auto-ids)
-                    for index, item in enumerate(detail_items):
-                        if strict:
-                            detail_record = import_record(
-                                eval_log,
-                                item,
-                                columns_detail,
-                                strict=True,
-                            )
-                        else:
-                            detail_record, errors = import_record(
-                                eval_log,
-                                item,
-                                columns_detail,
-                                strict=False,
-                            )
-                            all_errors.extend(errors)
+                    with message_render_cache():
+                        for index, item in enumerate(detail_items):
+                            if strict:
+                                detail_record = import_record(
+                                    eval_log,
+                                    item,
+                                    columns_detail,
+                                    strict=True,
+                                )
+                            else:
+                                detail_record, errors = import_record(
+                                    eval_log,
+                                    item,
+                                    columns_detail,
+                                    strict=False,
+                                )
+                                all_errors.extend(errors)
 
-                        # ensure ids
-                        detail_id_field = f"{detail.name}_id"
-                        detail_id = detail_record.get(detail_id_field, None)
-                        if detail_id is None:
-                            detail_record[detail_id_field] = auto_detail_id(
-                                sample_id, detail.name, index
-                            )
-                        ids = {SAMPLE_ID: sample_id}
-                        detail_record = ids | detail_record
+                            # ensure ids
+                            detail_id_field = f"{detail.name}_id"
+                            detail_id = detail_record.get(detail_id_field, None)
+                            if detail_id is None:
+                                detail_record[detail_id_field] = auto_detail_id(
+                                    sample_id, detail.name, index
+                                )
+                            ids = {SAMPLE_ID: sample_id}
+                            detail_record = ids | detail_record
 
-                        # inject order
-                        detail_record["order"] = index + 1
+                            # inject order
+                            detail_record["order"] = index + 1
 
-                        # append detail record
-                        detail_records.append(detail_record)
+                            # append detail record
+                            detail_records.append(detail_record)
 
                 # record sample record
                 sample_records.append(record)
@@ -572,6 +586,51 @@ def reorder_samples_df_columns(
 
     # reorder the DataFrame
     return df[ordered_columns]
+
+
+def _reconcile_string_columns(dfs: list["pd.DataFrame"]) -> list["pd.DataFrame"]:
+    """Convert a column to strings in every frame if any frame has strings in it.
+
+    Each parallel worker types its columns from its own log, so one worker can
+    read a column as strings (mixed types, or an int beyond int64) while another
+    reads it as numbers. A serial read of the same logs makes the whole column
+    strings, so do the same here, keeping nulls.
+    """
+    import pandas as pd
+    import pyarrow as pa
+
+    def is_string(series: pd.Series) -> bool:
+        dtype = series.dtype
+        return isinstance(dtype, pd.ArrowDtype) and (
+            pa.types.is_string(dtype.pyarrow_dtype)
+            or pa.types.is_large_string(dtype.pyarrow_dtype)
+        )
+
+    # an all-null column is typed as strings, so it doesn't decide the dtype
+    string_dtypes = {
+        col: df[col].dtype
+        for df in dfs
+        for col in df.columns
+        if is_string(df[col]) and df[col].notna().any()
+    }
+
+    reconciled: list[pd.DataFrame] = []
+    for df in dfs:
+        mismatched = [
+            col
+            for col in df.columns
+            if col in string_dtypes and df[col].dtype != string_dtypes[col]
+        ]
+        if mismatched:
+            df = df.copy()
+            for col in mismatched:
+                df[col] = (
+                    df[col]
+                    .map(lambda v: v if pd.isna(v) else str(v))
+                    .astype(string_dtypes[col])
+                )
+        reconciled.append(df)
+    return reconciled
 
 
 def _convert_to_large_string(df: "pd.DataFrame") -> "pd.DataFrame":

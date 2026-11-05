@@ -1,13 +1,15 @@
 """Memory tool for managing persistent information in /memories directory."""
 
-from pathlib import Path
+import posixpath
 from typing import Any, Callable, Literal
 
 from pydantic import Field
 
 from inspect_ai.tool import Tool, ToolError, tool
+from inspect_ai.tool._tool_canonical import set_tool_canonical_arguments
 from inspect_ai.util import StoreModel, store_as
 from inspect_ai.util._resource import resource
+from inspect_ai.util._tool_state import tool_state_instance
 
 SNIPPET_LINES: int = 4
 
@@ -20,7 +22,10 @@ class MemoryStore(StoreModel):
 
 @tool(parallel=True)
 def memory(
-    *, initial_data: dict[str, str] | None = None, readonly: bool = False
+    *,
+    initial_data: dict[str, str] | None = None,
+    readonly: bool = False,
+    instance: str | None = None,
 ) -> Tool:
     """Memory tool for managing persistent information.
 
@@ -31,10 +36,14 @@ def memory(
         initial_data: Optional dict mapping file paths to content for pre-seeding
             the memory store. Keys should be valid /memories paths (e.g.,
             "/memories/file.txt"). Values are resolved via resource(), supporting
-            inline strings, file paths, or remote resources (s3://, https://).
+            inline strings, file paths, or remote resources (`s3://`, `https://`).
             Seeding happens once on first tool execution.
         readonly: If True, only the view command is available. Write operations
             (create, str_replace, insert, delete, rename) are not exposed.
+        instance: Optional instance name for the memory store. Enables multiple
+            independent memory tools within a single sample (each with its own
+            files and seeding), rather than sharing one store. Defaults to
+            the current `tool_state_scope()`, if any.
 
     Returns:
         Memory tool for file operations in /memories directory.
@@ -48,8 +57,9 @@ def memory(
             store.seeding_complete = True
 
     if readonly:
-        result = _readonly_execute(_seed)
+        result = _readonly_execute(_seed, instance)
         result.initial_data = initial_data  # type: ignore[attr-defined]
+        set_tool_canonical_arguments(result, _canonical_arguments)
         return result
 
     async def execute(
@@ -104,7 +114,7 @@ def memory(
         Returns:
             Result message string
         """
-        store = store_as(MemoryStore)
+        store = store_as(MemoryStore, instance=tool_state_instance(instance))
         _seed(store)
 
         match command:
@@ -124,11 +134,13 @@ def memory(
                 raise ToolError(f"Unknown command: {command}")
 
     execute.initial_data = initial_data  # type: ignore[attr-defined]
+    set_tool_canonical_arguments(execute, _canonical_arguments)
     return execute
 
 
 def _readonly_execute(
     _seed: "Callable[[MemoryStore], None]",
+    instance: str | None,
 ) -> "Callable[..., Any]":
     async def execute_readonly(
         command: Literal["view"],
@@ -152,7 +164,7 @@ def _readonly_execute(
         Returns:
             Result message string
         """
-        store = store_as(MemoryStore)
+        store = store_as(MemoryStore, instance=tool_state_instance(instance))
         _seed(store)
         return _view(store, path, view_range)
 
@@ -160,34 +172,41 @@ def _readonly_execute(
 
 
 def _validate_path(path: str) -> str:
-    """Validate path starts with /memories and has no traversal."""
+    """Canonicalize a /memories path and verify it stays under the root."""
     if not path:
         raise ToolError("Path cannot be empty")
+    if "\x00" in path:
+        raise ToolError(f"Invalid path: {path!r} contains a null byte")
 
-    # Normalize separators
     path = path.replace("\\", "/")
-
-    # Must start with /memories
     if not path.startswith("/memories"):
         raise ToolError(
             f"Invalid path: all paths must start with /memories, got {path}"
         )
 
-    try:
-        # Convert to pathlib Path and resolve (eliminates .., symlinks, etc)
-        resolved = Path(path).resolve()
-        base = Path("/memories").resolve()
+    norm = posixpath.normpath(path)
+    if norm != "/memories" and not norm.startswith("/memories/"):
+        raise ToolError(f"Invalid path: {path} escapes /memories directory")
+    return norm
 
-        # Verify resolved path is within /memories
-        resolved.relative_to(base)
-    except ValueError:
-        raise ToolError(f"Invalid path: {path} resolves outside /memories directory")
 
-    # Remove trailing slash except for /memories itself
-    if path != "/memories" and path.endswith("/"):
-        path = path.rstrip("/")
+def _canonical_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
+    """Arguments with each valid path replaced by the canonical path it acts on.
 
-    return path
+    Tool calls are approved on these arguments, so an approval policy written
+    for a path matches the path the command will use (`/memories/a/../b` is
+    approved as `/memories/b`). An invalid path is left as given; the command
+    rejects it.
+    """
+    canonical = dict(arguments)
+    for name in ("path", "old_path", "new_path"):
+        path = canonical.get(name)
+        if isinstance(path, str):
+            try:
+                canonical[name] = _validate_path(path)
+            except ToolError:
+                pass
+    return canonical
 
 
 def _path_exists(store: MemoryStore, path: str) -> bool:
@@ -493,6 +512,15 @@ def _rename(store: MemoryStore, old_path: str | None, new_path: str | None) -> s
         raise ToolError(
             f"The path {old_path} does not exist. Please provide a valid path."
         )
+
+    # Refuse to rename onto an existing path: a file destination would be
+    # silently replaced, and a directory destination would leave the store
+    # holding both a directory entry and file keys at the same path, breaking
+    # view/str_replace/insert. Mirrors BetaLocalFilesystemMemoryTool.rename in
+    # anthropic-sdk-python, which refuses with "The destination ... already
+    # exists" (#5821).
+    if _path_exists(store, new_path):
+        raise ToolError(f"The destination {new_path} already exists")
 
     if _is_dir(store, old_path):
         # Rename directory and all contents

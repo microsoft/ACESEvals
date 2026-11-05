@@ -3,7 +3,7 @@ import reprlib
 from copy import deepcopy
 from fnmatch import fnmatch
 from logging import getLogger
-from typing import cast
+from typing import Callable, Iterable, NamedTuple, cast
 
 from inspect_ai._util.error import PrerequisiteError
 from inspect_ai._util.logger import warn_once
@@ -14,7 +14,10 @@ from inspect_ai.dataset._util import normalise_sample_id
 from inspect_ai.model import ChatMessage, ChatMessageUser
 
 from ..task import Task
-from .constants import TASK_FILE_ATTR, TASK_RUN_DIR_ATTR
+from .constants import (
+    TASK_FILE_ATTR,
+    TASK_RUN_DIR_ATTR,
+)
 
 logger = getLogger(__name__)
 
@@ -44,36 +47,145 @@ def task_file(task: Task, relative: bool = False) -> str | None:
         return None
 
 
+class SampleIdMatcher(NamedTuple):
+    """A `--sample-id` filter: the predicate plus its normalised patterns."""
+
+    matches: Callable[[str | int | None], bool]
+    patterns: list[str]
+
+
+def sample_id_filter(
+    sample_id: str | int | list[str] | list[int] | list[str | int],
+) -> SampleIdMatcher:
+    """Predicate matching a sample id against `sample_id` patterns.
+
+    Ids are normalised (`normalise_sample_id`) and matched with `fnmatch`,
+    the same semantics `slice_dataset` applies to a dataset. The normalised
+    patterns ride along so callers reporting on the filter (warnings/errors)
+    use exactly what the predicate matches.
+    """
+    sample_ids = sample_id if isinstance(sample_id, list) else [sample_id]
+    patterns = [normalise_sample_id(id) for id in sample_ids]
+
+    def matches(id: str | int | None) -> bool:
+        return any(fnmatch(normalise_sample_id(id), pat) for pat in patterns)
+
+    return SampleIdMatcher(matches, patterns)
+
+
+def resolve_task_sample_ids(
+    task: str,
+    sample_id: str | int | list[str] | list[int] | list[str | int] | None,
+    task_names: Iterable[str] | None = None,
+) -> str | int | list[str] | list[int] | list[str | int] | None:
+    """Narrow `sample_id` to the selectors that apply to `task`.
+
+    A `<task>:<id>` selector scopes an id to one task (`alpha:one,beta:two`
+    runs one sample of each): the prefix is stripped for that task and the
+    selector is dropped for every other. A prefix counts as a task selector
+    only when it names a task in the run; otherwise the colon is part of the
+    id, so namespaced ids such as `user:cybergym/arvo_6008` pass through
+    whole. An id that both names a task in the run and is a literal dataset
+    id is read as a selector.
+
+    Args:
+        task: Name of the task being resolved for.
+        sample_id: The requested sample id(s).
+        task_names: Names of every task in the run. `None` means only
+            `task` itself is known, so only its own prefix is a selector.
+
+    Returns:
+        The ids for `task`; `[]` when every selector named another task
+        (`slice_dataset` then selects nothing).
+    """
+    names = {name.lower() for name in task_names or []} | {task.lower()}
+
+    def collect_for_task(sample: str | int) -> str | int | None:
+        if isinstance(sample, str):
+            scoped = sample.split(":", maxsplit=1)
+            if len(scoped) > 1 and scoped[0].lower() in names:
+                if scoped[0].lower() == task.lower():
+                    return scoped[1]
+                else:
+                    return None
+            else:
+                return sample
+        else:
+            return sample
+
+    if sample_id is not None:
+        if isinstance(sample_id, list):
+            ids: list[int | str] = []
+            for id in sample_id:
+                collect = collect_for_task(id)
+                if collect is not None:
+                    ids.append(collect)
+            return ids
+
+        else:
+            collect = collect_for_task(sample_id)
+            if collect is not None:
+                return collect
+            else:
+                return []
+
+    else:
+        return sample_id
+
+
+def sample_limit_count(limit: int | tuple[int, int] | None) -> int | None:
+    """Number of samples a `limit` option selects (the size of its slice)."""
+    if limit is None:
+        return None
+    return max(0, limit[1] - limit[0]) if isinstance(limit, tuple) else limit
+
+
 def slice_dataset(
     dataset: Dataset,
     limit: int | tuple[int, int] | None,
     sample_id: str | int | list[str] | list[int] | list[str | int] | None,
+    dynamic: bool = False,
 ) -> Dataset:
+    """Apply `--limit` / `--sample-id` to a dataset.
+
+    Args:
+        dataset: Dataset to slice.
+        limit: Count or `(start, stop)` positional range of samples to select.
+        sample_id: Sample id pattern(s) to filter by (exclusive with `limit`).
+        dynamic: The dataset is a `SampleSource` seed, not the complete sample
+            set — samples matching a requested id may be produced while the
+            task runs, so unmatched `sample_id` entries neither warn nor error
+            (the filter still applies to the seed; the task's dispatcher
+            applies it to produced samples).
+
+    An empty `sample_id` list selects nothing: it is what
+    `resolve_task_sample_ids` yields for a task none of the `task:id`
+    selectors named, and that task runs no samples rather than failing on a
+    filter that cannot match.
+    """
+    if isinstance(sample_id, list) and len(sample_id) == 0:
+        return dataset[0:0]
+
     if sample_id is not None:
-        # reduce to list of normalized sample ids
-        sample_ids = sample_id if isinstance(sample_id, list) else [sample_id]
-        sample_id = [normalise_sample_id(id) for id in sample_ids]
+        matcher = sample_id_filter(sample_id)
 
         # validate all the sample ids and warn if they aren't in the dataset
-        all_sample_ids_raw = [sample.id for sample in dataset]
-        all_sample_ids = [normalise_sample_id(id) for id in all_sample_ids_raw]
-        for id in sample_id:
-            if id not in all_sample_ids:
-                warn_once(
-                    logger, f"sample id '{id}' not found in dataset '{dataset.name}'."
-                )
-
-        # helper to check for a matching sample id
-        def include_sample(sample: Sample) -> bool:
-            id = normalise_sample_id(sample.id)
-            return any(fnmatch(id, pat) for pat in sample_id)
+        if not dynamic:
+            all_sample_ids = [normalise_sample_id(sample.id) for sample in dataset]
+            for id in matcher.patterns:
+                if id not in all_sample_ids:
+                    warn_once(
+                        logger,
+                        f"sample id '{id}' not found in dataset '{dataset.name}'.",
+                    )
 
         # filter the dataset
-        filtered = dataset.filter(include_sample)
+        filtered = dataset.filter(lambda sample: matcher.matches(sample.id))
 
         # raise error if we got no hits
-        if len(filtered) == 0:
-            filter = ",".join([str(id) for id in sample_id])
+        if len(filtered) == 0 and not dynamic:
+            filter = ",".join([str(id) for id in matcher.patterns])
+            all_sample_ids_raw = [sample.id for sample in dataset]
             r = reprlib.Repr()
             r.maxlist = 8
             raise PrerequisiteError(

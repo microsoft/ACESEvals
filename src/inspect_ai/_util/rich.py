@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 import unicodedata
+from collections import OrderedDict
 from types import TracebackType
 from typing import Any, Tuple, Type
 
@@ -15,6 +16,10 @@ from rich.traceback import Traceback
 
 from inspect_ai._util.constants import CONSOLE_DISPLAY_WIDTH, PKG_NAME
 from inspect_ai._util.text import truncate_lines
+
+# LRU cache of rendered tracebacks (keyed by plain-text traceback)
+_traceback_cache: OrderedDict[str, tuple[str, str]] = OrderedDict()
+_TRACEBACK_CACHE_MAX_SIZE = 32
 
 
 def tool_result_display(
@@ -51,10 +56,53 @@ def clean_control_characters(text: str) -> str:
     )
 
 
+def escape_control_characters(text: str) -> str:
+    r"""Escape control characters, newlines and tabs included (`\x1b`, `\n`).
+
+    For values from an untrusted source shown on one line, where removing the
+    characters would change what the value appears to be.
+    """
+    return "".join(
+        c.encode("unicode_escape").decode("ascii")
+        if unicodedata.category(c) in ("Cc", "Cf")
+        else c
+        for c in text
+    )
+
+
+class _PlainCodeTraceback(Traceback):
+    """Rich traceback whose frame source snippets are not syntax highlighted.
+
+    Rich picks a pygments lexer per frame and lexes the frame's source file from
+    its first line to the frame's line, which for large modules costs seconds
+    per traceback. The "text" lexer is pygments' null lexer, so the snippets are
+    still shown, just unhighlighted. If a future rich release stops consulting
+    `_guess_lexer`, this degrades to full highlighting rather than failing.
+    """
+
+    @classmethod
+    def _guess_lexer(cls, filename: str, code: str) -> str:
+        return "text"
+
+
 def rich_traceback(
-    exc_type: Type[Any], exc_value: BaseException, exc_traceback: TracebackType | None
+    exc_type: Type[Any],
+    exc_value: BaseException,
+    exc_traceback: TracebackType | None,
+    highlight_code: bool = True,
 ) -> RenderableType:
-    rich_tb = Traceback.from_exception(
+    """Rich renderable for an exception traceback.
+
+    Args:
+        exc_type: Exception type.
+        exc_value: Exception value.
+        exc_traceback: Exception traceback.
+        highlight_code: Syntax highlight frame source snippets. Highlighting
+            lexes each frame's whole source file, so pass `False` when the
+            output will not be shown on a terminal at render time.
+    """
+    traceback_cls = Traceback if highlight_code else _PlainCodeTraceback
+    rich_tb = traceback_cls.from_exception(
         exc_type=exc_type,
         exc_value=exc_value,
         traceback=exc_traceback,
@@ -115,15 +163,37 @@ def format_traceback(
     exc_value: BaseException,
     exc_traceback: TracebackType | None,
 ) -> tuple[str, str]:
-    """Format exception traceback as plain text and ANSI-colored."""
+    """Format exception traceback as plain text and ANSI-colored.
+
+    The ANSI variant is stored in the log (`EvalError.traceback_ansi`) rather
+    than shown on a terminal at render time, so its frame source snippets are
+    not syntax highlighted.
+    """
     traceback_text, truncated = truncate_traceback(exc_type, exc_value, exc_traceback)
+
+    # with INSPECT_TRACEBACK_LOCALS the ANSI render includes local variables,
+    # which the plain-text cache key does not capture, so don't cache
+    use_cache = os.environ.get("INSPECT_TRACEBACK_LOCALS", None) != "1"
+
+    if use_cache:
+        cached = _traceback_cache.get(traceback_text)
+        if cached is not None:
+            _traceback_cache.move_to_end(traceback_text)
+            return cached
 
     if not truncated:
         with open(os.devnull, "w") as f:
             console = Console(record=True, file=f, legacy_windows=True)
-            console.print(rich_traceback(exc_type, exc_value, exc_traceback))
+            console.print(
+                rich_traceback(exc_type, exc_value, exc_traceback, highlight_code=False)
+            )
             traceback_ansi = console.export_text(styles=True)
     else:
         traceback_ansi = traceback_text
 
-    return traceback_text, traceback_ansi
+    result = traceback_text, traceback_ansi
+    if use_cache:
+        _traceback_cache[traceback_text] = result
+        while len(_traceback_cache) > _TRACEBACK_CACHE_MAX_SIZE:
+            _traceback_cache.popitem(last=False)
+    return result

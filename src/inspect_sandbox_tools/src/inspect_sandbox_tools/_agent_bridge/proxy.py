@@ -26,6 +26,10 @@ from urllib.parse import parse_qs, unquote, urlparse
 RequestHandler: TypeAlias = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 RouteMap: TypeAlias = dict[str, RequestHandler]
 MethodRoutes: TypeAlias = dict[str, RouteMap]
+JsonValue: TypeAlias = (
+    None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
+)
+
 
 # ---------- Limits / Defaults ----------
 MAX_HEADER_BYTES = 64 * 1024
@@ -33,6 +37,10 @@ MAX_BODY_BYTES = 50 * 1024 * 1024
 READ_TIMEOUT_S = 300
 WRITE_TIMEOUT_S = 300
 STREAM_CHUNK = 8192
+
+# Request headers the proxy reads as one value; repeating one is rejected rather
+# than joined like a list-valued header.
+_SINGLE_VALUE_REQUEST_HEADERS = frozenset({"content-length", "content-type", "host"})
 
 HOP_BY_HOP = {
     "connection",
@@ -47,14 +55,13 @@ HOP_BY_HOP = {
 
 
 class AsyncHTTPServer:
-    """Async HTTP server supporting GET/POST/OPTIONS with streaming + proxy utilities."""
+    """Async HTTP server supporting GET/POST with streaming + proxy utilities."""
 
     def __init__(self, host: str = "127.0.0.1", port: int = 8000) -> None:
         self.host = host
         self.port = port
-        self.routes: MethodRoutes = {"GET": {}, "POST": {}, "OPTIONS": {}}
+        self.routes: MethodRoutes = {"GET": {}, "POST": {}}
         self.server: asyncio.Server | None = None
-        self.enable_cors: bool = True
         self.server_name: str = "asyncio-proxy"
 
     # -------- Routing --------
@@ -164,11 +171,18 @@ class AsyncHTTPServer:
                 continue
             if ":" in header:
                 key, value = header.split(":", 1)
-                headers[key.strip().lower()] = value.strip()
+                key, value = key.strip().lower(), value.strip()
+                if key in headers:
+                    # A repeated list-valued header is one comma-separated value
+                    # (RFC 9110 5.3); a repeated single-valued one is ambiguous.
+                    if key in _SINGLE_VALUE_REQUEST_HEADERS:
+                        raise ValueError(f"Repeated {key} header")
+                    value = f"{headers[key]}, {value}"
+                headers[key] = value
 
         # Expect: 100-continue
-        expect = headers.get("expect")
-        if expect and expect.lower() == "100-continue":
+        expectations = headers.get("expect", "").split(",")
+        if any(item.strip().lower() == "100-continue" for item in expectations):
             try:
                 writer.write(b"HTTP/1.1 100 Continue\r\n\r\n")
                 await asyncio.wait_for(writer.drain(), timeout=WRITE_TIMEOUT_S)
@@ -194,27 +208,16 @@ class AsyncHTTPServer:
         return method, full_path, http_version, headers, body
 
     # -------- Response building / streaming --------
-    def _cors_headers(self) -> dict[str, str]:
-        if not self.enable_cors:
-            return {}
-        return {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Authorization, Content-Type, OpenAI-Organization, OpenAI-Beta",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Max-Age": "600",
-        }
-
     def _build_headers_block(
         self, status: int, headers: dict[str, str], reason: Optional[str] = None
     ) -> bytes:
-        phrase = reason or HTTPStatus(status).phrase
+        phrase = reason or _http_reason_phrase(status)
         status_line = f"HTTP/1.1 {status} {phrase}\r\n"
         base = {
             "Date": _http_date(),
             "Server": self.server_name,
         }
         out = {**base, **headers}
-        out.update(self._cors_headers())
         lines = [status_line]
         for k, v in out.items():
             if v is None:
@@ -307,14 +310,11 @@ class AsyncHTTPServer:
         headers_lower = {k.lower(): v for k, v in headers_list}
         is_chunked = "chunked" in headers_lower.get("transfer-encoding", "").lower()
 
-        # Compose headers (preserve original case), then add CORS
-        cors = self._cors_headers()
-        status_line = f"HTTP/1.1 {status} {reason or HTTPStatus(status).phrase}\r\n"
+        # Compose headers (preserve original case)
+        status_line = f"HTTP/1.1 {status} {reason or _http_reason_phrase(status)}\r\n"
         writer.write(status_line.encode("ascii"))
         for k, v in headers_list:
             writer.write(f"{k}: {v}\r\n".encode("latin-1", "strict"))
-        for ck, cv in cors.items():
-            writer.write(f"{ck}: {cv}\r\n".encode("ascii"))
         writer.write(b"\r\n")
         await asyncio.wait_for(writer.drain(), timeout=WRITE_TIMEOUT_S)
 
@@ -372,6 +372,41 @@ class AsyncHTTPServer:
                     await writer.drain()
 
     # -------- Connection handler --------
+    def _reject_non_json_post(self, ctype: str, parsed_json: Any) -> bytes | None:
+        """Response rejecting a POST that does not carry a JSON object body, or None.
+
+        Every POST route is a JSON API, so the body contract is enforced here
+        rather than in each handler. This is also the browser boundary: a
+        cross-origin request a browser sends without a preflight can only carry
+        a `text/plain`, form or multipart body, so refusing anything but
+        `application/json` before the handler runs means such a request never
+        reaches the bridge, whatever the handler would otherwise infer from the
+        URL alone. `OPTIONS` is 405, so a preflighted request is never sent.
+        """
+        if not ctype.startswith("application/json"):
+            return self._build_response(
+                415,
+                {
+                    "error": {
+                        "message": "Content-Type must be application/json",
+                        "type": "invalid_request_error",
+                        "code": 415,
+                    }
+                },
+            )
+        if not isinstance(parsed_json, dict):
+            return self._build_response(
+                400,
+                {
+                    "error": {
+                        "message": "Request body must be a JSON object",
+                        "type": "invalid_request_error",
+                        "code": 400,
+                    }
+                },
+            )
+        return None
+
     async def _handle_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
@@ -384,9 +419,11 @@ class AsyncHTTPServer:
             path = unquote(parsed.path)
             query = parse_qs(parsed.query)
 
-            # OPTIONS preflight
+            # No browser clients, so no preflight: OPTIONS is not a served method
             if method == "OPTIONS":
-                response_bytes = self._build_response(204, b"", "text/plain", {})
+                response_bytes = self._build_response(
+                    405, b"", "text/plain", {"Allow": ", ".join(self.routes)}
+                )
                 writer.write(response_bytes)
                 await writer.drain()
                 return
@@ -418,6 +455,13 @@ class AsyncHTTPServer:
                             )
                     elif ctype.startswith("text/"):
                         request_data["text"] = body.decode("utf-8", errors="replace")
+
+                if method == "POST":
+                    rejection = self._reject_non_json_post(ctype, request_data["json"])
+                    if rejection is not None:
+                        writer.write(rejection)
+                        await writer.drain()
+                        return
 
                 # Call handler
                 response = await handler(request_data)
@@ -515,6 +559,136 @@ def _http_date() -> str:
     return formatdate(timeval=None, usegmt=True)
 
 
+def _http_reason_phrase(status: int) -> str:
+    """Reason phrase for a status line, tolerant of non-standard codes.
+
+    `HTTPStatus(status)` raises `ValueError` for codes outside the standard
+    registry (e.g. Anthropic's 529 "overloaded", Cloudflare's 520-527). Those
+    are legitimate statuses to forward faithfully, so fall back to a generic
+    class phrase instead of letting the lookup raise — an unguarded raise here
+    is caught by the request handler and downgraded to a 500, defeating status
+    forwarding.
+    """
+    try:
+        return HTTPStatus(status).phrase
+    except ValueError:
+        if 500 <= status <= 599:
+            return "Server Error"
+        if 400 <= status <= 499:
+            return "Client Error"
+        return ""
+
+
+# ---------- Forwarded provider errors ----------
+# Mirror of inspect_ai.agent._bridge._errors.PROVIDER_ERROR_KEY. The proxy is a
+# separate shipped binary that cannot import inspect_ai, so the constant is
+# duplicated here — keep the two in sync.
+PROVIDER_ERROR_KEY = "__inspect_provider_error__"
+
+# Status used when the host could not recover a provider HTTP status (e.g. an
+# error raised by our own request translation rather than by the provider). 400
+# fails fast without inviting client retry loops on a deterministic error.
+_DEFAULT_ERROR_STATUS = 400
+
+
+def _provider_error(result: Any) -> Optional[dict[str, Any]]:
+    """Return the forwarded provider-error payload if present in a service result."""
+    if isinstance(result, dict):
+        payload = result.get(PROVIDER_ERROR_KEY)
+        if isinstance(payload, dict):
+            return payload
+    return None
+
+
+def _openai_error_body(
+    status: int, message: str, provider_body: Optional[dict[str, Any]] = None
+) -> dict[str, Any]:
+    """OpenAI-dialect error body (Chat Completions and Responses).
+
+    ``provider_body`` is the provider's own error object when the host recovered
+    one (an exhausted retry of an OpenAI-compatible endpoint, say). Its keys are
+    forwarded verbatim over the dialect's own -- clients read ``code`` values such
+    as ``insufficient_quota`` from it -- but the dialect's guaranteed keys stay
+    present: a body that lacks ``message`` (a FastAPI ``{"detail": ...}``, an empty
+    object) still yields the host's recovered message and a ``type``.
+    """
+    error: dict[str, Any] = {
+        "message": message,
+        "type": "invalid_request_error" if 400 <= status < 500 else "api_error",
+        "param": None,
+        "code": None,
+    }
+    if provider_body is not None:
+        error.update(provider_body)
+    return {"error": error}
+
+
+# The inverse of `status_code_of`: every status that helper can derive from a
+# provider error body must map back to its Anthropic error type here. A status
+# missing from this table degrades to `api_error`, and on the STREAMING route
+# that error type is the only machine-readable signal the client gets -- the
+# HTTP status is already 200 by the time the error is known -- so a missing
+# entry silently reclassifies a client error as a server error.
+_ANTHROPIC_ERROR_TYPES = {
+    400: "invalid_request_error",
+    401: "authentication_error",
+    402: "billing_error",
+    403: "permission_error",
+    404: "not_found_error",
+    409: "conflict_error",
+    413: "request_too_large",
+    429: "rate_limit_error",
+    500: "api_error",
+    504: "timeout_error",
+    529: "overloaded_error",
+}
+
+
+def _anthropic_error_body(status: int, message: str) -> dict[str, Any]:
+    """Anthropic-dialect error body.
+
+    An unlisted 4xx keeps a CLIENT classification rather than degrading to
+    `api_error`: the SDK recognizes statuses the table does not name (422 ->
+    `UnprocessableEntityError`), and Anthropic's error documentation permits
+    `invalid_request_error` for other 4xx responses. Calling a client error a
+    server error is the same defect the table above exists to prevent, one
+    status further out.
+    """
+    kind = _ANTHROPIC_ERROR_TYPES.get(status)
+    if kind is None:
+        kind = "invalid_request_error" if 400 <= status < 500 else "api_error"
+    return {
+        "type": "error",
+        "error": {
+            "type": kind,
+            "message": message,
+        },
+    }
+
+
+_GOOGLE_ERROR_STATUS = {
+    400: "INVALID_ARGUMENT",
+    401: "UNAUTHENTICATED",
+    403: "PERMISSION_DENIED",
+    404: "NOT_FOUND",
+    429: "RESOURCE_EXHAUSTED",
+    500: "INTERNAL",
+    503: "UNAVAILABLE",
+    504: "DEADLINE_EXCEEDED",
+}
+
+
+def _google_error_body(status: int, message: str) -> dict[str, Any]:
+    """Google-dialect error body."""
+    return {
+        "error": {
+            "code": status,
+            "message": message,
+            "status": _GOOGLE_ERROR_STATUS.get(status, "UNKNOWN"),
+        }
+    }
+
+
 async def model_proxy_server(
     port: int, call_bridge_model_service_async: Any = None
 ) -> AsyncHTTPServer:
@@ -546,15 +720,77 @@ async def model_proxy_server(
         for i in range(0, len(text), max_len):
             yield text[i : i + max_len]
 
+    def _json_body(request: dict[str, Any]) -> dict[str, Any]:
+        body = request.get("json")
+        return body if isinstance(body, dict) else {}
+
+    def _has_model(json_body: dict[str, Any]) -> bool:
+        model = json_body.get("model")
+        return isinstance(model, str) and bool(model.strip())
+
+    def _openai_missing_param(param: str) -> dict[str, Any]:
+        return {
+            "status": 400,
+            "body": {
+                "error": {
+                    "message": f"Missing required parameter: '{param}'.",
+                    "type": "invalid_request_error",
+                    "param": param,
+                    "code": "missing_required_parameter",
+                }
+            },
+        }
+
+    def _anthropic_missing_param(param: str) -> dict[str, Any]:
+        return {
+            "status": 400,
+            "body": {
+                "type": "error",
+                "error": {
+                    "type": "invalid_request_error",
+                    "message": f"Missing required parameter: '{param}'.",
+                },
+            },
+        }
+
+    def _google_missing_model() -> dict[str, Any]:
+        return {
+            "status": 400,
+            "body": {
+                "error": {
+                    "code": 400,
+                    "message": "Missing required model in request path.",
+                    "status": "INVALID_ARGUMENT",
+                }
+            },
+        }
+
     @server.route("/v1/responses", method="POST")
     async def responses(request: dict[str, Any]) -> dict[str, Any]:
         try:
-            json_body = request.get("json", {}) or {}
+            json_body = _json_body(request)
+            if not _has_model(json_body):
+                return _openai_missing_param("model")
+            if json_body.get("input") is None:
+                return _openai_missing_param("input")
             stream = json_body.get("stream", False)
 
             completion = await call_bridge_model_service_async(
-                "generate_responses", json_data=json_body
+                "generate_responses", json_data=json_body, headers=request["headers"]
             )
+
+            error = _provider_error(completion)
+            if error is not None:
+                status = error.get("status") or _DEFAULT_ERROR_STATUS
+                body = error.get("body")
+                return {
+                    "status": status,
+                    "body": _openai_error_body(
+                        status,
+                        error.get("message") or "",
+                        body if isinstance(body, dict) else None,
+                    ),
+                }
 
             if stream:
 
@@ -576,12 +812,23 @@ async def model_proxy_server(
 
                     seq_num = 0
 
+                    # Like the real API, created/in_progress carry no results yet:
+                    # items arrive via output_item.added (openai >= 3.31 rejects
+                    # an added index that the snapshot already holds).
+                    in_progress_resp = {
+                        **resp,
+                        "status": "in_progress",
+                        "output": [],
+                        "usage": None,
+                        "incomplete_details": None,
+                    }
+
                     # 1. response.created event
                     seq_num += 1
                     yield _sse_event(
                         "response.created",
                         {
-                            "response": resp,
+                            "response": in_progress_resp,
                             "sequence_number": seq_num,
                             "type": "response.created",
                         },
@@ -590,8 +837,6 @@ async def model_proxy_server(
 
                     # 2. response.in_progress event
                     seq_num += 1
-                    in_progress_resp = dict(resp)
-                    in_progress_resp["status"] = "in_progress"
                     yield _sse_event(
                         "response.in_progress",
                         {
@@ -1214,9 +1459,17 @@ async def model_proxy_server(
 
                         # 3d. response.output_item.done
                         seq_num += 1
-                        # Update status to completed
+                        # Update status to completed. custom_tool_call is a
+                        # special case: the installed OpenAI SDK's
+                        # ResponseCustomToolCall model omits "status" from its
+                        # dict entirely, even though clients such as opencode's
+                        # AI SDK require it on the done item to dispatch the
+                        # call, so it's added even when not already present.
                         item_dict_completed = dict(output_item)
-                        if "status" in item_dict_completed:
+                        if (
+                            "status" in item_dict_completed
+                            or item_type == "custom_tool_call"
+                        ):
                             item_dict_completed["status"] = "completed"
 
                         yield _sse_event(
@@ -1266,7 +1519,11 @@ async def model_proxy_server(
     @server.route("/v1/chat/completions", method="POST")
     async def chat_completions(request: dict[str, Any]) -> dict[str, Any]:
         try:
-            json_body = request.get("json", {}) or {}
+            json_body = _json_body(request)
+            if not _has_model(json_body):
+                return _openai_missing_param("model")
+            if json_body.get("messages") is None:
+                return _openai_missing_param("messages")
             stream = json_body.get("stream", False)
 
             # the openai codex cli seems to have a bug that causes
@@ -1277,8 +1534,21 @@ async def model_proxy_server(
             json_body["parallel_tool_calls"] = False
 
             completion = await call_bridge_model_service_async(
-                "generate_completions", json_data=json_body
+                "generate_completions", json_data=json_body, headers=request["headers"]
             )
+
+            error = _provider_error(completion)
+            if error is not None:
+                status = error.get("status") or _DEFAULT_ERROR_STATUS
+                body = error.get("body")
+                return {
+                    "status": status,
+                    "body": _openai_error_body(
+                        status,
+                        error.get("message") or "",
+                        body if isinstance(body, dict) else None,
+                    ),
+                }
 
             if stream:
 
@@ -1479,7 +1749,11 @@ async def model_proxy_server(
     @server.route("/v1/messages", method="POST")
     async def anthropic(request: dict[str, Any]) -> dict[str, Any]:
         try:
-            json_body = request.get("json", {}) or {}
+            json_body = _json_body(request)
+            if not _has_model(json_body):
+                return _anthropic_missing_param("model")
+            if json_body.get("messages") is None:
+                return _anthropic_missing_param("messages")
             stream = json_body.get("stream", False)
 
             if stream:
@@ -1517,7 +1791,9 @@ async def model_proxy_server(
                     PING_INTERVAL_S = 5.0
                     task = asyncio.create_task(
                         call_bridge_model_service_async(
-                            "generate_anthropic", json_data=json_body
+                            "generate_anthropic",
+                            json_data=json_body,
+                            headers=request["headers"],
                         )
                     )
                     try:
@@ -1537,6 +1813,17 @@ async def model_proxy_server(
                             except asyncio.CancelledError:
                                 pass
                         raise
+
+                    # A forwarded provider error arrives after message_start has
+                    # already been sent, so surface it as an SSE error event.
+                    error = _provider_error(completion)
+                    if error is not None:
+                        status = error.get("status") or _DEFAULT_ERROR_STATUS
+                        yield _sse_anthropic(
+                            "error",
+                            _anthropic_error_body(status, error.get("message") or ""),
+                        )
+                        return
 
                     try:
                         # Parse the completion as a dict
@@ -1712,24 +1999,61 @@ async def model_proxy_server(
                                 {"type": "content_block_stop", "index": index},
                             )
 
-                        elif block_type == "redacted_thinking":
-                            # redacted_thinking blocks carry encrypted reasoning
-                            # data from cross-model scenarios (e.g. OpenAI
-                            # content_filter responses with redacted reasoning
-                            # round-tripped through the Anthropic bridge).
+                        elif block_type == "compaction":
+                            # Compaction blocks stream differently - a single delta
+                            # with the complete content (no intermediate streaming)
                             yield _sse_anthropic(
                                 "content_block_start",
                                 {
                                     "type": "content_block_start",
                                     "index": index,
                                     "content_block": {
-                                        "type": "redacted_thinking",
-                                        "data": block.get("data", ""),
+                                        "type": "compaction",
+                                        "content": "",
                                     },
                                 },
                             )
 
-                            # content_block_stop (no deltas for redacted blocks)
+                            # Single delta with complete content
+                            content_value = block.get("content", "")
+                            yield _sse_anthropic(
+                                "content_block_delta",
+                                {
+                                    "type": "content_block_delta",
+                                    "index": index,
+                                    "delta": {
+                                        "type": "compaction_delta",
+                                        "content": content_value,
+                                    },
+                                },
+                            )
+
+                            # content_block_stop
+                            yield _sse_anthropic(
+                                "content_block_stop",
+                                {"type": "content_block_stop", "index": index},
+                            )
+
+                        elif block_type == "fallback":
+                            # server-side refusal fallback handoff marker. a
+                            # plain start/stop pair with no deltas. emit the
+                            # `from`/`to` wire shape (the message was dumped
+                            # without by_alias, so `from` may arrive as `from_`)
+                            fallback_block: dict[str, Any] = {
+                                "type": "fallback",
+                                "to": block.get("to"),
+                            }
+                            fallback_from = block.get("from", block.get("from_"))
+                            if fallback_from is not None:
+                                fallback_block["from"] = fallback_from
+                            yield _sse_anthropic(
+                                "content_block_start",
+                                {
+                                    "type": "content_block_start",
+                                    "index": index,
+                                    "content_block": fallback_block,
+                                },
+                            )
                             yield _sse_anthropic(
                                 "content_block_stop",
                                 {"type": "content_block_stop", "index": index},
@@ -1784,8 +2108,19 @@ async def model_proxy_server(
                 }
             else:
                 completion = await call_bridge_model_service_async(
-                    "generate_anthropic", json_data=json_body
+                    "generate_anthropic",
+                    json_data=json_body,
+                    headers=request["headers"],
                 )
+                error = _provider_error(completion)
+                if error is not None:
+                    status = error.get("status") or _DEFAULT_ERROR_STATUS
+                    return {
+                        "status": status,
+                        "body": _anthropic_error_body(
+                            status, error.get("message") or ""
+                        ),
+                    }
                 return {"status": 200, "body": completion}
         except Exception as ex:
             _handle_model_proxy_error(ex)
@@ -1822,7 +2157,7 @@ async def model_proxy_server(
     # Route patterns for Google's Gemini API using wildcard matching
     # Supports: /v1beta/models/{model}:generateContent and /models/{model}:generateContent
 
-    def _extract_model_from_google_path(path: str) -> str:
+    def _extract_model_from_google_path(path: str) -> str | None:
         """Extract model name from Google API path.
 
         Examples:
@@ -1830,23 +2165,33 @@ async def model_proxy_server(
             /models/gemini-2.5-flash:streamGenerateContent -> gemini-2.5-flash
         """
         match = re.search(r"models/([^/:]+)", path)
-        return match.group(1) if match else "inspect"
+        return match.group(1) if match else None
 
     @server.route("/v1beta/models/*", method="POST")
     @server.route("/models/*", method="POST")
     async def google_generate_content(request: dict[str, Any]) -> dict[str, Any]:
         try:
             path = request.get("path", "")
-            json_body = request.get("json", {}) or {}
+            json_body = _json_body(request)
 
             is_streaming = ":streamGenerateContent" in path
 
             model_name = _extract_model_from_google_path(path)
+            if model_name is None:
+                return _google_missing_model()
             json_body["model"] = model_name
 
             completion = await call_bridge_model_service_async(
                 "generate_google", json_data=json_body
             )
+
+            error = _provider_error(completion)
+            if error is not None:
+                status = error.get("status") or _DEFAULT_ERROR_STATUS
+                return {
+                    "status": status,
+                    "body": _google_error_body(status, error.get("message") or ""),
+                }
 
             resp = (
                 completion if isinstance(completion, dict) else json.loads(completion)
@@ -1975,7 +2320,7 @@ async def model_proxy_server(
                     arguments=arguments,
                 )
                 return _jsonrpc_response(
-                    req_id, {"content": [{"type": "text", "text": result}]}
+                    req_id, {"content": _mcp_tool_result_content(result)}
                 )
 
             else:
@@ -1990,6 +2335,18 @@ async def model_proxy_server(
 
     # return configured server
     return server
+
+
+def _mcp_tool_result_content(result: JsonValue) -> JsonValue:
+    match result:
+        case str():
+            return [{"type": "text", "text": result}]
+        case _:
+            return _mcp_tool_content_block(result)
+
+
+def _mcp_tool_content_block(content: JsonValue) -> JsonValue:
+    return content
 
 
 async def run_model_proxy_server() -> None:

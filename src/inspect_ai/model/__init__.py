@@ -43,6 +43,7 @@ from ._compaction import (
     CompactionAuto,
     CompactionEdit,
     CompactionNative,
+    CompactionResult,
     CompactionStrategy,
     CompactionSummary,
     CompactionTrim,
@@ -65,11 +66,16 @@ from ._model import (
     Model,
     ModelAPI,
     ModelName,
+    ModelRefusalError,
+    ModelResolver,
+    ModelResponseFilter,
+    ModelRoles,
     RetryDecision,
+    compute_model_cost,
     get_model,
     model_roles,
 )
-from ._model_call import ModelCall
+from ._model_call import ModelCall, ModelRequestId
 from ._model_config import ModelConfig
 from ._model_data.model_data import ModelCost, ModelInfo
 from ._model_info import get_model_info, set_model_cost, set_model_info
@@ -77,23 +83,37 @@ from ._model_output import (
     ChatCompletionChoice,
     Logprob,
     Logprobs,
+    ModelFallback,
     ModelOutput,
     ModelUsage,
+    ServedModelUsage,
     StopCategory,
     StopDetails,
     StopReason,
     TopLogprob,
 )
+from ._model_role import ModelRole
 from ._openai_convert import (
     messages_from_openai,
     messages_from_openai_responses,
     messages_to_openai,
+    messages_to_openai_responses,
     model_output_from_openai,
     model_output_from_openai_responses,
 )
+from ._origin import model_origin
 from ._prompt import user_prompt
 from ._providers.providers import *
 from ._registry import modelapi
+from ._response_headers import record_response_headers
+from ._stream import (
+    StreamEvent,
+    StreamHandler,
+    StreamReasoningEvent,
+    StreamRetryEvent,
+    StreamTextEvent,
+    StreamToolCallEvent,
+)
 from ._trim import trim_messages
 
 __all__ = [
@@ -101,6 +121,8 @@ __all__ = [
     "GenerateConfig",
     "GenerateConfigArgs",
     "GenerateFilter",
+    "ModelResponseFilter",
+    "ModelResolver",
     "GenerateInput",
     "ImageOutput",
     "OutputModality",
@@ -125,6 +147,7 @@ __all__ = [
     "ChatCompletionChoice",
     "messages_from_openai",
     "messages_from_openai_responses",
+    "messages_to_openai_responses",
     "messages_from_anthropic",
     "messages_from_google",
     "model_output_from_openai",
@@ -134,12 +157,14 @@ __all__ = [
     "messages_to_openai",
     "stable_message_ids",
     "ModelCall",
+    "ModelRequestId",
     "ModelCost",
     "ModelOutput",
     "ModelConversation",
     "compaction",
     "Compact",
     "CompactionStrategy",
+    "CompactionResult",
     "CompactionAuto",
     "CompactionEdit",
     "CompactionSummary",
@@ -151,12 +176,25 @@ __all__ = [
     "Model",
     "ModelAPI",
     "ModelName",
+    "ModelRefusalError",
+    "compute_model_cost",
+    "ModelRole",
+    "ModelRoles",
     "RetryDecision",
+    "record_response_headers",
+    "ServedModelUsage",
     "ModelConfig",
+    "ModelFallback",
     "ModelUsage",
     "StopCategory",
     "StopDetails",
     "StopReason",
+    "StreamEvent",
+    "StreamHandler",
+    "StreamReasoningEvent",
+    "StreamRetryEvent",
+    "StreamTextEvent",
+    "StreamToolCallEvent",
     "call_tools",
     "execute_tools",
     "ExecuteToolsResult",
@@ -172,6 +210,7 @@ __all__ = [
     "set_model_cost",
     "set_model_info",
     "model_roles",
+    "model_origin",
     "ModelInfo",
     "modelapi",
     "Citation",

@@ -126,19 +126,21 @@ export function getInstallCmd(eval_) {
   return eval_.source === 'harbor' ? 'pip install inspect-harbor' : 'pip install inspect-evals';
 }
 
-export function getRunCmd(eval_, model = 'openai/gpt-5') {
+export function getRunCmd(eval_, model = 'openai/gpt-6-luna') {
   return `inspect eval ${eval_.code} --model ${model}`;
 }
 
-export function getPythonSnippet(eval_, model = 'openai/gpt-5') {
-  const pkg  = eval_.source === 'harbor' ? 'inspect_harbor' : 'inspect_evals';
+export function getPythonSnippet(eval_, model = 'openai/gpt-6-luna') {
   // Use the task name from `code` (e.g. inspect_evals/mmlu_0_shot) rather
   // than `id` (the directory slug, e.g. mmlu) so the import/call work for
   // multi-task evals.
   const task = (eval_.code || '').split('/').pop() || eval_.id.replace(/^h_/, '');
+  // inspect_evals doesn't re-export tasks, so import from the `id` submodule;
+  // inspect_harbor does re-export, so `from inspect_harbor import <task>` works at the top level.
+  const module = eval_.source === 'harbor' ? 'inspect_harbor' : `inspect_evals.${eval_.id}`;
   return [
     `from inspect_ai import eval`,
-    `from ${pkg} import ${task}`,
+    `from ${module} import ${task}`,
     ``,
     `eval(${task}(), model="${model}")`,
   ].join('\n');

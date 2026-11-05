@@ -4,9 +4,9 @@ from test_helpers.utils import skip_if_no_anthropic
 from inspect_ai import Task, eval
 from inspect_ai._util.content import ContentReasoning
 from inspect_ai.dataset import Sample
+from inspect_ai.model import get_model
 from inspect_ai.model._generate_config import GenerateConfig
 from inspect_ai.tool._tool import tool
-from inspect_ai.tool._tool_choice import ToolFunction
 
 from .test_reasoning_content import check_reasoning_content
 
@@ -22,7 +22,125 @@ async def test_reasoning_claude():
 async def test_reasoning_claude_opus_4_7():
     # Opus 4.7 defaults thinking.display to 'omitted'; Inspect sends
     # 'summarized', so summarized reasoning content must still come back.
-    await check_reasoning_content("anthropic/claude-opus-4-7")
+    # Claude 4.7+ rejects an explicit reasoning_tokens budget, so drive
+    # thinking via reasoning_effort only.
+    await check_reasoning_content("anthropic/claude-opus-4-7", reasoning_tokens=None)
+
+
+@pytest.mark.anyio
+@skip_if_no_anthropic
+async def test_reasoning_claude_sonnet_5():
+    # Coverage gap this fills: every other reasoning test in this module drives
+    # thinking via an explicit reasoning_tokens budget (check_reasoning_content's
+    # default of 1024). Claude 4.7+ removed budgeted thinking, so those tests must
+    # target pre-4.7 models and provide no effort-driven reasoning coverage for a
+    # current Sonnet-tier model. This test exercises that path directly on Sonnet 5.
+    #
+    # Sonnet 5 (Claude 4.7+) rejects an explicit reasoning_tokens budget, so drive
+    # thinking via reasoning_effort only. It defaults thinking.display to 'omitted'
+    # while Inspect requests 'summarized', so a non-empty summarized reasoning block
+    # must come back — and reasoning must not leak into the visible response text.
+    model = get_model("anthropic/claude-sonnet-5")
+    output = await model.generate(
+        "Solve 3*x^3-5*x=1",
+        config=GenerateConfig(reasoning_effort="low", max_tokens=8192),
+    )
+    assert "<think>" not in output.completion
+    content = output.choices[0].message.content
+    assert isinstance(content, list)
+    assert isinstance(content[0], ContentReasoning)
+    assert content[0].reasoning.strip()
+
+
+@pytest.mark.anyio
+@skip_if_no_anthropic
+async def test_reasoning_claude_opus_5():
+    # Opus 5 (like Sonnet 5) rejects an explicit reasoning_tokens budget, so
+    # drive thinking via reasoning_effort only. It defaults thinking.display to
+    # 'omitted' while Inspect requests 'summarized', so a non-empty summarized
+    # reasoning block must come back — and reasoning must not leak into the
+    # visible response text.
+    model = get_model("anthropic/claude-opus-5")
+    output = await model.generate(
+        "Solve 3*x^3-5*x=1",
+        config=GenerateConfig(reasoning_effort="low", max_tokens=8192),
+    )
+    assert "<think>" not in output.completion
+    content = output.choices[0].message.content
+    assert isinstance(content, list)
+    assert isinstance(content[0], ContentReasoning)
+    assert content[0].reasoning.strip()
+
+
+@pytest.mark.anyio
+@skip_if_no_anthropic
+async def test_reasoning_claude_opus_5_5():
+    # same shape as the Opus 5 test above: reasoning_effort only (no
+    # budget), summarized reasoning must come back and not leak into text
+    model = get_model("anthropic/claude-opus-5-5")
+    output = await model.generate(
+        "Solve 3*x^3-5*x=1",
+        config=GenerateConfig(reasoning_effort="high", max_tokens=8192),
+    )
+    assert "<think>" not in output.completion
+    content = output.choices[0].message.content
+    assert isinstance(content, list)
+    assert isinstance(content[0], ContentReasoning)
+    assert content[0].reasoning.strip()
+
+
+@pytest.mark.anyio
+@skip_if_no_anthropic
+async def test_reasoning_claude_sonnet_5_5():
+    # same shape as the Opus 5.5 test above
+    model = get_model("anthropic/claude-sonnet-5-5")
+    output = await model.generate(
+        "Solve 3*x^3-5*x=1",
+        config=GenerateConfig(reasoning_effort="high", max_tokens=8192),
+    )
+    assert "<think>" not in output.completion
+    content = output.choices[0].message.content
+    assert isinstance(content, list)
+    assert isinstance(content[0], ContentReasoning)
+    assert content[0].reasoning.strip()
+
+
+@pytest.mark.anyio
+@skip_if_no_anthropic
+async def test_reasoning_claude_haiku_5_5():
+    # same shape as the Opus 5.5 test above
+    model = get_model("anthropic/claude-haiku-5-5")
+    output = await model.generate(
+        "Solve 3*x^3-5*x=1",
+        config=GenerateConfig(reasoning_effort="high", max_tokens=8192),
+    )
+    assert "<think>" not in output.completion
+    content = output.choices[0].message.content
+    assert isinstance(content, list)
+    assert isinstance(content[0], ContentReasoning)
+    assert content[0].reasoning.strip()
+
+
+@pytest.mark.anyio
+@skip_if_no_anthropic
+async def test_reasoning_claude_fable_5_1():
+    # Fable 5.1 (like Fable 5) always thinks and rejects an explicit
+    # reasoning_tokens budget, so drive thinking via reasoning_effort only. It
+    # defaults thinking.display to 'omitted' while Inspect requests
+    # 'summarized', so a non-empty summarized reasoning block must come back —
+    # and reasoning must not leak into the visible response text. Use "high"
+    # effort: at "low", 5.1 often answers a problem this size directly without
+    # emitting a thinking block (verified live 2026-09-01).
+    model = get_model("anthropic/claude-fable-5-1")
+    output = await model.generate(
+        "Solve 3*x^3-5*x=1",
+        config=GenerateConfig(reasoning_effort="high", max_tokens=8192),
+    )
+    assert "<think>" not in output.completion
+    content = output.choices[0].message.content
+    assert isinstance(content, list)
+    assert isinstance(content[0], ContentReasoning)
+    assert content[0].reasoning.strip()
 
 
 @pytest.mark.anyio
@@ -45,11 +163,11 @@ async def test_reasoning_claude_ignore_unsupported():
 
         return execute
 
+    # no forced tool choice: under adaptive thinking a forced turn has no reasoning
     await check_reasoning_content(
         "anthropic/claude-sonnet-4-6",
         config=GenerateConfig(temperature=0.9, top_p=3, top_k=3),
         tools=[addition()],
-        tool_choice=ToolFunction("addition"),
     )
 
 

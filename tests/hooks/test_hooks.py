@@ -1,19 +1,27 @@
+from contextlib import contextmanager, nullcontext
+from pathlib import Path
 from typing import Generator, Type, TypeVar
 from unittest.mock import patch
 
+import anyio
+import anyio.lowlevel
 import pytest
 
 import inspect_ai.hooks._startup as hooks_startup_module
-from inspect_ai import eval
+from inspect_ai import eval, eval_async
 from inspect_ai._eval.task.task import Task
+from inspect_ai._util._async import current_async_backend
+from inspect_ai._util.entrypoints import clear_entry_points_state, ensure_entry_points
 from inspect_ai._util.environ import environ_var
 from inspect_ai._util.error import PrerequisiteError
 from inspect_ai._util.registry import _registry, registry_info, registry_lookup
 from inspect_ai.dataset._dataset import Sample
+from inspect_ai.event import InfoEvent, TimelineEvent, timeline_build
 from inspect_ai.hooks._hooks import (
     ApiKeyOverride,
     BeforeModelGenerate,
     Hooks,
+    ModelRetry,
     ModelUsageData,
     RunEnd,
     RunStart,
@@ -29,8 +37,13 @@ from inspect_ai.hooks._hooks import (
     hooks,
     override_api_key,
 )
-from inspect_ai.hooks._startup import init_hooks
-from inspect_ai.solver._solver import Generate, Solver, solver
+from inspect_ai.hooks._startup import _load_registry_hooks, init_hooks
+from inspect_ai.log import EvalLog, list_eval_logs_async, read_eval_log_async
+from inspect_ai.log._file import read_eval_log
+from inspect_ai.log._log import EvalSample
+from inspect_ai.log._transcript import transcript
+from inspect_ai.model import ModelOutput, get_model
+from inspect_ai.solver._solver import Generate, Solver, generate, solver
 from inspect_ai.solver._task_state import TaskState
 
 
@@ -48,6 +61,7 @@ class MockHooks(Hooks):
         self.sample_event_events: list[SampleEvent] = []
         self.sample_end_events: list[SampleEnd] = []
         self.model_usage_events: list[ModelUsageData] = []
+        self.model_retry_events: list[ModelRetry] = []
         self.before_model_generate_events: list[BeforeModelGenerate] = []
 
     def assert_no_events(self) -> None:
@@ -62,6 +76,7 @@ class MockHooks(Hooks):
         assert not self.sample_event_events
         assert not self.sample_end_events
         assert not self.model_usage_events
+        assert not self.model_retry_events
         assert not self.before_model_generate_events
 
     def enabled(self) -> bool:
@@ -100,6 +115,9 @@ class MockHooks(Hooks):
     async def on_model_usage(self, data: ModelUsageData) -> None:
         self.model_usage_events.append(data)
 
+    async def on_model_retry(self, data: ModelRetry) -> None:
+        self.model_retry_events.append(data)
+
     async def on_before_model_generate(self, data: BeforeModelGenerate) -> None:
         self.before_model_generate_events.append(data)
 
@@ -113,6 +131,23 @@ class MockMinimalHooks(Hooks):
 
     async def on_run_start(self, data: RunStart) -> None:
         self.run_start_events.append(data)
+
+
+class AwaitingRunHooks(Hooks):
+    """Run hooks that await, so cancellation can reach them."""
+
+    def __init__(self) -> None:
+        self.run_start_suspended: anyio.Event | None = None
+        self.run_end_events: list[RunEnd] = []
+
+    async def on_run_start(self, data: RunStart) -> None:
+        if self.run_start_suspended is not None:
+            self.run_start_suspended.set()
+            await anyio.sleep_forever()
+
+    async def on_run_end(self, data: RunEnd) -> None:
+        await anyio.lowlevel.checkpoint()
+        self.run_end_events.append(data)
 
 
 @pytest.fixture(autouse=True)
@@ -136,6 +171,11 @@ def hooks_2() -> Generator[MockHooks, None, None]:
 @pytest.fixture
 def hooks_minimal() -> Generator[MockMinimalHooks, None, None]:
     yield from _create_mock_hooks("test_hooks_minimal", MockMinimalHooks)
+
+
+@pytest.fixture
+def awaiting_run_hooks() -> Generator[AwaitingRunHooks, None, None]:
+    yield from _create_mock_hooks("test_awaiting_run_hooks", AwaitingRunHooks)
 
 
 def test_can_run_eval_with_no_hooks() -> None:
@@ -180,6 +220,20 @@ def test_can_subscribe_to_events(mock_hooks: MockHooks) -> None:
     assert before_gen.task_name is not None
 
 
+def test_task_start_carries_plan_including_setup_steps(
+    mock_hooks: MockHooks,
+) -> None:
+    task = Task(dataset=[Sample("sample_1")], setup=_setup_marker_solver())
+
+    eval(task, model="mockllm/model")
+
+    assert len(mock_hooks.task_start_events) == 1
+    steps = [step.solver for step in mock_hooks.task_start_events[0].plan.steps]
+    # resolve_plan unrolls setup onto the front, ahead of the solver
+    assert "_setup_marker_solver" in steps[0]
+    assert len(steps) > 1
+
+
 def test_can_subscribe_to_events_with_multiple_hooks(
     mock_hooks: MockHooks, hooks_2: MockHooks
 ) -> None:
@@ -201,6 +255,39 @@ def test_can_subscribe_to_events_with_multiple_hooks(
         assert len(h.sample_end_events) == 1
         assert len(h.model_usage_events) == 1
         assert len(h.before_model_generate_events) == 1
+
+
+def test_model_retry_hook(mock_hooks: MockHooks) -> None:
+    import anyio
+
+    from inspect_ai.hooks._hooks import emit_model_retry
+
+    anyio.run(emit_model_retry, "mockllm/model", 2, 1.5)
+
+    assert len(mock_hooks.model_retry_events) == 1
+    retry = mock_hooks.model_retry_events[0]
+    assert retry.model_name == "mockllm/model"
+    assert retry.attempt == 2
+    assert retry.wait_time == 1.5
+    # no active sample in this context, so eval/sample ids are None
+    assert retry.sample_id is None
+    assert retry.eval_id is None
+    # cause not provided, so it defaults to None
+    assert retry.exception_type is None
+    assert retry.status_code is None
+
+
+def test_model_retry_hook_carries_cause(mock_hooks: MockHooks) -> None:
+    import anyio
+
+    from inspect_ai.hooks._hooks import emit_model_retry
+
+    anyio.run(emit_model_retry, "mockllm/model", 1, 0.5, "RateLimitError", 429)
+
+    assert len(mock_hooks.model_retry_events) == 1
+    retry = mock_hooks.model_retry_events[0]
+    assert retry.exception_type == "RateLimitError"
+    assert retry.status_code == 429
 
 
 def test_hooks_on_multiple_tasks(mock_hooks: MockHooks) -> None:
@@ -461,6 +548,63 @@ def test_hooks_with_base_exception_passes_exception_to_run_end(
     assert mock_hooks.run_end_events[0].exception is not None
 
 
+async def test_run_end_hook_runs_when_cancelled_during_run_start(
+    awaiting_run_hooks: AwaitingRunHooks,
+) -> None:
+    awaiting_run_hooks.run_start_suspended = anyio.Event()
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(_eval_async_one_sample)
+        await awaiting_run_hooks.run_start_suspended.wait()
+        tg.cancel_scope.cancel()
+
+    (run_end,) = awaiting_run_hooks.run_end_events
+    assert isinstance(run_end.exception, anyio.get_cancelled_exc_class())
+    assert run_end.logs == []
+
+    # the cancelled run no longer counts as running
+    awaiting_run_hooks.run_start_suspended = None
+    (log,) = await _eval_async_one_sample()
+    assert log.status == "success"
+    assert len(awaiting_run_hooks.run_end_events) == 2
+
+
+async def test_run_end_hook_finishes_once_when_samples_are_cancelled(
+    awaiting_run_hooks: AwaitingRunHooks, tmp_path: Path
+) -> None:
+    sample_started = anyio.Event()
+
+    @solver
+    def wait_solver() -> Solver:
+        async def solve(state: TaskState, generate: Generate) -> TaskState:
+            sample_started.set()
+            await anyio.sleep_forever()
+            return state
+
+        return solve
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(_eval_async_one_sample, wait_solver(), str(tmp_path))
+        await sample_started.wait()
+        tg.cancel_scope.cancel()
+
+    (log_info,) = await list_eval_logs_async(str(tmp_path))
+    log = await read_eval_log_async(log_info.name, header_only=True)
+    assert log.status == "cancelled"
+    (run_end,) = awaiting_run_hooks.run_end_events
+    if current_async_backend() == "trio":
+        # the run is finished shielded and gets its log
+        assert run_end.exception is None
+        assert [log.status for log in run_end.logs] == ["cancelled"]
+    else:
+        # the cancellation cuts the hook short; it runs again with it
+        assert isinstance(run_end.exception, anyio.get_cancelled_exc_class())
+        assert run_end.logs == []
+
+    (log,) = await _eval_async_one_sample()
+    assert log.status == "success"
+    assert len(awaiting_run_hooks.run_end_events) == 2
+
+
 def test_hooks_do_not_need_to_subscribe_to_all_events(
     hooks_minimal: MockMinimalHooks,
 ) -> None:
@@ -534,9 +678,77 @@ def test_hooks_decorator_returns_class() -> None:
     class TestHooksClass(Hooks):
         pass
 
-    assert isinstance(TestHooksClass, type)
-    instance = TestHooksClass()
-    assert isinstance(instance, Hooks)
+    try:
+        assert isinstance(TestHooksClass, type)
+        instance = TestHooksClass()
+        assert isinstance(instance, Hooks)
+    finally:
+        # Registration is a side effect of the decorator, not under test here;
+        # clean it up so it doesn't leak into other tests via get_all_hooks().
+        del _registry["hooks:test_hooks_class"]
+
+
+class _FakeEntryPoint:
+    """Stand-in for an `inspect_ai` entry point that registers a hook on load."""
+
+    def __init__(self, name: str, hook_name: str) -> None:
+        self.name = name
+        self.value = f"{name}:hooks"
+        self._hook_name = hook_name
+
+    def load(self) -> None:
+        @hooks(self._hook_name, description=f"{self._hook_name}-description")
+        def get_hooks_class() -> Type[MockMinimalHooks]:
+            return MockMinimalHooks
+
+
+def test_entry_point_hooks_load_when_a_hook_is_already_registered(
+    mock_hooks: MockHooks,
+) -> None:
+    # registry_find() only scans entry points when its own scan finds nothing, so
+    # any hook registered before startup (e.g. by the INSPECT_TELEMETRY package)
+    # used to hide every entry-point hook from the one-shot load.
+    entry_point_hook_name = "test_hooks_entry_point"
+    entry_point = _FakeEntryPoint("test_hooks_package", entry_point_hook_name)
+
+    clear_entry_points_state()
+    try:
+        with patch(
+            "inspect_ai._util.entrypoints.entry_points", return_value=[entry_point]
+        ):
+            loaded = _load_registry_hooks()
+    finally:
+        _registry.pop(f"hooks:{entry_point_hook_name}", None)
+        clear_entry_points_state()
+        ensure_entry_points()
+
+    loaded_names = {registry_info(hook).name for hook in loaded}
+    assert "test_hooks" in loaded_names
+    assert entry_point_hook_name in loaded_names
+
+
+def test_required_entry_point_hook_not_reported_missing_when_a_hook_is_already_registered(
+    mock_hooks: MockHooks,
+) -> None:
+    # The loud symptom of the same bug: with the entry-point hook hidden,
+    # INSPECT_REQUIRED_HOOKS verification raised a PrerequisiteError naming a
+    # hook that was in fact installed.
+    entry_point_hook_name = "test_hooks_entry_point_required"
+    entry_point = _FakeEntryPoint("test_hooks_package_required", entry_point_hook_name)
+
+    clear_entry_points_state()
+    try:
+        with patch(
+            "inspect_ai._util.entrypoints.entry_points", return_value=[entry_point]
+        ):
+            with environ_var("INSPECT_REQUIRED_HOOKS", entry_point_hook_name):
+                loaded = _load_registry_hooks()
+    finally:
+        _registry.pop(f"hooks:{entry_point_hook_name}", None)
+        clear_entry_points_state()
+        ensure_entry_points()
+
+    assert entry_point_hook_name in {registry_info(hook).name for hook in loaded}
 
 
 def test_required_hooks_when_all_installed(
@@ -641,6 +853,161 @@ def _create_mock_hooks(name: str, hooks_class: Type[T]) -> Generator[T, None, No
     finally:
         # Remove the hook from the registry to avoid conflicts in other tests.
         del _registry[f"hooks:{name}"]
+
+
+async def _eval_async_one_sample(
+    solver: Solver = generate(), log_dir: str | None = None
+) -> list[EvalLog]:
+    return await eval_async(
+        Task(dataset=[Sample("sample_1")], solver=solver),
+        model="mockllm/model",
+        log_dir=log_dir,
+        ctl_server=False,
+    )
+
+
+@contextmanager
+def _hook_context(name: str, hooks_class: Type[T]) -> Generator[T, None, None]:
+    yield from _create_mock_hooks(name, hooks_class)
+
+
+@solver
+def _emitting_solver_with_model_response() -> Solver:
+    async def solve(state: TaskState, generate: Generate) -> TaskState:
+        for i in range(100):
+            transcript().info({"i": i})
+        assert transcript().history.resident_events_truncated
+        state = await generate(state)
+        transcript().add_timeline(
+            timeline_build(list(transcript().events), name="test-timeline")
+        )
+        return state
+
+    return solve
+
+
+class _RecordingHook(Hooks):
+    def __init__(self) -> None:
+        self.samples: list[EvalSample] = []
+
+    async def on_sample_end(self, data: SampleEnd) -> None:
+        self.samples.append(data.sample)
+
+
+class _SummaryOnlyRecordingHook(_RecordingHook):
+    def needs_full_sample(self) -> bool:
+        return False
+
+
+class _DisabledRecordingHook(_RecordingHook):
+    def enabled(self) -> bool:
+        return False
+
+
+class _RaisingNeedsFullSampleHook(_RecordingHook):
+    def needs_full_sample(self) -> bool:
+        raise RuntimeError("needs_full_sample() failed")
+
+
+@pytest.mark.parametrize(
+    ("other_hook_class", "expect_full"),
+    [
+        pytest.param(None, False, id="summary-only"),
+        pytest.param(MockMinimalHooks, False, id="no-sample-end"),
+        pytest.param(_DisabledRecordingHook, False, id="disabled"),
+        pytest.param(_RecordingHook, True, id="mixed"),
+        pytest.param(_RaisingNeedsFullSampleHook, True, id="predicate-error"),
+    ],
+)
+def test_opted_out_hook_receives_event_less_sample_when_evicted(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_hooks_registry: None,
+    caplog: pytest.LogCaptureFixture,
+    other_hook_class: type[Hooks] | None,
+    expect_full: bool,
+) -> None:
+    import inspect_ai._eval.task.run as run_module
+
+    monkeypatch.setattr(run_module, "DEFAULT_RESIDENT_TAIL", 20)
+    monkeypatch.setenv("INSPECT_TRANSCRIPT_BOUNDED", "true")
+    # The final response stays resident and exceeds the attachment threshold.
+    long_response = "x" * 150
+    other_context = (
+        _hook_context("other_finalization_hook", other_hook_class)
+        if other_hook_class is not None
+        else nullcontext(None)
+    )
+    with (
+        _hook_context("summary_only_hook", _SummaryOnlyRecordingHook) as hook,
+        other_context as other,
+    ):
+        eval(
+            Task(
+                dataset=[Sample("sample_1")],
+                solver=[_emitting_solver_with_model_response()],
+            ),
+            model=get_model(
+                "mockllm/model",
+                custom_outputs=[
+                    ModelOutput.from_content("mockllm/model", long_response)
+                ],
+            ),
+            log_dir=str(tmp_path),
+            display="none",
+        )
+
+    assert len(hook.samples) == 1
+    sample = hook.samples[0]
+    if expect_full:
+        assert sample.events and sample.attachments and sample.timelines
+        assert isinstance(other, _RecordingHook) and other.samples == [sample]
+    else:
+        assert sample.events == []
+        assert sample.attachments == {}
+        assert sample.timelines is None
+        if isinstance(other, _RecordingHook):
+            assert other.samples == []
+    if isinstance(other, MockMinimalHooks):
+        assert len(other.run_start_events) == 1
+    assert sample.output.completion == long_response
+    assert sample.messages
+    assert sample.total_time is not None
+    if other_hook_class is _RaisingNeedsFullSampleHook:
+        assert "needs_full_sample() failed" in caplog.text
+
+    log = read_eval_log(str(next(tmp_path.glob("*.eval"))))
+    assert log.status == "success"
+    assert log.samples is not None
+    logged = log.samples[0]
+    assert [
+        event.data["i"]
+        for event in logged.events
+        if isinstance(event, InfoEvent)
+        and isinstance(event.data, dict)
+        and "i" in event.data
+    ] == list(range(100))
+    assert long_response in logged.attachments.values()
+    assert logged.timelines is not None
+    assert logged.timelines[0].name == "test-timeline"
+    timeline_event_ids = {
+        item.event.uuid
+        for item in logged.timelines[0].root.content
+        if isinstance(item, TimelineEvent)
+    }
+    assert timeline_event_ids and timeline_event_ids <= {
+        event.uuid for event in logged.events
+    }
+
+
+@solver
+def _setup_marker_solver() -> Solver:
+    """No-op setup step, so the plan has a setup entry to find."""
+
+    async def solve(state: TaskState, generate: Generate) -> TaskState:
+        return state
+
+    return solve
 
 
 @solver

@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
-from inspect_ai.util._checkpoint._layout import eval_checkpoints_dir
+import pytest
+
+from inspect_ai.util._checkpoint import CheckpointConfig, TurnInterval
+from inspect_ai.util._checkpoint._layout import (
+    eval_checkpoints_dir,
+    sample_checkpoints_dir,
+)
+from inspect_ai.util._checkpoint._layout._paths import sample_dir_segment
+from inspect_ai.util._checkpoint._layout.eval_checkpoints_dir import (
+    eval_checkpoints_dir_from_config,
+)
+from inspect_ai.util._checkpoint.config import CheckpointDisabled
 
 
 def test_eval_checkpoints_dir_strips_eval_suffix() -> None:
@@ -70,3 +81,51 @@ def test_eval_checkpoints_dir_strips_trailing_slash_on_override() -> None:
         eval_checkpoints_dir("/logs/foo.eval", "/scratch/ckpts/")
         == "/scratch/ckpts/foo.checkpoints"
     )
+
+
+@pytest.mark.parametrize(
+    "sample_id",
+    ["../../escape", "task/variant", "/etc/x", "s3://bucket/other.checkpoints/x"],
+)
+def test_sample_dir_with_slash_id_stays_under_eval_checkpoints_dir(
+    sample_id: str,
+) -> None:
+    """A sample id containing `/` (local or S3 eval dir) stays in the eval dir."""
+    for log in ("/logs/foo.eval", "s3://bucket/logs/foo.eval"):
+        eval_dir = eval_checkpoints_dir(log, None)
+        sample_dir = sample_checkpoints_dir(eval_dir, sample_id, 0)
+        assert sample_dir == f"{eval_dir}/{sample_dir_segment(sample_id)}__0"
+        assert sample_dir.removeprefix(f"{eval_dir}/").count("/") == 0
+
+
+# --- eval_checkpoints_dir_from_config veto / no-config cases --------
+
+
+@pytest.mark.parametrize(
+    "task, eval_",
+    [
+        pytest.param(
+            CheckpointDisabled(),
+            CheckpointConfig(trigger=TurnInterval(every=1)),
+            id="task_veto",
+        ),
+        pytest.param(
+            CheckpointConfig(trigger=TurnInterval(every=1)),
+            CheckpointDisabled(),
+            id="eval_veto",
+        ),
+        pytest.param(None, None, id="no_config"),
+    ],
+)
+def test_eval_dir_from_config_returns_none(
+    task: CheckpointConfig | CheckpointDisabled | None,
+    eval_: CheckpointConfig | CheckpointDisabled | None,
+) -> None:
+    assert eval_checkpoints_dir_from_config("/logs/run.eval", task, eval_) is None
+
+
+def test_eval_dir_from_config_enabled_returns_dir() -> None:
+    out = eval_checkpoints_dir_from_config(
+        "/logs/run.eval", None, CheckpointConfig(trigger=TurnInterval(every=1))
+    )
+    assert out is not None and "run.checkpoints" in out

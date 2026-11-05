@@ -1,18 +1,49 @@
-"""Path to the sandbox CLI binary injected into sandbox environments.
+"""Path to the sandbox tools injected into sandbox environments.
+
+The tools ship as a PyInstaller --onedir bundle (a launcher executable plus an
+``_internal`` directory), so what is injected is a directory tree rather than a single
+file. ``SANDBOX_TOOLS_DIR`` is where the tree is extracted, and ``SANDBOX_CLI`` is the
+launcher inside it.
 
 We choose /var/tmp as the injection location since:
   1) it is accessible in all major linux distributions
-  2) all users have permissions to read/write to it (i.e. world-writable)
+  2) all users can create entries there, which supports rootless sandboxes
   3) it is unlikely to be cleared during an evaluation
      (https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard)
   4) it is unlikely to be accidentally stumbled upon by an LLM solving a
      task that requires interacting with temp files
 
-We additionally choose a dot-prefixed random hash sub-directory to further
-attempt to prevent LLMs from stumbling on the injected tools.
+We additionally choose a dot-prefixed random hash sub-directory to reduce
+accidental discovery. When Inspect can run commands in the sandbox as root, it
+installs the tree as root and restricts it to 0700. A root-owned 0700 tree
+prevents access by other, non-root users, but not by a process running in the
+sandbox as root.
 """
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .environment import SandboxEnvironment
 
 # Also defined in inspect_ai.tool._sandbox_tools_utils._build_config — keep in sync.
 SANDBOX_TOOLS_BASE_NAME = "inspect-sandbox-tools"
 
-SANDBOX_CLI = f"/var/tmp/.da7be258e003d428/{SANDBOX_TOOLS_BASE_NAME}"
+SANDBOX_TOOLS_DIR = "/var/tmp/.da7be258e003d428"
+
+SANDBOX_CLI = f"{SANDBOX_TOOLS_DIR}/{SANDBOX_TOOLS_BASE_NAME}"
+
+
+def tools_user_param(
+    sandbox: "SandboxEnvironment", user: str | None
+) -> str | dict[str, object] | None:
+    """Value of a sandbox tool request's ``user`` param.
+
+    An explicit ``user`` wins; otherwise the sandbox's default exec identity, which
+    the tools switch to (a no-op when they already run as it). None when neither is
+    known, so the tools keep their own identity.
+    """
+    if user:
+        return user
+    if sandbox._tools_default_user:
+        return sandbox._tools_default_user._asdict()
+    return None

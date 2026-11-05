@@ -1,3 +1,5 @@
+from typing import Any
+
 import anyio
 import pytest
 
@@ -5,18 +7,21 @@ from inspect_ai._eval.eval import eval
 from inspect_ai._eval.task.task import Task
 from inspect_ai.dataset._dataset import Sample
 from inspect_ai.model._model_output import ModelUsage
-from inspect_ai.solver._solver import Generate, solver
+from inspect_ai.solver._solver import Generate, Solver, solver
 from inspect_ai.solver._task_state import TaskState
 from inspect_ai.util._limit import (
     LimitExceededError,
     apply_limits,
     check_message_limit,
     check_token_limit,
+    check_tool_call_limit,
     message_limit,
     record_model_usage,
+    record_tool_call_usage,
     sample_limits,
     time_limit,
     token_limit,
+    tool_call_limit,
 )
 
 
@@ -32,6 +37,77 @@ def test_can_use_deprecated_sample_limit_exceeded_error() -> None:
     except SampleLimitExceededError as exc_info:
         assert exc_info.__class__ == LimitExceededError
         assert exc_info.type == "token"
+
+
+def test_tool_call_limits_preserve_nested_scopes() -> None:
+    with tool_call_limit(2) as outer:
+        with tool_call_limit(1) as inner:
+            record_tool_call_usage(1)
+            check_tool_call_limit()
+            assert inner.usage == 1
+        record_tool_call_usage(1)
+        check_tool_call_limit()
+        with pytest.raises(LimitExceededError) as error:
+            record_tool_call_usage(1)
+            check_tool_call_limit()
+        assert error.value.type == "tool_call"
+        assert error.value.source is outer
+    record_tool_call_usage(1)
+    check_tool_call_limit()
+
+
+@pytest.mark.parametrize("value", [-1, True, 1.5, float("nan"), float("inf"), "5"])
+def test_tool_call_limit_rejects_invalid_values(value: Any) -> None:
+    with pytest.raises(ValueError, match="non-negative"):
+        tool_call_limit(value)
+
+    limit = tool_call_limit(None)
+    limit._set_ceiling(5)
+    with limit:
+        record_tool_call_usage(2)
+        with pytest.raises(ValueError, match="non-negative"):
+            limit.limit = value
+        assert limit.limit == 5
+        assert limit.usage == 2
+
+
+@pytest.mark.parametrize(
+    "sample_limit, evaluation_limit, expected",
+    [
+        (25, 5, 5),
+        (3, 5, 3),
+        (None, 5, 5),
+        (25, None, 25),
+        (25, 0, 0),
+        (0, 5, 0),
+        (None, None, None),
+    ],
+)
+def test_sample_metadata_cannot_raise_evaluation_tool_budget(
+    sample_limit: int | None, evaluation_limit: int | None, expected: int | None
+) -> None:
+    observed: list[int | None] = []
+
+    @solver
+    def observe_budget() -> Solver:
+        async def solve(state: TaskState, generate: Generate) -> TaskState:
+            observed.append(state.tool_call_limit)
+            return state
+
+        return solve
+
+    result = eval(
+        Task(
+            dataset=[
+                Sample(input="check budget", metadata={"tool_call_limit": sample_limit})
+            ],
+            solver=observe_budget(),
+        ),
+        model="mockllm/budget",
+        tool_call_limit=evaluation_limit,
+    )
+    assert result[0].status == "success"
+    assert observed == [expected]
 
 
 @pytest.mark.parametrize(

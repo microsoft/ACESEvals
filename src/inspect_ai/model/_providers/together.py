@@ -2,23 +2,23 @@ import os
 from functools import partial
 from json import dumps
 from logging import getLogger
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import httpx
-from openai import APIStatusError, LengthFinishReasonError
+from openai import APIStatusError
 from openai.types.chat import (
     ChatCompletion,
 )
 from typing_extensions import override
 
 from inspect_ai._util.constants import DEFAULT_MAX_TOKENS
-from inspect_ai.model._retry import model_retry_config
+from inspect_ai.model._retry import batch_admin_retry_config
 from inspect_ai.tool._tool_choice import ToolChoice
 from inspect_ai.tool._tool_info import ToolInfo
 
 from .._chat_message import ChatMessage, ChatMessageAssistant
 from .._generate_config import GenerateConfig, normalized_batch_config
-from .._model import ModelAPI, RetryDecision, log_model_retry
+from .._model import ModelAPI, RetryDecision
 from .._model_output import (
     ChatCompletionChoice,
     Logprob,
@@ -29,7 +29,11 @@ from .._model_output import (
     as_stop_reason,
     collect_stop_details,
 )
-from .._openai import chat_message_assistant_from_openai, openai_stop_details
+from .._openai import (
+    chat_message_assistant_from_openai,
+    openai_chat_completion_stream_final,
+    openai_stop_details,
+)
 from ._together_batch import TogetherBatcher
 from .openai_compatible import OpenAICompatibleAPI
 from .util import (
@@ -97,7 +101,7 @@ class TogetherAIAPI(OpenAICompatibleAPI):
         api_key: str | None = None,
         config: GenerateConfig = GenerateConfig(),
         emulate_tools: bool = False,
-        stream: bool | None = None,
+        stream: bool | Literal["auto"] | None = None,
     ) -> None:
         super().__init__(
             model_name=model_name,
@@ -144,13 +148,27 @@ class TogetherAIAPI(OpenAICompatibleAPI):
         else:
             return ex
 
+    def is_gpt_oss(self) -> bool:
+        return "gpt-oss" in self.model_family().lower()
+
     @override
     def completion_params(self, config: GenerateConfig, tools: bool) -> dict[str, Any]:
         params = super().completion_params(config, tools)
-        if "logprobs" in params:
-            params["logprobs"] = 1
-        if "top_logprobs" in params:
-            del params["top_logprobs"]
+
+        # Together accepts `low`/`medium`/`high` for all reasoning models, plus
+        # `xhigh`/`max` on some (e.g. DeepSeek V4 Pro). `minimal` is never accepted
+        # (-> `low`). `none` isn't a supported effort value, so it's omitted and the
+        # provider/model default applies -- reasoning is not disabled (hybrid models
+        # are disabled via reasoning={"enabled": false}, not an effort value). Only
+        # gpt-oss rejects `xhigh`/`max` (-> `high`); other models pass them through.
+        if "reasoning_effort" in params:
+            effort = params["reasoning_effort"]
+            if effort == "minimal":
+                params["reasoning_effort"] = "low"
+            elif effort == "none":
+                del params["reasoning_effort"]
+            elif effort in ("xhigh", "max") and self.is_gpt_oss():
+                params["reasoning_effort"] = "high"
 
         # together requires temperature with num_choices
         if config.num_choices is not None and config.temperature is None:
@@ -166,24 +184,33 @@ class TogetherAIAPI(OpenAICompatibleAPI):
         return chat_choices_from_response_together(completion, tools)
 
     @override
+    def resolve_stream(self, config: GenerateConfig) -> bool:
+        # batching and streaming are mutually exclusive (and the base class
+        # resolves streaming while building the request, before the batcher
+        # exists — so the decision must not depend on _resolve_batcher having
+        # run)
+        if self._batcher or normalized_batch_config(config.batch):
+            return False
+        return super().resolve_stream(config)
+
+    @override
+    def auto_streamable(self, config: GenerateConfig) -> bool:
+        # Together returns logprobs in its native tokens/token_logprobs
+        # shape (see chat_choices_from_response_together), which the SDK
+        # stream accumulator does not carry into the final completion —
+        # logprobs would silently come back empty under streaming.
+        return super().auto_streamable(config) and not config.logprobs
+
+    @override
     async def _generate_completion(
         self, request: dict[str, Any], config: GenerateConfig
     ) -> ChatCompletion:
         self._resolve_batcher(config)
         if self._batcher:
             return await self._batcher.generate_for_request(request)
-        # honor streaming (batching and streaming are mutually exclusive)
-        if self.stream or self.should_stream(config):
-            async with self.client.chat.completions.stream(**request) as stream:
-                try:
-                    return await stream.get_final_completion()
-                except LengthFinishReasonError as ex:
-                    # When structured output (response_format) or tools are in
-                    # play, the SDK raises on a length-truncated stream rather
-                    # than returning the partial completion. Fall back to the
-                    # partial completion so it is handled like the
-                    # non-streaming path (stop_reason="max_tokens").
-                    return ex.completion
+        if self.resolve_stream(config):
+            async with await self.client.chat.completions.create(**request) as stream:
+                return await openai_chat_completion_stream_final(stream)
         return cast(
             ChatCompletion, await self.client.chat.completions.create(**request)
         )
@@ -197,13 +224,11 @@ class TogetherAIAPI(OpenAICompatibleAPI):
             batch_config,
             # TODO: In the future, we could pass max_retries and timeout
             # from batch_config falling back to config
-            model_retry_config(
+            batch_admin_retry_config(
                 self.model_name,
-                config.max_retries,
-                config.timeout,
+                config,
                 self.should_retry,
-                lambda ex: None,
-                log_model_retry,
+                qualified_model_name=self.qualified_model_name,
             ),
         )
 
@@ -280,6 +305,7 @@ class TogetherRESTAPI(ModelAPI):
             url=f"{chat_url}",
             headers={"Authorization": f"Bearer {self.api_key}"},
             json=json,
+            qualified_model_name=self.qualified_model_name,
         )
 
         if "error" in response:
@@ -327,7 +353,7 @@ class TogetherRESTAPI(ModelAPI):
         Per-model scoping avoids that, at the cost of slight over-fragmentation
         when models actually share an upstream rate-limit budget.
         """
-        return f"{self.api_key}:{self.model_name}"
+        return f"{self.initial_api_key}:{self.model_name}"
 
     # Together uses a default of 512 so we bump it up
     @override

@@ -8,6 +8,7 @@ from pydantic_core import to_jsonable_python
 from inspect_ai.event._compaction import CompactionEvent
 from inspect_ai.event._event import Event
 from inspect_ai.event._model import ModelEvent
+from inspect_ai.event._sample_limit import SampleLimitEvent
 from inspect_ai.event._step import StepEvent
 from inspect_ai.log._log import EvalSample, EvalSampleSummary
 from inspect_ai.log._recorders.buffer.types import (
@@ -26,16 +27,18 @@ from inspect_ai.model._chat_message import (
 )
 from inspect_ai.model._generate_config import GenerateConfig
 from inspect_ai.model._model_call import ModelCall
-from inspect_ai.model._model_output import ModelOutput
+from inspect_ai.model._model_output import ModelFallback, ModelOutput
 from inspect_ai.scorer._metric import Score
 
 
 def _make_model_event(
     input_messages: list[ChatMessage],
     output_content: str,
+    role: str | None = None,
 ) -> ModelEvent:
     return ModelEvent(
         model="mockllm/model",
+        role=role,
         input=input_messages,
         tools=[],
         tool_choice="auto",
@@ -45,7 +48,7 @@ def _make_model_event(
 
 
 def _event_to_event_data(
-    event: ModelEvent | StepEvent | CompactionEvent,
+    event: Event,
     id: int,
     sample_id: str = "1",
     epoch: int = 1,
@@ -68,7 +71,17 @@ def _make_completed_summary() -> EvalSampleSummary:
         epoch=1,
         input="What is 2+2?",
         target="4",
+        description="Add two numbers.",
         scores={"accuracy": Score(value="C", answer="4")},
+        model_fallbacks=[
+            ModelFallback(
+                model="claude-fable-5", fallback_model="claude-opus-4-8", count=2
+            )
+        ],
+        turn_count=3,
+        token_limit=1000,
+        token_limit_type="output",
+        token_limit_usage=15,
         started_at=datetime.now(timezone.utc).isoformat(),
         completed_at=datetime.now(timezone.utc).isoformat(),
     )
@@ -103,9 +116,15 @@ def test_reconstruct_completed_sample() -> None:
     assert sample.epoch == 1
     assert sample.input == "What is 2+2?"
     assert sample.target == "4"
+    assert sample.description == "Add two numbers."
     assert sample.scores is not None
     assert "accuracy" in sample.scores
     assert sample.error is None
+    assert sample.model_fallbacks == summary.model_fallbacks
+    assert sample.turn_count == 3
+    assert sample.token_limit == 1000
+    assert sample.token_limit_type == "output"
+    assert sample.token_limit_usage == 15
 
     # Messages extracted from ModelEvent
     assert len(sample.messages) == 2  # user + assistant
@@ -196,6 +215,130 @@ def test_reconstruct_multiple_model_events() -> None:
     assert sample.output.choices[0].message.content == "4"
 
 
+def test_reconstruct_multi_agent_follows_first_role() -> None:
+    """Reconstruction follows the first ModelEvent's role under concurrent agents.
+
+    A solver running two agents in parallel (e.g. an auditor driving a
+    target) interleaves both agents' ModelEvents, each carrying its own
+    conversation. Recovery must return the first role's conversation
+    deterministically, not whichever agent's event happened to fire last.
+    """
+    summary = _make_completed_summary()
+
+    auditor_user = ChatMessageUser(content="Probe the target.")
+    auditor_event1 = _make_model_event(
+        [auditor_user], "Sending a question.", role="auditor"
+    )
+
+    target_user = ChatMessageUser(content="What is 2+2?")
+    target_event1 = _make_model_event([target_user], "4", role="target")
+
+    auditor_assistant = ChatMessageAssistant(content="Sending a question.")
+    auditor_user2 = ChatMessageUser(content="The target answered 4.")
+    auditor_event2 = _make_model_event(
+        [auditor_user, auditor_assistant, auditor_user2],
+        "Audit complete.",
+        role="auditor",
+    )
+
+    target_assistant = ChatMessageAssistant(content="4")
+    target_user2 = ChatMessageUser(content="Are you sure?")
+    target_event2 = _make_model_event(
+        [target_user, target_assistant, target_user2], "Yes, 4.", role="target"
+    )
+
+    # The target's event fires last
+    sample_data = SampleData(
+        events=[
+            _event_to_event_data(auditor_event1, id=1),
+            _event_to_event_data(target_event1, id=2),
+            _event_to_event_data(auditor_event2, id=3),
+            _event_to_event_data(target_event2, id=4),
+        ],
+        attachments=[],
+    )
+
+    sample = reconstruct_eval_sample(summary, sample_data)
+
+    assert [m.text for m in sample.messages] == [
+        "Probe the target.",
+        "Sending a question.",
+        "The target answered 4.",
+        "Audit complete.",
+    ]
+    assert sample.output.choices[0].message.content == "Audit complete."
+
+
+def test_reconstruct_multi_agent_primary_is_first_in_stream() -> None:
+    """The primary role is whichever role's ModelEvent appears first."""
+    summary = _make_completed_summary()
+
+    target_user = ChatMessageUser(content="Hello")
+    target_event = _make_model_event([target_user], "Hi there!", role="target")
+
+    auditor_user = ChatMessageUser(content="The target said hi.")
+    auditor_event = _make_model_event([auditor_user], "Noted.", role="auditor")
+
+    sample_data = SampleData(
+        events=[
+            _event_to_event_data(target_event, id=1),
+            _event_to_event_data(auditor_event, id=2),
+        ],
+        attachments=[],
+    )
+
+    sample = reconstruct_eval_sample(summary, sample_data)
+
+    assert [m.text for m in sample.messages] == ["Hello", "Hi there!"]
+    assert sample.output.choices[0].message.content == "Hi there!"
+
+
+def test_reconstruct_multi_agent_compaction_survives_foreign_interleave() -> None:
+    """A compaction attributed to the primary role survives a foreign event in between.
+
+    Regression for a review comment on #4417: primary P1, then a foreign
+    secondary event, then a compaction of the primary's own conversation,
+    then primary P2. Since the secondary event is the most recent
+    ModelEvent when the compaction fires, attributing the compaction by
+    "most recent event's role" would skip flushing P1 and drop
+    p1_input/p1_output. CompactionEvent.role removes the guesswork.
+    """
+    summary = _make_completed_summary()
+
+    p1_user = ChatMessageUser(content="p1_input")
+    p1_event = _make_model_event([p1_user], "p1_output", role="primary")
+
+    s1_user = ChatMessageUser(content="s1_input")
+    s1_event = _make_model_event([s1_user], "s1_output", role="secondary")
+
+    compaction = CompactionEvent(type="summary", role="primary")
+
+    summary_msg = ChatMessageUser(content="summary")
+    p2_user = ChatMessageUser(content="p2_input")
+    p2_event = _make_model_event([summary_msg, p2_user], "p2_output", role="primary")
+
+    sample_data = SampleData(
+        events=[
+            _event_to_event_data(p1_event, id=1),
+            _event_to_event_data(s1_event, id=2),
+            _event_to_event_data(compaction, id=3),
+            _event_to_event_data(p2_event, id=4),
+        ],
+        attachments=[],
+    )
+
+    sample = reconstruct_eval_sample(summary, sample_data)
+
+    assert [m.text for m in sample.messages] == [
+        "p1_input",
+        "p1_output",
+        "summary",
+        "p2_input",
+        "p2_output",
+    ]
+    assert sample.output.choices[0].message.content == "p2_output"
+
+
 def test_reconstruct_empty_events() -> None:
     """Test reconstruction with no events at all."""
     summary = _make_in_progress_summary()
@@ -254,6 +397,11 @@ def test_reconstruct_summary_can_be_generated() -> None:
     assert new_summary.epoch == 1
     assert new_summary.scores is not None
     assert new_summary.message_count == 2
+    # limit fields survive the summary -> sample -> summary round trip
+    assert new_summary.turn_count == 3
+    assert new_summary.token_limit == 1000
+    assert new_summary.token_limit_type == "output"
+    assert new_summary.token_limit_usage == 15
 
 
 def test_reconstruct_with_summary_compaction() -> None:
@@ -487,6 +635,109 @@ def test_message_accumulator_compaction_across_chunks() -> None:
     assert output.choices[0].message.content == "6"
 
 
+def test_message_accumulator_multi_role_chunked() -> None:
+    """The primary role persists across chunked segment batches."""
+    auditor_user = ChatMessageUser(content="Probe the target.")
+    auditor_event1 = _make_model_event(
+        [auditor_user], "Sending a question.", role="auditor"
+    )
+    target_event1 = _make_model_event(
+        [ChatMessageUser(content="What is 2+2?")], "4", role="target"
+    )
+    auditor_assistant = ChatMessageAssistant(content="Sending a question.")
+    auditor_user2 = ChatMessageUser(content="The target answered 4.")
+    auditor_event2 = _make_model_event(
+        [auditor_user, auditor_assistant, auditor_user2],
+        "Audit complete.",
+        role="auditor",
+    )
+    target_event2 = _make_model_event(
+        [ChatMessageUser(content="Are you sure?")], "Yes, 4.", role="target"
+    )
+
+    acc = MessageAccumulator()
+    acc.process_events([auditor_event1])
+    acc.process_events([target_event1, auditor_event2])
+    acc.process_events([target_event2])
+    messages, output = acc.result()
+
+    assert [m.text for m in messages] == [
+        "Probe the target.",
+        "Sending a question.",
+        "The target answered 4.",
+        "Audit complete.",
+    ]
+    assert output.choices[0].message.content == "Audit complete."
+
+
+def test_message_accumulator_compaction_attributed_to_last_role() -> None:
+    """A compaction following another role's event leaves the primary conversation alone.
+
+    CompactionEvent carries no role, so it is attributed to the most recent
+    ModelEvent's role. Here the summary compacted the target's conversation;
+    flushing the auditor's history instead would duplicate its messages in
+    the merged result.
+    """
+    auditor_user = ChatMessageUser(content="Probe the target.")
+    auditor_event1 = _make_model_event(
+        [auditor_user], "Sending a question.", role="auditor"
+    )
+    target_event = _make_model_event(
+        [ChatMessageUser(content="Question")], "Answer", role="target"
+    )
+    compaction = CompactionEvent(type="summary")
+    auditor_assistant = ChatMessageAssistant(content="Sending a question.")
+    auditor_event2 = _make_model_event(
+        [auditor_user, auditor_assistant], "Done.", role="auditor"
+    )
+
+    acc = MessageAccumulator()
+    acc.process_events([auditor_event1, target_event, compaction, auditor_event2])
+    messages, output = acc.result()
+
+    assert [m.text for m in messages] == [
+        "Probe the target.",
+        "Sending a question.",
+        "Done.",
+    ]
+    assert output.choices[0].message.content == "Done."
+
+
+def test_message_accumulator_compaction_role_survives_foreign_interleave() -> None:
+    """CompactionEvent.role is used when present instead of the last-event heuristic.
+
+    Same regression as test_reconstruct_multi_agent_compaction_survives_foreign_interleave,
+    exercised directly against MessageAccumulator: a foreign event between the
+    primary's last event and its own compaction must not cause that
+    compaction to be skipped.
+    """
+    p1_event = _make_model_event(
+        [ChatMessageUser(content="p1_input")], "p1_output", role="primary"
+    )
+    s1_event = _make_model_event(
+        [ChatMessageUser(content="s1_input")], "s1_output", role="secondary"
+    )
+    compaction = CompactionEvent(type="summary", role="primary")
+    p2_event = _make_model_event(
+        [ChatMessageUser(content="summary"), ChatMessageUser(content="p2_input")],
+        "p2_output",
+        role="primary",
+    )
+
+    acc = MessageAccumulator()
+    acc.process_events([p1_event, s1_event, compaction, p2_event])
+    messages, output = acc.result()
+
+    assert [m.text for m in messages] == [
+        "p1_input",
+        "p1_output",
+        "summary",
+        "p2_input",
+        "p2_output",
+    ]
+    assert output.choices[0].message.content == "p2_output"
+
+
 def test_reconstruct_in_progress_summary_without_uuid_synthesizes_one() -> None:
     """Legacy in-flight buffer rows lack a uuid; recovery synthesizes one."""
     summary = EvalSampleSummary(id="some-sample", epoch=1, input="2+2?", target="4")
@@ -588,3 +839,88 @@ def test_reconstruct_resolves_call_pool_refs() -> None:
     assert call is not None
     assert call.call_refs is None
     assert call.request["messages"] == [pooled_message]
+
+
+def test_reconstruct_carries_limit_from_event() -> None:
+    """DB recovery preserves the limit and its reason.
+
+    The write path recomputes the summary from the reconstructed sample
+    (``buffer_sample`` -> ``sample.summary()``), so dropping the limit here
+    erases what the buffered summary already knew.
+    """
+    summary = _make_completed_summary()
+    summary.limit = "token"
+    summary.limit_reason = "Token limit exceeded. value: 1,001; limit: 1,000"
+
+    limit_event = SampleLimitEvent(
+        type="token", limit=1000.0, message=summary.limit_reason
+    )
+    sample_data = SampleData(
+        events=[_event_to_event_data(limit_event, id=1)], attachments=[]
+    )
+
+    sample = reconstruct_eval_sample(summary, sample_data)
+
+    assert sample.limit is not None
+    assert sample.limit.type == "token"
+    assert sample.limit.limit == 1000.0
+    assert sample.limit.reason == summary.limit_reason
+    # the round-trip the write path performs
+    assert sample.summary().limit == "token"
+    assert sample.summary().limit_reason == summary.limit_reason
+
+
+def test_reconstruct_carries_limit_without_event() -> None:
+    """A limit recorded with no transcript event still round-trips.
+
+    A user-raised ``LimitExceededError`` emits no ``SampleLimitEvent``, so only
+    the summary knows; the numeric value is unrecoverable and takes the same
+    ``-1`` sentinel the live path writes.
+    """
+    summary = _make_completed_summary()
+    summary.limit = "custom"
+    summary.limit_reason = "budget exhausted"
+
+    sample = reconstruct_eval_sample(summary, SampleData(events=[], attachments=[]))
+
+    assert sample.limit is not None
+    assert sample.limit.type == "custom"
+    assert sample.limit.limit == -1
+    assert sample.limit.reason == "budget exhausted"
+
+
+def test_reconstruct_no_limit_stays_none() -> None:
+    """A sample that hit no limit reconstructs without one."""
+    sample = reconstruct_eval_sample(
+        _make_completed_summary(), SampleData(events=[], attachments=[])
+    )
+    assert sample.limit is None
+
+
+def test_reconstruct_prefers_limit_event_matching_summary() -> None:
+    """A scoring-phase operator interrupt must not mask the real limit."""
+    summary = _make_completed_summary()
+    summary.limit = "message"
+
+    sample_data = SampleData(
+        events=[
+            _event_to_event_data(
+                SampleLimitEvent(type="message", limit=50.0, message="msg limit"),
+                id=1,
+            ),
+            _event_to_event_data(
+                SampleLimitEvent(
+                    type="operator",
+                    message="Unable to score sample due to operator interruption",
+                ),
+                id=2,
+            ),
+        ],
+        attachments=[],
+    )
+
+    sample = reconstruct_eval_sample(summary, sample_data)
+
+    assert sample.limit is not None
+    assert sample.limit.type == "message"
+    assert sample.limit.limit == 50.0

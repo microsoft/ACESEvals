@@ -79,7 +79,7 @@ class GenerateConfigArgs(TypedDict, total=False):
     """Type for kwargs that selectively override GenerateConfig."""
 
     max_retries: int | None
-    """Maximum number of times to retry request (defaults to unlimited)."""
+    """Maximum number of times to retry request, so e.g. 1 allows two attempts total (defaults to unlimited)."""
 
     timeout: int | None
     """Request timeout (in seconds)."""
@@ -87,11 +87,14 @@ class GenerateConfigArgs(TypedDict, total=False):
     attempt_timeout: int | None
     """Timeout (in seconds) for any given attempt (if exceeded, will abandon attempt and retry according to max_retries)."""
 
+    stream_idle_timeout: int | None
+    """Timeout (in seconds) on silence within a streaming response — if a streaming attempt delivers no chunk for this long, the attempt is abandoned and retried according to max_retries. Setting it requests streaming (like on_stream); it has no effect on calls that do not stream."""
+
     max_connections: int | None
     """Maximum number of concurrent connections to Model API (default is model specific)."""
 
     adaptive_connections: bool | int | AdaptiveConcurrency | None
-    """Adaptive concurrency for model API connections. Defaults to enabled (`None` and `True` both resolve to `AdaptiveConcurrency()` defaults: min=4, start=20, max=100). Pass `False` to opt out (uses static concurrency). Pass an integer `N` as shorthand for `AdaptiveConcurrency(max=N)`. Pass an `AdaptiveConcurrency` to fully customize bounds and tuning (cooldown_seconds, decrease_factor, scale_up_percent). An explicit `max_connections` or `batch=True` takes precedence and uses static concurrency."""
+    """Adaptive concurrency for model API connections. Defaults to enabled (`None` and `True` both resolve to `AdaptiveConcurrency()` defaults: min=10, start=20, max=100). Pass `False` to opt out (uses static concurrency). Pass an integer `N` as shorthand for `AdaptiveConcurrency(max=N)`. Pass an `AdaptiveConcurrency` to fully customize bounds and tuning (cooldown_seconds, decrease_factor, scale_up_percent). An explicit `max_connections` or `batch=True` takes precedence and uses static concurrency."""
 
     system_message: str | None
     """Override the default system message."""
@@ -124,7 +127,7 @@ class GenerateConfigArgs(TypedDict, total=False):
     """Random seed. OpenAI, Google, Mistral, Groq, HuggingFace, and vLLM only."""
 
     top_k: int | None
-    """Randomly sample the next word from the top_k most likely next words. Anthropic, Google, and HuggingFace only."""
+    """Randomly sample the next word from the top_k most likely next words. Google and HuggingFace only."""
 
     num_choices: int | None
     """How many chat completion choices to generate for each input message. OpenAI, Grok, Google, and TogetherAI only."""
@@ -148,7 +151,13 @@ class GenerateConfigArgs(TypedDict, total=False):
     """Maximum tool output (in bytes). Defaults to 16 * 1024."""
 
     cache_prompt: Literal["auto"] | bool | None
-    """Whether to cache the prompt prefix. Enabled by default. Set to False to disable. Anthropic only."""
+    """Whether to cache the prompt prefix. Enabled by default. Set to False to disable: on Anthropic and Bedrock Converse (Claude and Nova) this turns off the provider's own automatic caching; on OpenAI it only turns off explicit `cache_breakpoint` marks — the model's own implicit caching still applies regardless. Use `ContentText(cache_breakpoint=True)` to mark an explicit cache boundary (e.g. a fixed rubric ahead of a varying item) instead of relying on automatic caching; Anthropic and OpenAI `gpt-5.6`+ only."""
+
+    fallback_models: list[str] | None
+    """Fallback models tried in order when the model's safety classifiers refuse the request. Anthropic Claude API only (not supported on Bedrock/Vertex/Azure or with batch mode)."""
+
+    fail_on_refusal: bool | None
+    """Raise a `ModelRefusalError` (failing the sample) when the model returns `stop_reason="content_filter"`. Defaults to False."""
 
     verbosity: Literal["low", "medium", "high"] | None
     """Constrains the verbosity of the model's response. Lower values will result in more concise responses, while higher values will result in more verbose responses. GPT 5.x models only (defaults to "medium" for OpenAI models)."""
@@ -160,6 +169,9 @@ class GenerateConfigArgs(TypedDict, total=False):
         Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] | None
     )
     """Constrains effort on reasoning. Defaults vary by provider and model and not all models support all values (please consult provider documentation for details)."""
+
+    reasoning_mode: Literal["standard", "pro"] | None
+    """Reasoning mode. "pro" performs more model work for greater reliability on difficult tasks, at higher latency and token usage. OpenAI GPT-5.6+ models only ("standard" is the default)."""
 
     reasoning_tokens: int | None
     """Maximum number of tokens to use for reasoning. Anthropic Claude models only."""
@@ -193,7 +205,7 @@ class GenerateConfig(BaseModel):
     """Model generation options."""
 
     max_retries: int | None = Field(default=None)
-    """Maximum number of times to retry request (defaults to unlimited)."""
+    """Maximum number of times to retry request, so e.g. 1 allows two attempts total (defaults to unlimited)."""
 
     timeout: int | None = Field(default=None)
     """Timeout (in seconds) for an entire request (including retries)."""
@@ -201,11 +213,14 @@ class GenerateConfig(BaseModel):
     attempt_timeout: int | None = Field(default=None)
     """Timeout (in seconds) for any given attempt (if exceeded, will abandon attempt and retry according to max_retries)."""
 
+    stream_idle_timeout: int | None = Field(default=None)
+    """Timeout (in seconds) on silence within a streaming response — if a streaming attempt delivers no chunk for this long, the attempt is abandoned and retried according to max_retries. Setting it requests streaming (like on_stream); it has no effect on calls that do not stream."""
+
     max_connections: int | None = Field(default=None)
     """Maximum number of concurrent connections to Model API (default is model specific)."""
 
     adaptive_connections: bool | int | AdaptiveConcurrency | None = Field(default=None)
-    """Adaptive concurrency for model API connections. Defaults to enabled (`None` and `True` both resolve to `AdaptiveConcurrency()` defaults: min=4, start=20, max=100). Pass `False` to opt out (uses static concurrency). Pass an integer `N` as shorthand for `AdaptiveConcurrency(max=N)`. Pass an `AdaptiveConcurrency` to fully customize bounds and tuning (cooldown_seconds, decrease_factor, scale_up_percent). An explicit `max_connections` or `batch=True` takes precedence and uses static concurrency."""
+    """Adaptive concurrency for model API connections. Defaults to enabled (`None` and `True` both resolve to `AdaptiveConcurrency()` defaults: min=10, start=20, max=100). Pass `False` to opt out (uses static concurrency). Pass an integer `N` as shorthand for `AdaptiveConcurrency(max=N)`. Pass an `AdaptiveConcurrency` to fully customize bounds and tuning (cooldown_seconds, decrease_factor, scale_up_percent). An explicit `max_connections` or `batch=True` takes precedence and uses static concurrency."""
 
     system_message: str | None = Field(default=None)
     """Override the default system message."""
@@ -238,7 +253,7 @@ class GenerateConfig(BaseModel):
     """Random seed. OpenAI, Google, Mistral, Groq, HuggingFace, and vLLM only."""
 
     top_k: int | None = Field(default=None)
-    """Randomly sample the next word from the top_k most likely next words. Anthropic, Google, HuggingFace, vLLM, and SGLang only."""
+    """Randomly sample the next word from the top_k most likely next words. Google, HuggingFace, vLLM, and SGLang only."""
 
     num_choices: int | None = Field(default=None)
     """How many chat completion choices to generate for each input message. OpenAI, Grok, Google, TogetherAI, vLLM, and SGLang only."""
@@ -269,7 +284,13 @@ class GenerateConfig(BaseModel):
     """Maximum tool output (in bytes). Defaults to 16 * 1024."""
 
     cache_prompt: Literal["auto"] | bool | None = Field(default=None)
-    """Whether to cache the prompt prefix. Enabled by default. Set to False to disable. Anthropic only."""
+    """Whether to cache the prompt prefix. Enabled by default. Set to False to disable: on Anthropic and Bedrock Converse (Claude and Nova) this turns off the provider's own automatic caching; on OpenAI it only turns off explicit `cache_breakpoint` marks — the model's own implicit caching still applies regardless. Use `ContentText(cache_breakpoint=True)` to mark an explicit cache boundary (e.g. a fixed rubric ahead of a varying item) instead of relying on automatic caching; Anthropic and OpenAI `gpt-5.6`+ only."""
+
+    fallback_models: list[str] | None = Field(default=None)
+    """Fallback models tried in order when the model's safety classifiers refuse the request. Anthropic Claude API only (not supported on Bedrock/Vertex/Azure or with batch mode)."""
+
+    fail_on_refusal: bool | None = Field(default=None)
+    """Raise a `ModelRefusalError` (failing the sample) when the model returns `stop_reason="content_filter"`. Defaults to False."""
 
     verbosity: Literal["low", "medium", "high"] | None = Field(default=None)
     """Constrains the verbosity of the model's response. Lower values will result in more concise responses, while higher values will result in more verbose responses. GPT 5.x models only (defaults to "medium" for OpenAI models)."""
@@ -283,6 +304,9 @@ class GenerateConfig(BaseModel):
         Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] | None
     ) = Field(default=None)
     """Constrains effort on reasoning. Defaults vary by provider and model and not all models support all values (please consult provider documentation for details)."""
+
+    reasoning_mode: Literal["standard", "pro"] | None = Field(default=None)
+    """Reasoning mode. "pro" performs more model work for greater reliability on difficult tasks, at higher latency and token usage. OpenAI GPT-5.6+ models only ("standard" is the default)."""
 
     reasoning_tokens: int | None = Field(default=None)
     """Maximum number of tokens to use for reasoning. Anthropic Claude models only."""
@@ -373,6 +397,18 @@ class GenerateConfig(BaseModel):
             if value is not None:
                 setattr(config, key, deepcopy(value))
         return config
+
+
+def generate_config_dict(config: GenerateConfig) -> dict[str, Any]:
+    """Dump a generate config without its None fields, except a cache's expiry.
+
+    A cache policy with no ``expiry`` validates with the "1W" default, so a
+    cache that never expires keeps an explicit None.
+    """
+    config_dict = config.model_dump(exclude_none=True)
+    if isinstance(config.cache, CachePolicy) and config.cache.expiry is None:
+        config_dict["cache"]["expiry"] = None
+    return config_dict
 
 
 def active_generate_config() -> GenerateConfig:

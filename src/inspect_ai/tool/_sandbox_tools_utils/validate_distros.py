@@ -12,12 +12,35 @@ NOTE: Must be run as a module (with -m flag) to ensure proper package imports.
 Run from the inspect_ai source root or with the package installed.
 """
 
+import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import List
+from typing import List, NamedTuple
 
 from inspect_ai.util._sandbox._cli import SANDBOX_TOOLS_BASE_NAME
+
+from ._build_config import filename_to_config
+
+# glibc artifacts are validated against glibc distros; musl artifacts against musl
+# (Alpine) distros. Each artifact is routed to the matching set — running a glibc
+# bundle on Alpine (or vice versa) would fail by construction.
+GLIBC_DISTROS = [
+    "ubuntu:16.04",  # oldest glibc we target (glibc 2.23, above the build's 2.17 floor)
+    "ubuntu:18.04",  # glibc 2.27
+    "ubuntu:20.04",
+    "ubuntu:22.04",
+    "ubuntu:24.04",
+    "debian:11",
+    "debian:12",
+    "kalilinux/kali-rolling:latest",
+]
+MUSL_DISTROS = [
+    "alpine:3.16",  # the build floor — oldest musl we target (musl 1.2.3)
+    "alpine:3.18",
+    "alpine:latest",
+]
 
 
 class Colors:
@@ -32,33 +55,61 @@ def print_colored(message: str, color: str = Colors.NC) -> None:
     print(f"{color}{message}{Colors.NC}")
 
 
-def test_distro(distro: str, executable_path: Path) -> bool:
-    """Test a single distro with the given executable."""
-    print_colored(f"Testing {distro} with {executable_path.name}", Colors.BLUE)
+class DistroResult(NamedTuple):
+    """Outcome of one distro x artifact healthcheck run."""
 
-    # Docker command to test the executable
+    distro: str
+    executable_name: str
+    passed: bool
+    output: str
+
+
+def test_distro(distro: str, executable_path: Path) -> DistroResult:
+    """Test a single distro with the given artifact (a gzipped tar of the onedir bundle).
+
+    Runs quietly (output captured, not streamed) so tests can run concurrently;
+    the caller prints each result as it completes.
+    """
+    # Run the container matching the ARTIFACT's architecture so the dynamically
+    # linked launcher finds its libc/loader. On a foreign-arch host this runs under
+    # the platform emulator (e.g. Rosetta/qemu); that works because the emulated
+    # container provides the matching loader — without --platform the host-arch
+    # container would lack the foreign loader and fail to exec the binary.
+    arch = filename_to_config(executable_path.name).arch
+    platform = "linux/amd64" if arch == "amd64" else "linux/arm64"
+
+    # Mount the artifact, extract the onedir tree, then run the launcher's healthcheck
+    # (which also exercises starting the server). This validates the common-case
+    # `tar xzf`; the host-side uncompressed fallback used by injection isn't covered
+    # here because all validated distros' tar support gzip.
+    script = f"""
+        set -e
+        mkdir -p /app/tools
+        tar xzf /app/tools.tgz -C /app/tools
+        /app/tools/{SANDBOX_TOOLS_BASE_NAME} healthcheck
+        """
     cmd = [
         "docker",
         "run",
         "--rm",
+        "--platform",
+        platform,
         "-v",
-        f"{executable_path}:/app/executable:ro",
+        f"{executable_path}:/app/tools.tgz:ro",
         distro,
-        "bash",
+        # POSIX sh, not bash: Alpine ships only busybox sh by default.
+        "sh",
         "-c",
-        """
-        cd /app
-        ./executable healthcheck
-        """,
+        script,
     ]
 
-    try:
-        subprocess.run(cmd, check=True, capture_output=False)
-        print_colored(f"✓ {distro}: SUCCESS", Colors.GREEN)
-        return True
-    except subprocess.CalledProcessError:
-        print_colored(f"✗ {distro}: FAILED", Colors.RED)
-        return False
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return DistroResult(
+        distro=distro,
+        executable_name=executable_path.name,
+        passed=result.returncode == 0,
+        output=result.stdout + result.stderr,
+    )
 
 
 def find_executables() -> List[Path]:
@@ -77,15 +128,6 @@ def find_executables() -> List[Path]:
 
 def main() -> None:
     """Main execution function."""
-    distros = [
-        "ubuntu:20.04",
-        "ubuntu:22.04",
-        "ubuntu:24.04",
-        "debian:11",
-        "debian:12",
-        "kalilinux/kali-rolling:latest",
-    ]
-
     print_colored(
         "Starting compatibility tests across multiple Linux distributions...",
         Colors.BLUE,
@@ -104,19 +146,38 @@ def main() -> None:
     executable_names = [exe.name for exe in executables]
     print_colored(f"Found executables: {', '.join(executable_names)}", Colors.BLUE)
 
-    # Test results tracking
-    total_tests = 0
+    # Every (artifact, distro) pair is an independent docker run, so run them
+    # concurrently. Capped: each healthcheck starts the server process, and the
+    # foreign-arch runs execute under emulation.
+    pairs = [
+        (executable, distro)
+        for executable in executables
+        for distro in (
+            MUSL_DISTROS if filename_to_config(executable.name).musl else GLIBC_DISTROS
+        )
+    ]
+    total_tests = len(pairs)
     passed_tests = 0
 
-    # Test each executable against each distro
-    for executable in executables:
-        print_colored(f"\n=== Testing {executable.name} ===", Colors.BLUE)
-
-        for distro in distros:
-            total_tests += 1
-            if test_distro(distro, executable):
+    with ThreadPoolExecutor(max_workers=min(8, os.cpu_count() or 4)) as executor:
+        futures = [
+            executor.submit(test_distro, distro, executable)
+            for executable, distro in pairs
+        ]
+        for future in as_completed(futures):
+            result = future.result()
+            if result.passed:
                 passed_tests += 1
-            print()  # Blank line for readability
+                print_colored(
+                    f"✓ {result.distro} × {result.executable_name}: SUCCESS",
+                    Colors.GREEN,
+                )
+            else:
+                print_colored(
+                    f"✗ {result.distro} × {result.executable_name}: FAILED",
+                    Colors.RED,
+                )
+                print(result.output)
 
     # Summary
     print_colored("\n=== TEST SUMMARY ===", Colors.BLUE)

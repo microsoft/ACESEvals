@@ -1,0 +1,326 @@
+"""Tests for GoogleGenAIAPI model-name feature detection, focused on is_latest().
+
+is_latest() recognizes Google predeployment/codename models (names matching no
+known family) as the current frontier, mirroring the OpenAI provider's
+is_latest_model() and the Anthropic provider's is_claude_latest(). Folding it
+into is_gemini() means a codename gets full frontier behavior (thinking config,
+native tools), and input_tokens_name() aliases unknown names to the current
+frontier so the context window (compaction) resolves correctly.
+"""
+
+import pytest
+
+from inspect_ai.model import get_model
+from inspect_ai.model._model_info import get_model_input_tokens
+from inspect_ai.model._providers._google_reasoning import (
+    gemini_3_plus,
+    gemini_has_thinking_config,
+    gemini_is_latest,
+    gemini_thinking_budget,
+    gemini_thinking_level,
+    gemini_thinking_only,
+)
+from inspect_ai.model._providers.google import GoogleGenAIAPI
+
+
+def _api(model_name: str) -> GoogleGenAIAPI:
+    vertex = model_name.startswith("vertex/")
+    return GoogleGenAIAPI(
+        model_name=model_name,
+        base_url=None,
+        api_key="test-key",
+        project="test-project" if vertex else None,
+        location="us-central1" if vertex else None,
+    )
+
+
+# Known families and non-generative models must NOT be treated as latest.
+KNOWN_MODELS = [
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-3-pro",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+]
+
+NON_GENERATIVE_MODELS = [
+    "text-embedding-004",
+    "imagen-3.0-generate-002",
+    "veo-2.0",
+    "gemma-3-27b-it",
+    "learnlm-2.0-flash",
+]
+
+# Codename / predeployment names matching no known family.
+CODENAME_MODELS = [
+    "foo-bar-22",
+    "jellyfish",
+    "bluejay-preview",
+    "summit-2026",
+]
+
+
+@pytest.mark.parametrize("model_name", KNOWN_MODELS + NON_GENERATIVE_MODELS)
+def test_known_models_not_latest(model_name: str) -> None:
+    assert _api(model_name).is_latest() is False
+
+
+@pytest.mark.parametrize("model_name", NON_GENERATIVE_MODELS)
+def test_non_generative_models_not_gemini(model_name: str) -> None:
+    assert _api(model_name).is_gemini() is False
+
+
+@pytest.mark.parametrize("model_name", CODENAME_MODELS)
+def test_codename_models_are_latest(model_name: str) -> None:
+    api = _api(model_name)
+    assert api.is_latest() is True
+    # folded into is_gemini(), so frontier behavior follows transitively
+    # (thinking config, native web search / code execution, mixed tools)
+    assert api.is_gemini() is True
+    assert api.is_gemini_3_plus() is True
+    assert api.is_gemini_thinking() is True
+    # codename has no "-pro"/"flash" substring
+    assert api.is_gemini_thinking_only() is False
+    assert api.supports_minimal_thinking() is False
+
+
+def test_pro_codename_is_thinking_only() -> None:
+    assert _api("orion-pro-preview").is_gemini_thinking_only() is True
+
+
+@pytest.mark.parametrize(
+    "model_name,expected",
+    [
+        ("gemini-3-flash-preview", True),
+        ("gemini-3.5-flash", True),
+        ("gemini-3.6-flash", True),
+        ("gemini-3.7-flash", False),
+        ("gemini-3.8-flash", False),
+        ("gemini-4-flash", False),
+        ("gemini-4-argon", False),
+        ("vertex/gemini-4-argon", False),
+        ("gemini-3.1-flash-lite", True),
+        ("gemini-3.1-flash-lite-preview", True),
+        ("gemini-3.5-flash-lite", True),
+        ("gemini-3-flash-lite", False),
+        ("gemini-3.6-flash-lite", False),
+        ("gemini-2.5-flash-lite", False),
+        ("gemini-4-flash-lite", False),
+        ("gemini-3-pro", False),
+        ("gemini-3.1-pro-preview", False),
+        ("gemini-2.5-flash", False),
+        ("vertex/gemini-3.8-flash", False),
+        ("vertex/gemini-3.6-flash", True),
+        # unverified: version-less names and vertex resource paths whose
+        # project id happens to look like a version
+        ("gemini-flash-latest", False),
+        ("gemini-flash-lite-latest", False),
+        ("nimbus-flash-preview", False),
+        ("nimbus-flash-lite-preview", False),
+        ("satellite-flash-preview", False),
+        ("vertex/some-flash-lite-endpoint", False),
+        (
+            "vertex/projects/gemini-3-research/locations/us-central1/publishers/google/models/gemini-3.8-flash",
+            False,
+        ),
+        (
+            "vertex/projects/gemini-3-research/locations/us-central1/publishers/google/models/gemini-3.6-flash",
+            True,
+        ),
+        (
+            "vertex/projects/my-flash-experiments/locations/us-central1/publishers/google/models/gemini-3-pro",
+            False,
+        ),
+        (
+            "vertex/projects/flash-lite-team/locations/us-central1/publishers/google/models/gemini-3.6-flash",
+            True,
+        ),
+        (
+            "vertex/projects/flash-lite-team/locations/us-central1/publishers/google/models/gemini-4-argon",
+            False,
+        ),
+    ],
+)
+def test_supports_minimal_thinking(model_name: str, expected: bool) -> None:
+    assert _api(model_name).supports_minimal_thinking() is expected
+
+
+@pytest.mark.parametrize(
+    "model_name,expected",
+    [
+        ("gemini-4-argon", (4,)),
+        ("gemini-3.8-flash", (3, 8)),
+        ("gemini-3-pro", (3,)),
+        ("gemini-2.5-flash-lite", (2, 5)),
+        ("gemini-3.1-pro-preview", (3, 1)),
+        ("nimbus-flash-preview", None),
+        ("gemini-flash-latest", None),
+        (
+            "vertex/projects/gemini-3-research/publishers/google/models/gemini-3.8-flash",
+            (3, 8),
+        ),
+        (
+            "vertex/projects/gemini-3-research/publishers/google/models/gemini-4-argon",
+            (4,),
+        ),
+    ],
+)
+def test_gemini_version(model_name: str, expected: tuple[int, ...] | None) -> None:
+    assert _api(model_name).gemini_version() == expected
+
+
+@pytest.mark.parametrize("model_name", CODENAME_MODELS)
+def test_codename_aliases_to_frontier_context_window(model_name: str) -> None:
+    # input_tokens_name() aliases to the current frontier so the context window
+    # resolves correctly instead of falling back to the 128K default.
+    assert _api(model_name).input_tokens_name() == "google/gemini-4-argon"
+
+
+@pytest.mark.parametrize("model_name", KNOWN_MODELS)
+def test_known_model_input_tokens_name_unchanged(model_name: str) -> None:
+    assert _api(model_name).input_tokens_name() == f"google/{model_name}"
+
+
+def test_future_gemini_version_aliases_to_frontier() -> None:
+    # a gemini-named model not yet in the model-info database gets frontier
+    # treatment via is_gemini_3_plus() and the DB-miss alias (but is not a
+    # "latest" codename)
+    api = _api("gemini-4-pro")
+    assert api.is_latest() is False
+    assert api.is_gemini_3_plus() is True
+    # unverified Pro names keep the fail-safe (thinking cannot be disabled)
+    assert api.is_gemini_thinking_only() is True
+    assert api.input_tokens_name() == "google/gemini-4-argon"
+
+
+def test_latest_scoped_to_dev_endpoint() -> None:
+    # vertex custom endpoints/deployments have arbitrary names that say
+    # nothing about the model behind them
+    api = _api("vertex/some-partner-endpoint")
+    assert api.is_latest() is False
+    assert api.is_gemini() is False
+
+
+def test_codename_context_window_resolves() -> None:
+    model = get_model("google/foo-bar-22", api_key="test-key")
+    assert get_model_input_tokens(model) == 1048576
+
+
+@pytest.mark.parametrize(
+    "family,effort,expected",
+    [
+        ("gemini-3.6-flash", "minimal", "minimal"),
+        ("gemini-3.1-flash-lite", "minimal", "minimal"),
+        ("gemini-3-pro", "minimal", "low"),
+        ("gemini-3.7-flash", "minimal", "low"),
+        ("gemini-4-argon", "minimal", "low"),
+        ("gemini-4-argon", "low", "low"),
+        ("gemini-4-argon", "medium", "medium"),
+        ("gemini-4-argon", "high", "high"),
+        ("gemini-4-argon", "xhigh", "high"),
+        ("gemini-4-argon", "max", "high"),
+        ("gemini-4-argon", "none", None),
+        ("nimbus-preview", "minimal", "low"),
+        ("gemini-3-pro", "low", "low"),
+        ("gemini-3-pro", "medium", "medium"),
+        ("gemini-3-pro", "high", "high"),
+        ("gemini-3-pro", "xhigh", "high"),
+        ("nimbus-preview", "max", "high"),
+        ("gemini-3-pro", "none", None),
+        ("gemini-3-pro", None, None),
+    ],
+)
+def test_gemini_thinking_level(
+    family: str, effort: str | None, expected: str | None
+) -> None:
+    assert gemini_thinking_level(effort, family) == expected
+
+
+@pytest.mark.parametrize(
+    "family,expected",
+    [
+        ("nimbus-preview", True),
+        ("orion-pro-preview", True),
+        ("gemini-3-pro", False),
+        ("gemini-flash-latest", False),
+        ("gemma-3-27b-it", False),
+        ("text-embedding-004", False),
+    ],
+)
+def test_gemini_is_latest(family: str, expected: bool) -> None:
+    assert gemini_is_latest(family) is expected
+
+
+@pytest.mark.parametrize(
+    "family,thinking_config,three_plus,thinking_only",
+    [
+        ("gemini-1.5-pro", False, False, False),
+        ("gemini-2.0-flash", False, False, False),
+        ("gemini-2.5-flash", True, False, False),
+        ("gemini-2.5-pro", True, False, True),
+        ("gemini-3-pro", True, True, True),
+        ("gemini-3.8-flash", True, True, False),
+        ("gemini-3.1-pro-preview", True, True, True),
+        ("gemini-4-argon", True, True, False),
+        ("gemini-4-pro", True, True, True),
+        ("gemini-pro-latest", True, True, True),
+        (
+            "projects/my-project/locations/us-central1/publishers/google/models/gemini-4-argon",
+            True,
+            True,
+            False,
+        ),
+        (
+            "projects/my-project/locations/us-central1/publishers/google/models/gemini-3.8-flash",
+            True,
+            True,
+            False,
+        ),
+        ("gemini-flash-latest", True, True, False),
+        ("nimbus-preview", True, True, False),
+        ("orion-pro-preview", True, True, True),
+    ],
+)
+def test_gemini_generations(
+    family: str, thinking_config: bool, three_plus: bool, thinking_only: bool
+) -> None:
+    latest = gemini_is_latest(family)
+    assert gemini_has_thinking_config(family, latest) is thinking_config
+    assert gemini_3_plus(family, latest) is three_plus
+    assert gemini_thinking_only(family, latest) is thinking_only
+
+
+@pytest.mark.parametrize(
+    "family,effort,expected",
+    [
+        ("gemini-2.5-flash", "high", 16000),
+        ("gemini-2.5-flash", "max", 24576),
+        ("gemini-2.5-flash-lite", "xhigh", 24576),
+        ("gemini-2.5-pro", "max", 32000),
+        ("gemini-2.5-flash", "xhigh", 24576),
+        # a project id containing "-pro" does not raise the cap
+        (
+            "projects/my-project/locations/us-central1/publishers/google/models/gemini-2.5-flash",
+            "max",
+            24576,
+        ),
+        (
+            "projects/my-project/locations/us-central1/publishers/google/models/gemini-2.5-pro",
+            "max",
+            32000,
+        ),
+        ("gemini-2.5-pro", "none", None),
+        ("gemini-2.5-pro", None, None),
+    ],
+)
+def test_gemini_thinking_budget(
+    family: str, effort: str | None, expected: int | None
+) -> None:
+    assert gemini_thinking_budget(effort, family) == expected

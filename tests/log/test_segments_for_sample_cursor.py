@@ -4,12 +4,14 @@ from inspect_ai.log._log import EvalSampleSummary
 from inspect_ai.log._recorders.buffer.filestore import (
     Manifest,
     SampleManifest,
+    SampleSegment,
+    SampleSegmentEntry,
     Segment,
     segments_for_sample_cursor,
 )
 
 
-def _manifest(segs: list[Segment], sample_segs: list[int]) -> Manifest:
+def _manifest(segs: list[Segment], sample_segs: list[SampleSegmentEntry]) -> Manifest:
     return Manifest(
         metrics=[],
         samples=[
@@ -37,7 +39,7 @@ def test_segments_for_sample_cursor_returns_all_when_cursor_is_minus_one() -> No
         after_message_pool_id=-1,
         after_call_pool_id=-1,
     )
-    assert [s.id for s in out] == [0, 1, 2]
+    assert [s["id"] for s in out] == [0, 1, 2]
 
 
 def test_segments_for_sample_cursor_returns_all_when_cursor_is_none() -> None:
@@ -54,7 +56,7 @@ def test_segments_for_sample_cursor_returns_all_when_cursor_is_none() -> None:
         after_message_pool_id=None,
         after_call_pool_id=None,
     )
-    assert [s.id for s in out] == [0, 1, 2]
+    assert [s["id"] for s in out] == [0, 1, 2]
 
 
 def test_segments_for_sample_cursor_prunes_by_event_id() -> None:
@@ -76,7 +78,7 @@ def test_segments_for_sample_cursor_prunes_by_event_id() -> None:
     )
     # Only segment 2 has last_event_id > 10; others have no dimension above
     # any cursor so the OR-filter excludes them.
-    assert [s.id for s in out] == [2]
+    assert [s["id"] for s in out] == [2]
 
 
 def test_segments_for_sample_cursor_or_logic_across_cursor_types() -> None:
@@ -96,7 +98,7 @@ def test_segments_for_sample_cursor_or_logic_across_cursor_types() -> None:
         after_message_pool_id=50,
         after_call_pool_id=50,
     )
-    assert [s.id for s in out] == [0]
+    assert [s["id"] for s in out] == [0]
 
 
 @pytest.mark.parametrize(
@@ -164,7 +166,7 @@ def test_segments_for_sample_cursor_returns_in_id_order() -> None:
         after_message_pool_id=-1,
         after_call_pool_id=-1,
     )
-    assert [s.id for s in out] == [0, 1, 2]
+    assert [s["id"] for s in out] == [0, 1, 2]
 
 
 def test_segments_for_sample_cursor_ignores_segments_not_in_sample() -> None:
@@ -181,4 +183,128 @@ def test_segments_for_sample_cursor_ignores_segments_not_in_sample() -> None:
         after_message_pool_id=-1,
         after_call_pool_id=-1,
     )
-    assert [s.id for s in out] == [0, 2]
+    assert [s["id"] for s in out] == [0, 2]
+
+
+def test_segments_for_sample_cursor_uses_sample_segment_maxima() -> None:
+    # Another co-batched sample advanced; this sample did not.
+    segs = [
+        Segment(
+            id=226,
+            last_event_id=1835,
+            last_attachment_id=139345,
+            last_message_pool_id=411,
+            last_call_pool_id=798,
+        )
+    ]
+    m = _manifest(
+        segs,
+        [
+            SampleSegment(
+                id=226,
+                last_event_id=1835,
+                last_attachment_id=133425,
+                last_message_pool_id=376,
+                last_call_pool_id=728,
+            )
+        ],
+    )
+
+    out = segments_for_sample_cursor(
+        m,
+        m.samples[0],
+        after_event_id=1835,
+        after_attachment_id=133425,
+        after_message_pool_id=376,
+        after_call_pool_id=728,
+    )
+
+    assert out == []
+
+
+def test_segments_for_sample_cursor_includes_sample_segment_when_any_dimension_advances() -> (
+    None
+):
+    segs = [
+        Segment(
+            id=10,
+            last_event_id=12,
+            last_attachment_id=13,
+            last_message_pool_id=99,
+            last_call_pool_id=15,
+        )
+    ]
+    m = _manifest(
+        segs,
+        [
+            SampleSegment(
+                id=10,
+                last_event_id=12,
+                last_attachment_id=13,
+                last_message_pool_id=99,
+                last_call_pool_id=15,
+            )
+        ],
+    )
+
+    out = segments_for_sample_cursor(
+        m,
+        m.samples[0],
+        after_event_id=12,
+        after_attachment_id=13,
+        after_message_pool_id=98,
+        after_call_pool_id=15,
+    )
+
+    assert [s["id"] for s in out] == [10]
+
+
+def test_segments_for_sample_cursor_handles_mixed_legacy_and_sample_segment_entries() -> (
+    None
+):
+    segs = [
+        Segment(id=3, last_event_id=300, last_attachment_id=0),
+        Segment(id=1, last_event_id=100, last_attachment_id=0),
+        Segment(id=2, last_event_id=200, last_attachment_id=0),
+    ]
+    m = _manifest(
+        segs,
+        [
+            SampleSegment(id=3, last_event_id=3, last_attachment_id=0),
+            1,
+            SampleSegment(id=1, last_event_id=1, last_attachment_id=0),
+            SampleSegment(id=2, last_event_id=2, last_attachment_id=0),
+        ],
+    )
+
+    out = segments_for_sample_cursor(
+        m,
+        m.samples[0],
+        after_event_id=0,
+        after_attachment_id=0,
+        after_message_pool_id=0,
+        after_call_pool_id=0,
+    )
+
+    assert [s["id"] for s in out] == [1, 2, 3]
+
+
+def test_segments_for_sample_cursor_skips_sample_segment_with_missing_global_segment() -> (
+    None
+):
+    # Cursor metadata is useless without a physical segment zip to return.
+    m = _manifest(
+        [],
+        [SampleSegment(id=99, last_event_id=1, last_attachment_id=0)],
+    )
+
+    out = segments_for_sample_cursor(
+        m,
+        m.samples[0],
+        after_event_id=0,
+        after_attachment_id=0,
+        after_message_pool_id=0,
+        after_call_pool_id=0,
+    )
+
+    assert out == []

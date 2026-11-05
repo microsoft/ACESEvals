@@ -13,8 +13,10 @@ Three roles:
   to intervene — the ACP transport today, future subagent supervisors.
   Exposes only :meth:`AgentRef.post` and :meth:`AgentRef.interrupt`.
 - **Consumer**: the agent loop. Acquires its channel via
-  :func:`agent_channel` (context manager) and reads via
-  :meth:`AgentChannel.drain` / :meth:`AgentChannel.recv`.
+  :func:`agent_channel` (context manager) and drives each turn through
+  the high-level facade :meth:`AgentChannel.before_turn` /
+  :meth:`AgentChannel.turn_scope` / :meth:`AgentChannel.after_cancel`
+  (the pattern documented in ``docs/intervention.qmd``).
 
 Inert by default: with no producer attached, ``drain`` returns ``[]``
 and the scope never cancels. An eval with no ACP attached pays no
@@ -31,6 +33,7 @@ from inspect_ai.model._chat_message import ChatMessage, ChatMessageTool
 
 from .channel import AgentChannel
 from .exceptions import AgentInterrupted
+from .gate import current_turn_gate
 from .items import (
     Cancel,
     CancelReason,
@@ -113,8 +116,12 @@ async def agent_channel() -> AsyncIterator[AgentChannel]:
     slot iff this channel was the binder, letting a successor react in
     the same sample rebind. The channel itself never knows whether it
     is nested; the bind-once semantics live on the ACP session.
+
+    The channel keeps the turn gate set by ``turn_gate()`` when it opens,
+    if any, and calls the gate's ``closed()`` on exit.
     """
     ch = AgentChannel()
+    ch._gate = current_turn_gate()
     ref = ch._ref()
     bound_session = None
     # Defer the bind attempt: look up the active sample's ACP session
@@ -133,12 +140,16 @@ async def agent_channel() -> AsyncIterator[AgentChannel]:
     try:
         yield ch
     finally:
-        _channel_var.reset(token)
-        if bound_session is not None:
-            try:
-                bound_session.unbind(ref)
-            except Exception:  # noqa: BLE001
-                pass
+        try:
+            if ch._gate is not None:
+                ch._gate.closed(ch)
+        finally:
+            _channel_var.reset(token)
+            if bound_session is not None:
+                try:
+                    bound_session.unbind(ref)
+                except Exception:  # noqa: BLE001
+                    pass
 
 
 def current_agent_channel() -> AgentChannel:

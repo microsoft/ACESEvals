@@ -71,6 +71,7 @@ inspect-docs:
         - text: Concurrency
           href: models-concurrency.qmd
         - href: compaction.qmd
+        - href: fallbacks.qmd
         - href: multimodal.qmd
         - href: reasoning.qmd
         - href: structured.qmd
@@ -80,6 +81,8 @@ inspect-docs:
       contents:
         - href: standard-scorers.qmd
         - href: custom-scorers.qmd
+        - text: Scoring Policy
+          href: scoring-policy.qmd
         - text: Model Grading
           href: model-graded.qmd
         - text: Scoring Metrics
@@ -92,8 +95,8 @@ inspect-docs:
         - href: agents.qmd
         - href: react-agent.qmd
         - href: deepagent.qmd
-        # - text: Checkpointing
-        #   href: checkpointing.qmd
+        - text: Checkpointing
+          href: checkpointing.qmd
         - text: Intervention
           href: intervention.qmd
         - href: multi-agent.qmd
@@ -109,6 +112,7 @@ inspect-docs:
         - href: tools-custom.qmd
         - href: sandboxing.qmd
         - href: approval.qmd
+        - href: review.qmd
     - text: Running
       href: running.qmd
       contents:
@@ -116,8 +120,11 @@ inspect-docs:
         - href: parallelism.qmd
         - href: handling-errors.qmd
         - href: setting-limits.qmd
+        - href: control-channel.qmd
         - href: early-stopping.qmd
-        - href: tracing.qmd   
+        - href: task-source.qmd
+        - href: sample-source.qmd
+        - href: tracing.qmd
     - text: Analysis
       href: analysis.qmd
       contents:

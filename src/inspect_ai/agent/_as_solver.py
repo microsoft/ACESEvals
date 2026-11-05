@@ -26,7 +26,8 @@ def as_solver(agent: Agent, limits: list[Limit] = [], **agent_kwargs: Any) -> So
 
     Note that agents used as solvers will only receive their first parameter
     (`state`). Any other parameters must provide appropriate defaults
-    or be explicitly specified in `agent_kwargs`
+    or be explicitly specified in `agent_kwargs`. Agents declaring a `tools`
+    parameter receive the task's tools unless `agent_kwargs` supplies it.
 
     Args:
        agent: Agent to convert.
@@ -51,7 +52,16 @@ def as_solver(agent: Agent, limits: list[Limit] = [], **agent_kwargs: Any) -> So
 
     # check to make sure we have all the parameters we need to run the agent
     agent_info = parse_tool_info(agent)
+    saber_parameters = {
+        "tools",
+        "session_manager",
+        "mcp_config",
+        "policy_endpoint",
+        "agent_id",
+    }
     for name, param in list(agent_info.parameters.properties.items())[1:]:
+        if name in saber_parameters:
+            continue
         if param.default is None and name not in agent_kwargs:
             raise ValueError(
                 f"To use the {agent_name} agent as a solver "
@@ -68,7 +78,13 @@ def as_solver(agent: Agent, limits: list[Limit] = [], **agent_kwargs: Any) -> So
                 # run the agent with limits
                 with apply_limits(limits):
                     async with span(name=agent_name, type=AGENT_SPAN_TYPE):
-                        agent_state = await agent(agent_state, **agent_kwargs)
+                        call_kwargs = dict(agent_kwargs)
+                        if (
+                            "tools" in agent_info.parameters.properties
+                            and "tools" not in call_kwargs
+                        ):
+                            call_kwargs["tools"] = state.tools
+                        agent_state = await agent(agent_state, **call_kwargs)
             # if an exception occurs, we still want to update the TaskState with the
             # AgentState's messages + output so that it appears in the log and is scored
             finally:

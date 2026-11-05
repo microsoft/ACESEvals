@@ -1,0 +1,59 @@
+# Fails PRs that edit CHANGELOG.md. Release Please writes the changelog from
+# the Conventional Commit PR titles, so a PR's title is its changelog line.
+#
+# The release PR (head branch release-please--branches--main) is exempt: it
+# carries Release Please's CHANGELOG.md update. Release Please pushes it with
+# GITHUB_TOKEN, which starts no pull_request runs, so release.yml dispatches
+# this workflow on that branch.
+#
+# Runs on every PR, passing when CHANGELOG.md is untouched, so its check can
+# be required on main.
+
+name: Changelog Lint
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: no-changelog-edits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The pull_request checkout is the merge commit, so depth 2 brings in
+          # HEAD^1 (the base branch tip). A dispatched run diffs against its
+          # merge base with main, which needs the history.
+          # Quoted: 0 is falsy in expressions, so `&& 0 || 2` gives 2.
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && '0' || '2' }}
+          persist-credentials: false
+
+      - name: Check CHANGELOG.md is not edited
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          # Empty on dispatch, which only people with write access can start.
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          RELEASE_BRANCH: release-please--branches--main
+        run: |
+          if [ "$BRANCH" = "$RELEASE_BRANCH" ] &&
+            { [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ]; }; then
+            echo "Release PR: Release Please writes CHANGELOG.md."
+            exit 0
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            BASE=$(git merge-base origin/main HEAD)
+          else
+            BASE=HEAD^1
+          fi
+          if git diff --quiet "$BASE" HEAD -- CHANGELOG.md; then
+            echo "CHANGELOG.md is unchanged."
+            exit 0
+          fi
+          echo "::error file=CHANGELOG.md::Don't edit CHANGELOG.md. Release Please writes it from PR titles at release time: your PR title is the changelog line. Revert this file (git checkout origin/main -- CHANGELOG.md)."
+          exit 1

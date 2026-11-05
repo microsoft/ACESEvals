@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is a prototype of an Inspect agent running in a Linux sandbox with human intervention. It utilises Inspect's [Interactivity features](https://inspect.aisi.org.uk/interactivity.html). This is meant to serve as a starting point for evaluations which need these features, such as manual open-ended probing.
+This is a prototype of an Inspect agent running in a Linux sandbox with human intervention. It utilises Inspect's [Interactivity features](https://inspect.aisi.org.uk/intervention.html). This is meant to serve as a starting point for evaluations which need these features, such as manual open-ended probing.
 
 ## Usage Modes
 
@@ -35,11 +35,12 @@ For `shell` mode, this will result in each and every bash or python call requiri
 ```{.yaml filename="approval.yaml"}
 approvers:
   - name: human
-    tools:
-      - computer(action='key'
-      - computer(action='left_click'
-      - computer(action='middle_click'
-      - computer(action='double_click'
+    tools: computer
+    arguments: {action: key}
+
+  - name: human
+    tools: computer
+    arguments: {action: "*_click"}
 
   - name: auto
     tools: "*"

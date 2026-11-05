@@ -9,8 +9,10 @@ from inspect_ai.tool._sandbox_tools_utils._error_mapper import (
 )
 from inspect_ai.tool._sandbox_tools_utils.sandbox import sandbox_with_injected_tools
 from inspect_ai.util import StoreModel, store_as
-from inspect_ai.util._sandbox._cli import SANDBOX_CLI
+from inspect_ai.util._sandbox._cli import SANDBOX_CLI, tools_user_param
 from inspect_ai.util._sandbox._json_rpc_transport import SandboxJSONRPCTransport
+from inspect_ai.util._sandbox.limits import SandboxEnvironmentLimits
+from inspect_ai.util._tool_state import tool_state_instance
 
 from .._tool import Tool, ToolParsingError, tool
 
@@ -100,7 +102,8 @@ def bash_session(
           empty string. The model may need to make multiple tool calls to obtain
           all output from a given command.
       user: Username to run commands as
-      instance: Instance id (each unique instance id has its own bash process)
+      instance: Instance id (each unique instance id has its own bash process).
+          Defaults to the current `tool_state_scope()`, if any.
 
     Returns:
       String with output from the shell.
@@ -191,18 +194,21 @@ def bash_session(
                         f"Do not provide 'input' with '{action}' action."
                     )
 
-        store = store_as(BashSessionStore, instance=instance)
+        store = store_as(BashSessionStore, instance=tool_state_instance(instance))
         sandbox = await sandbox_with_injected_tools()
 
         # Create transport for all RPC calls
         transport = SandboxJSONRPCTransport(sandbox, SANDBOX_CLI)
 
         if not store.session_id:
+            params: dict[str, object] = {}
+            if (run_as := tools_user_param(sandbox, user)) is not None:
+                params["user"] = run_as
             try:
                 store.session_id = (
                     await exec_model_request(
                         method="bash_session_new_session",
-                        params={"user": user} if user else {},
+                        params=params,
                         result_type=NewSessionResult,
                         transport=transport,
                         error_mapper=SandboxToolsErrorMapper,
@@ -216,10 +222,15 @@ def bash_session(
         timing: dict[str, object] = {
             "wait_for_output": wait_for_output,
             "idle_timeout": DEFAULT_IDLE_TIME,
+            "max_output_bytes": SandboxEnvironmentLimits.MAX_EXEC_OUTPUT_SIZE,
         }
         action_specific: dict[str, dict[str, object]] = {
             "type": {"input": input, **timing},
-            "type_submit": {"input": f"{input}\n", **timing},
+            # a bare type_submit is the return key alone, not the string "None"
+            "type_submit": {
+                "input": (input if input is not None else "") + "\n",
+                **timing,
+            },
             "interrupt": {"input": "\u0003", **timing},
             "read": timing,
             "restart": {"restart": True},

@@ -1,6 +1,50 @@
 google:
   display_name: Google
   models:
+    gemini-4-argon:
+      display_name: "Gemini 4 Argon"
+      # GA date per https://ai.google.dev/gemini-api/docs/changelog
+      release_date: 2026-10-13
+      # https://deepmind.google/models/model-cards/gemini-4-argon/
+      knowledge_cutoff_date: 2026-03-01
+      context_length: 1048576
+      # default synchronous limit; up to 1048576 only with long decode.
+      # https://ai.google.dev/gemini-api/docs/models/gemini-4-argon
+      output_tokens: 65536
+      reasoning: True
+      # Gemini 4 Argon defaults to thinking_level=MEDIUM if unspecified.
+      # https://ai.google.dev/gemini-api/docs/thinking
+      reasoning_effort_default: medium
+    gemini-3.8-flash:
+      display_name: "Gemini 3.8 Flash"
+      release_date: 2026-09-02
+      knowledge_cutoff_date: 2026-03-01
+      context_length: 1048576
+      output_tokens: 65536
+      reasoning: True
+      # Gemini 3.8 Flash defaults to thinking_level=MEDIUM if unspecified.
+      # https://ai.google.dev/gemini-api/docs/thinking
+      reasoning_effort_default: medium
+    gemini-3.7-flash:
+      display_name: "Gemini 3.7 Flash"
+      release_date: 2026-08-13
+      knowledge_cutoff_date: 2026-03-01
+      context_length: 1048576
+      output_tokens: 65536
+      reasoning: True
+      # Gemini 3.7 Flash defaults to thinking_level=MEDIUM if unspecified.
+      # https://ai.google.dev/gemini-api/docs/thinking
+      reasoning_effort_default: medium
+    gemini-3.6-flash:
+      display_name: "Gemini 3.6 Flash"
+      release_date: 2026-07-21
+      knowledge_cutoff_date: 2026-03-01
+      context_length: 1048576
+      output_tokens: 65536
+      reasoning: True
+      # Gemini 3.6 Flash defaults to thinking_level=MEDIUM if unspecified.
+      # https://ai.google.dev/gemini-api/docs/models
+      reasoning_effort_default: medium
     gemini-3.5-flash:
       display_name: "Gemini 3.5 Flash"
       release_date: 2026-05-19
@@ -11,6 +55,16 @@ google:
       # Gemini 3 Flash supports MINIMAL/LOW/MEDIUM/HIGH; default thinking_level
       # is MEDIUM. https://ai.google.dev/gemini-api/docs/gemini-3
       reasoning_effort_default: medium
+    gemini-3.5-flash-lite:
+      display_name: "Gemini 3.5 Flash-Lite"
+      release_date: 2026-07-21
+      knowledge_cutoff_date: 2025-01-01
+      context_length: 1048576
+      output_tokens: 65536
+      reasoning: True
+      # Gemini 3.5 Flash-Lite defaults to thinking_level=MINIMAL if unspecified.
+      # https://ai.google.dev/gemini-api/docs/models
+      reasoning_effort_default: minimal
     gemini-3.1-pro:
       display_name: "Gemini 3.1 Pro"
       release_date: 2026-02-19

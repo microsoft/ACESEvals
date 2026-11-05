@@ -3,13 +3,44 @@ import os
 from typing import Any, Callable, cast
 
 import click
+from click.core import ParameterSource
 from typing_extensions import Unpack
 
 from inspect_ai._util.constants import DEFAULT_SERVER_HOST, DEFAULT_VIEW_PORT
+from inspect_ai._view.network import ViewerNetworkPolicyError
 from inspect_ai._view.view import view
 from inspect_ai.log._bundle import bundle_log_dir, embed_log_dir
 
 from .common import CommonOptions, common_options, process_common_options
+
+TRUST_CONTENT_HELP = (
+    "Whether log content may be rendered richly (markdown, math, highlighting, "
+    "media, links). --no-trust-content shows the content of every log as plain "
+    "text, whatever the log's own ViewerConfig(trust_content=...). "
+    "--trust-content, like leaving the option unset, defers to each log; it "
+    "never shows an untrusted log richly."
+)
+
+
+def resolve_trust_content(trust_content: bool | None) -> bool | None:
+    """A subcommand's --trust-content, else one given before the subcommand.
+
+    `inspect view` itself accepts the start options, so without this
+    `inspect view --no-trust-content start` would silently drop the setting.
+    The subcommand's own command-line value wins; otherwise the environment
+    (or default) value it already has applies.
+    """
+    ctx = click.get_current_context()
+    if ctx.get_parameter_source("trust_content") == ParameterSource.COMMANDLINE:
+        return trust_content
+    parent = ctx.parent
+    if (
+        parent is not None
+        and parent.get_parameter_source("trust_content") == ParameterSource.COMMANDLINE
+    ):
+        parent_value: bool | None = parent.params["trust_content"]
+        return parent_value
+    return trust_content
 
 
 def start_options(func: Callable[..., Any]) -> Callable[..., click.Context]:
@@ -21,11 +52,41 @@ def start_options(func: Callable[..., Any]) -> Callable[..., click.Context]:
         help="Include all logs in log_dir recursively.",
     )
     @click.option(
+        "--show-shards",
+        type=bool,
+        is_flag=True,
+        default=False,
+        help="List shard logs that their merged log already covers (hidden by default).",
+    )
+    @click.option(
         "--host",
         default=DEFAULT_SERVER_HOST,
-        help="Tcp/Ip host. Note: you can use `0.0.0.0` to expose the viewer and connect remotely (e.g. SSH).",
+        help="TCP/IP bind host. Non-loopback binds require authorization or an explicit unsafe acknowledgement.",
     )
     @click.option("--port", default=DEFAULT_VIEW_PORT, help="TCP/IP port")
+    @click.option(
+        "--trusted-origin",
+        multiple=True,
+        help="Exact browser origin allowed to use the viewer. Repeat for multiple origins.",
+    )
+    @click.option(
+        "--trusted-host",
+        multiple=True,
+        help="Additional exact HTTP authority allowed for non-browser clients.",
+    )
+    @click.option(
+        "--unsafe-allow-unauthenticated",
+        is_flag=True,
+        help="Acknowledge unauthenticated access when binding beyond loopback.",
+    )
+    @click.option(
+        "--trust-content/--no-trust-content",
+        type=bool,
+        default=None,
+        is_flag=True,
+        help=TRUST_CONTENT_HELP,
+        envvar="INSPECT_VIEW_TRUST_CONTENT",
+    )
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> click.Context:
         return cast(click.Context, func(*args, **kwargs))
@@ -45,6 +106,15 @@ def view_command(ctx: click.Context, **kwargs: Unpack[CommonOptions]) -> None:
     """
     if ctx.invoked_subcommand is None:
         ctx.invoke(start, **kwargs)
+    elif (
+        ctx.invoked_subcommand != "start"
+        and ctx.get_parameter_source("trust_content") == ParameterSource.COMMANDLINE
+    ):
+        raise click.UsageError(
+            f"--trust-content/--no-trust-content does not apply to "
+            f"'inspect view {ctx.invoked_subcommand}'. Set "
+            "ViewerConfig(trust_content=False) in the task so each log records it."
+        )
     else:
         pass
 
@@ -54,8 +124,13 @@ def view_command(ctx: click.Context, **kwargs: Unpack[CommonOptions]) -> None:
 @common_options
 def start(
     recursive: bool,
+    show_shards: bool,
     host: str,
     port: int,
+    trusted_origin: tuple[str, ...],
+    trusted_host: tuple[str, ...],
+    unsafe_allow_unauthenticated: bool,
+    trust_content: bool | None,
     **common: Unpack[CommonOptions],
 ) -> None:
     """View evaluation logs."""
@@ -74,14 +149,22 @@ def start(
         os.unsetenv(INSPECT_VIEW_AUTHORIZATION_TOKEN)
 
     # run the viewer
-    view(
-        log_dir=common["log_dir"],
-        recursive=recursive,
-        host=host,
-        port=port,
-        authorization=authorization,
-        log_level=common["log_level"],
-    )
+    try:
+        view(
+            log_dir=common["log_dir"],
+            recursive=recursive,
+            host=host,
+            port=port,
+            trusted_origins=trusted_origin,
+            trusted_hosts=trusted_host,
+            authorization=authorization,
+            unsafe_allow_unauthenticated=unsafe_allow_unauthenticated,
+            log_level=common["log_level"],
+            show_shards=show_shards,
+            trust_content=resolve_trust_content(trust_content),
+        )
+    except ViewerNetworkPolicyError as ex:
+        raise click.UsageError(str(ex)) from ex
 
 
 @view_command.command("bundle")

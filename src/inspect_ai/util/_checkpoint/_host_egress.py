@@ -1,10 +1,13 @@
 """Host egress: ship sample staging dir → remote sample checkpoints dir.
 
-Runs at the end of each fire when the resolved sample checkpoints dir
-is remote. Mirrors the in-sandbox egress protocol (Appendix B of
-``design/plans/checkpointing-working.md``): manifest of files already
-shipped, diff against the live staging dir, ship new files in a safe
-order, then atomically update the manifest.
+Runs when the resolved sample checkpoints dir is remote, at the end of
+each fire. Mirrors the in-sandbox egress protocol: manifest of files
+already shipped, diff against the live staging dir, ship new files in
+a safe order, then atomically update the manifest. On resume the
+payload itself is already at the destination (copied there at retry
+startup; see ``_resume_copy``) — hydrate pulls it into staging and
+seeds the manifest with it (:func:`seed_manifest`), so the first
+post-resume fire ships only its delta.
 
 The ``context/`` subdir (restic source — host context files restic
 backs up) and the manifest file itself are excluded from shipping.
@@ -20,9 +23,11 @@ Safe upload order — destination is valid at every intermediate state:
 4. ``restic/**/index/**`` (immutable; occasional consolidation)
 5. ``restic/**/snapshots/**`` (references indexes / data)
 6. ``restic/restic-config.json`` (first cycle; password file)
-7. ``ckpt-NNNNN.json`` last (commit point at the destination)
+7. ``ckpt-NNNNN.json`` last (commit point at the destination),
+   newest id first — so an interrupt mid-tier leaves the latest
+   checkpoint in place, never a stale prefix
 
-Within each tier, files are shipped in lexicographic order. The
+Within each other tier, files are shipped in lexicographic order. The
 manifest write at the end is the commit point for the local "I've
 shipped these"; a crash between ship and manifest-replace leaves the
 destination ahead of the manifest, and the next fire's diff re-ships
@@ -33,7 +38,6 @@ content-addressed and checkpoint files overwrite cleanly).
 from __future__ import annotations
 
 import os
-import re
 from logging import getLogger
 from pathlib import Path
 
@@ -41,6 +45,9 @@ from inspect_ai._util.asyncfiles import get_async_filesystem
 from inspect_ai._util.trace import trace_action
 
 from ._async_fs import async_mkdir
+from ._layout.sample_checkpoints_dir import checkpoint_file_id
+from ._layout.schemas import Checkpoint
+from ._layout.staging_dir import RESTIC_CONFIG_SUBPATH
 
 logger = getLogger(__name__)
 
@@ -51,30 +58,9 @@ MANIFEST_FILENAME = ".egress-manifest.txt"
 # captured inside the restic repos and not part of the checkpoint
 # state at the destination. The manifest itself is host-local
 # bookkeeping.
-_EXCLUDED_TOP_LEVEL: frozenset[str] = frozenset({"context", MANIFEST_FILENAME})
-
-# Tier ordering: (priority, regex matching the path's relative form).
-# A new file's tier is the lowest-priority matching pattern, defaulting
-# to a catch-all bucket if none match (which shouldn't happen for
-# well-formed restic content).
-_CHECKPOINT_FILE_RE = re.compile(r"^ckpt-\d+\.json$")
-_RESTIC_CONFIG = "restic/restic-config.json"
-
-
-def seed_manifest(staging_dir: str) -> int:
-    """Pre-populate ``.egress-manifest.txt`` after resume hydration.
-
-    Lists everything currently in ``staging_dir`` (minus the **context
-    subdir** and the manifest file itself). Use after a remote-resume
-    populates the staging dir from the destination — without seeding,
-    the first post-resume fire's host_egress would treat every
-    downloaded file as "new" and re-ship the whole resume payload to
-    the destination. Returns the entry count for diagnostics.
-    """
-    staging = Path(staging_dir)
-    files = _scan_new_files(staging, shipped=set())
-    _write_manifest(staging / MANIFEST_FILENAME, set(files))
-    return len(files)
+_EXCLUDED_TOP_LEVEL: frozenset[str] = frozenset(
+    {"context", MANIFEST_FILENAME, f"{MANIFEST_FILENAME}.tmp"}
+)
 
 
 async def host_egress(*, staging_dir: str, destination_dir: str) -> None:
@@ -87,7 +73,11 @@ async def host_egress(*, staging_dir: str, destination_dir: str) -> None:
     staging = Path(staging_dir)
     manifest_path = staging / MANIFEST_FILENAME
     shipped = _read_manifest(manifest_path)
-    new_files = _scan_new_files(staging, shipped)
+    new_files = [
+        rel
+        for rel in _scan_new_files(staging, shipped)
+        if _committed_checkpoint_or_other(staging, rel)
+    ]
     if not new_files:
         return
     ordered = _safe_order(new_files)
@@ -105,6 +95,24 @@ async def host_egress(*, staging_dir: str, destination_dir: str) -> None:
             with open(src, "rb") as f:
                 await async_fs.write_file_streaming(dst, f)
     _write_manifest(manifest_path, shipped | set(ordered))
+
+
+def seed_manifest(staging_dir: str, files: list[str]) -> None:
+    """Record ``files`` (staging-relative) as already at the destination.
+
+    Called by hydrate after pulling the resume payload from the
+    destination into staging — those files must not be re-shipped by
+    the next fire's egress. A torn checkpoint file is not recorded: the
+    next fire re-uses its id, and a manifest entry would make the egress
+    skip the valid file written under the same name.
+    """
+    staging = Path(staging_dir)
+    manifest_path = staging / MANIFEST_FILENAME
+    _write_manifest(
+        manifest_path,
+        _read_manifest(manifest_path)
+        | {rel for rel in files if _committed_checkpoint_or_other(staging, rel)},
+    )
 
 
 def _read_manifest(path: Path) -> set[str]:
@@ -135,6 +143,16 @@ def _scan_new_files(staging: Path, shipped: set[str]) -> list[str]:
     return new
 
 
+def _committed_checkpoint_or_other(staging: Path, rel: str) -> bool:
+    if checkpoint_file_id(Path(rel).name) is None:
+        return True
+    try:
+        Checkpoint.model_validate_json((staging / rel).read_bytes())
+    except Exception:
+        return False
+    return True
+
+
 def _safe_order(files: list[str]) -> list[str]:
     """Sort new files into the safe upload tiers (see module docstring)."""
     config_keys: list[str] = []
@@ -146,9 +164,9 @@ def _safe_order(files: list[str]) -> list[str]:
     other: list[str] = []
     for f in files:
         parts = f.split("/")
-        if f == _RESTIC_CONFIG:
+        if f == RESTIC_CONFIG_SUBPATH:
             restic_config.append(f)
-        elif _CHECKPOINT_FILE_RE.match(parts[-1]):
+        elif checkpoint_file_id(parts[-1]) is not None:
             checkpoint_files.append(f)
         elif "data" in parts:
             data.append(f)
@@ -167,7 +185,15 @@ def _safe_order(files: list[str]) -> list[str]:
         + sorted(snapshots)
         + sorted(other)
         + sorted(restic_config)
-        + sorted(checkpoint_files)
+        # newest checkpoint file first: a per-fire egress ships one, but
+        # a multi-file ship interrupted part way through must leave the
+        # *latest* at the destination — a stale-prefix dir would resolve
+        # to an old checkpoint
+        + sorted(
+            checkpoint_files,
+            key=lambda f: checkpoint_file_id(f.rsplit("/", 1)[-1]) or 0,
+            reverse=True,
+        )
     )
 
 

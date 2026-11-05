@@ -20,7 +20,7 @@
             "type": "integer"
           },
           "min": {
-            "default": 4,
+            "default": 10,
             "title": "Min",
             "type": "integer"
           },
@@ -150,6 +150,17 @@
               }
             ],
             "title": "Scout Version"
+          },
+          "trust_content": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trust Content"
           }
         },
         "required": [
@@ -304,8 +315,22 @@
       },
       "ApproverPolicyConfig": {
         "additionalProperties": true,
-        "description": "Configuration format for approver policies.\n\nFor example, here is a configuration in YAML:\n\n```yaml\napprovers:\n  - name: human\n    tools: web_browser*, bash, pyhton\n    choices: [approve, reject]\n\n  - name: auto\n    tools: *\n    decision: approve\n```",
+        "description": "Configuration format for approver policies.\n\nFor example, here is a configuration in YAML:\n\n```yaml\napprovers:\n  - name: human\n    tools: web_browser*, bash, pyhton\n    choices: [approve, reject]\n\n  - name: human\n    tools: computer\n    arguments: {action: key}\n\n  - name: auto\n    tools: *\n    decision: approve\n```",
         "properties": {
+          "arguments": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arguments"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -336,6 +361,22 @@
           "params"
         ],
         "title": "ApproverPolicyConfig",
+        "type": "object"
+      },
+      "ArchiveSnapshots": {
+        "description": "One complete compressed tar archive per checkpoint.\n\nCaptures with tools already present in effectively every image\n(tar, dd, sha256sum, zstd or gzip) \u2014 nothing is injected into the\nsandbox. Each checkpoint's archive is self-contained, so restore\nreads a single file. Best choice when restic injection is\nimpractical, or when the captured data is dominated by large,\nhigh-entropy, frequently-rewritten files where incremental backup\nstores roughly the full dataset again at every checkpoint anyway.\n\nUnlike restic (which encrypts its repository with a per-sample\npassword), archives are written unencrypted: checkpoint data \u2014\nincluding any credentials or keys the agent wrote into captured\npaths \u2014 lands in the checkpoint storage location (possibly S3) as\nplaintext tar archives.",
+        "properties": {
+          "name": {
+            "const": "archive",
+            "default": "archive",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ArchiveSnapshots",
         "type": "object"
       },
       "AttachmentData": {
@@ -1221,10 +1262,25 @@
               "manual",
               "token",
               "cost",
-              "budget"
+              "budget",
+              "agent_complete"
             ],
             "title": "Trigger",
             "type": "string"
+          },
+          "trigger_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Metadata"
           },
           "turn": {
             "title": "Turn",
@@ -1263,7 +1319,7 @@
         "type": "object"
       },
       "CheckpointSampleConfig": {
-        "description": "Checkpoint configuration fields that may be set at the sample layer.\n\nThese fields can be specified on ``Sample(checkpoint=...)`` and are\nalso accepted at the task and eval layers (where they participate in\nthe per-field merge \u2014 precedence: eval > sample > task).\n\nThe fields excluded from this base class \u2014 ``checkpoints_dir`` and\n``retention`` \u2014 are eval-wide concerns that the sample layer must\nnot influence. They live only on the derived :class:`CheckpointConfig`,\nwhich is the type used at the task and eval layers.\n\nSee ``design/plans/checkpointing-working.md`` \u00a72.",
+        "description": "Checkpoint configuration fields that may be set at the sample layer.\n\nThese fields can be specified on ``Sample(checkpoint=...)`` and are\nalso accepted at the task and eval layers (where they participate in\nthe per-field merge \u2014 precedence: eval > sample > task). Capture\nconfiguration \u2014 what to snapshot and with which strategy \u2014 is a\nproperty of the sample's workload, so it lives here.\n\nExcluded from the sample layer: ``checkpoints_location`` and\n``retention``. These are eval-wide storage-policy concerns that the\nsample layer must not influence; they live only on\n:class:`CheckpointConfig`, the subclass used at the task and eval\nlayers.",
         "properties": {
           "max_consecutive_failures": {
             "anyOf": [
@@ -1280,10 +1336,17 @@
             "anyOf": [
               {
                 "additionalProperties": {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SandboxSnapshotConfig"
+                    }
+                  ]
                 },
                 "type": "object"
               },
@@ -1377,6 +1440,17 @@
             ],
             "title": "Pending"
           },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
           "source": {
             "anyOf": [
               {
@@ -1460,6 +1534,74 @@
         "title": "CompactionEvent",
         "type": "object"
       },
+      "ConfigUpdate": {
+        "description": "A group of config changes applied together, sharing provenance.",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigValueChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ProvenanceData"
+          },
+          "scope": {
+            "enum": [
+              "task",
+              "process"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "changes",
+          "scope",
+          "provenance"
+        ],
+        "title": "ConfigUpdate",
+        "type": "object"
+      },
+      "ConfigValueChange": {
+        "description": "One knob's value change within a config update.",
+        "properties": {
+          "cleared": {
+            "default": false,
+            "title": "Cleared",
+            "type": "boolean"
+          },
+          "config": {
+            "enum": [
+              "eval",
+              "generate",
+              "concurrency"
+            ],
+            "title": "Config",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "config",
+          "name",
+          "value",
+          "cleared",
+          "previous"
+        ],
+        "title": "ConfigValueChange",
+        "type": "object"
+      },
       "ConnectionLimitChange": {
         "description": "Record of an adaptive-connections controller scale change.",
         "properties": {
@@ -1476,13 +1618,21 @@
             "type": "integer"
           },
           "reason": {
-            "enum": [
-              "slow_start",
-              "steady_state_up",
-              "rate_limit"
+            "anyOf": [
+              {
+                "enum": [
+                  "slow_start",
+                  "steady_state_up",
+                  "rate_limit"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "manual",
+                "type": "string"
+              }
             ],
-            "title": "Reason",
-            "type": "string"
+            "title": "Reason"
           },
           "timestamp": {
             "title": "Timestamp",
@@ -1665,6 +1815,11 @@
       "ContentDocument": {
         "description": "Document content (e.g. a PDF).",
         "properties": {
+          "citations": {
+            "default": false,
+            "title": "Citations",
+            "type": "boolean"
+          },
           "document": {
             "title": "Document",
             "type": "string"
@@ -1698,7 +1853,8 @@
           "type",
           "document",
           "filename",
-          "mime_type"
+          "mime_type",
+          "citations"
         ],
         "title": "ContentDocument",
         "type": "object"
@@ -1808,6 +1964,17 @@
       "ContentText": {
         "description": "Text content.",
         "properties": {
+          "cache_breakpoint": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Breakpoint"
+          },
           "citations": {
             "anyOf": [
               {
@@ -2539,6 +2706,16 @@
             ],
             "title": "Retry On Error"
           },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewPolicyConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sample_id": {
             "anyOf": [
               {
@@ -2603,6 +2780,17 @@
             ],
             "title": "Sandbox Cleanup"
           },
+          "sandbox_prebuilt": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Prebuilt"
+          },
           "score_display": {
             "anyOf": [
               {
@@ -2625,6 +2813,16 @@
             ],
             "title": "Score On Error"
           },
+          "sentinel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SentinelConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "time_limit": {
             "anyOf": [
               {
@@ -2646,6 +2844,28 @@
               }
             ],
             "title": "Token Limit"
+          },
+          "token_limit_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit Type"
+          },
+          "turn_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn Limit"
           },
           "working_limit": {
             "anyOf": [
@@ -2773,6 +2993,20 @@
       "EvalLog": {
         "description": "Evaluation log.",
         "properties": {
+          "config_updates": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConfigUpdate"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Updates"
+          },
           "error": {
             "anyOf": [
               {
@@ -2894,6 +3128,17 @@
       "EvalMetric": {
         "description": "Metric for evaluation score.",
         "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
           "metadata": {
             "anyOf": [
               {
@@ -3043,6 +3288,27 @@
               }
             ]
           },
+          "headline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeadlineMetric"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "logged_samples": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logged Samples"
+          },
           "metadata": {
             "anyOf": [
               {
@@ -3084,7 +3350,37 @@
             "anyOf": [
               {
                 "items": {
-                  "anyOf": [
+                  "discriminator": {
+                    "mapping": {
+                      "anchor": "#/components/schemas/AnchorEvent",
+                      "approval": "#/components/schemas/ApprovalEvent",
+                      "branch": "#/components/schemas/BranchEvent",
+                      "checkpoint": "#/components/schemas/CheckpointEvent",
+                      "compaction": "#/components/schemas/CompactionEvent",
+                      "error": "#/components/schemas/ErrorEvent",
+                      "info": "#/components/schemas/InfoEvent",
+                      "input": "#/components/schemas/InputEvent",
+                      "interrupt": "#/components/schemas/InterruptEvent",
+                      "logger": "#/components/schemas/LoggerEvent",
+                      "model": "#/components/schemas/ModelEvent",
+                      "review": "#/components/schemas/ReviewEvent",
+                      "sample_init": "#/components/schemas/SampleInitEvent",
+                      "sample_limit": "#/components/schemas/SampleLimitEvent",
+                      "sandbox": "#/components/schemas/SandboxEvent",
+                      "score": "#/components/schemas/ScoreEvent",
+                      "score_edit": "#/components/schemas/ScoreEditEvent",
+                      "sentinel": "#/components/schemas/SentinelEvent",
+                      "span_begin": "#/components/schemas/SpanBeginEvent",
+                      "span_end": "#/components/schemas/SpanEndEvent",
+                      "state": "#/components/schemas/StateEvent",
+                      "step": "#/components/schemas/StepEvent",
+                      "store": "#/components/schemas/StoreEvent",
+                      "subtask": "#/components/schemas/SubtaskEvent",
+                      "tool": "#/components/schemas/ToolEvent"
+                    },
+                    "propertyName": "event"
+                  },
+                  "oneOf": [
                     {
                       "$ref": "#/components/schemas/SampleInitEvent"
                     },
@@ -3111,6 +3407,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/ApprovalEvent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ReviewEvent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SentinelEvent"
                     },
                     {
                       "$ref": "#/components/schemas/BranchEvent"
@@ -3256,6 +3558,17 @@
             ],
             "title": "Completed At"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "epoch": {
             "title": "Epoch",
             "type": "integer"
@@ -3286,7 +3599,37 @@
           },
           "events": {
             "items": {
-              "anyOf": [
+              "discriminator": {
+                "mapping": {
+                  "anchor": "#/components/schemas/AnchorEvent",
+                  "approval": "#/components/schemas/ApprovalEvent",
+                  "branch": "#/components/schemas/BranchEvent",
+                  "checkpoint": "#/components/schemas/CheckpointEvent",
+                  "compaction": "#/components/schemas/CompactionEvent",
+                  "error": "#/components/schemas/ErrorEvent",
+                  "info": "#/components/schemas/InfoEvent",
+                  "input": "#/components/schemas/InputEvent",
+                  "interrupt": "#/components/schemas/InterruptEvent",
+                  "logger": "#/components/schemas/LoggerEvent",
+                  "model": "#/components/schemas/ModelEvent",
+                  "review": "#/components/schemas/ReviewEvent",
+                  "sample_init": "#/components/schemas/SampleInitEvent",
+                  "sample_limit": "#/components/schemas/SampleLimitEvent",
+                  "sandbox": "#/components/schemas/SandboxEvent",
+                  "score": "#/components/schemas/ScoreEvent",
+                  "score_edit": "#/components/schemas/ScoreEditEvent",
+                  "sentinel": "#/components/schemas/SentinelEvent",
+                  "span_begin": "#/components/schemas/SpanBeginEvent",
+                  "span_end": "#/components/schemas/SpanEndEvent",
+                  "state": "#/components/schemas/StateEvent",
+                  "step": "#/components/schemas/StepEvent",
+                  "store": "#/components/schemas/StoreEvent",
+                  "subtask": "#/components/schemas/SubtaskEvent",
+                  "tool": "#/components/schemas/ToolEvent"
+                },
+                "propertyName": "event"
+              },
+              "oneOf": [
                 {
                   "$ref": "#/components/schemas/SampleInitEvent"
                 },
@@ -3313,6 +3656,12 @@
                 },
                 {
                   "$ref": "#/components/schemas/ApprovalEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ReviewEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/SentinelEvent"
                 },
                 {
                   "$ref": "#/components/schemas/BranchEvent"
@@ -3443,6 +3792,17 @@
               }
             ]
           },
+          "message_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Limit"
+          },
           "messages": {
             "items": {
               "anyOf": [
@@ -3467,6 +3827,20 @@
             "additionalProperties": true,
             "title": "Metadata",
             "type": "object"
+          },
+          "model_fallbacks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModelFallback"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Fallbacks"
           },
           "model_usage": {
             "additionalProperties": {
@@ -3550,6 +3924,17 @@
             ],
             "title": "Target"
           },
+          "time_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit"
+          },
           "timelines": {
             "anyOf": [
               {
@@ -3564,6 +3949,39 @@
             ],
             "title": "Timelines"
           },
+          "token_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit"
+          },
+          "token_limit_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit Type"
+          },
+          "token_limit_usage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit Usage"
+          },
           "total_time": {
             "anyOf": [
               {
@@ -3574,6 +3992,17 @@
               }
             ],
             "title": "Total Time"
+          },
+          "turn_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn Count"
           },
           "uuid": {
             "anyOf": [
@@ -3622,6 +4051,17 @@
             "title": "Limit",
             "type": "number"
           },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
           "type": {
             "enum": [
               "context",
@@ -3629,6 +4069,7 @@
               "working",
               "message",
               "token",
+              "turn",
               "cost",
               "operator",
               "custom"
@@ -3720,6 +4161,27 @@
               }
             ],
             "title": "Metadata"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid_response_format",
+                  "refusal",
+                  "no_response",
+                  "grader_failed",
+                  "scoring_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
           },
           "sample_id": {
             "anyOf": [
@@ -3834,6 +4296,17 @@
             ],
             "title": "Completed At"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "epoch": {
             "title": "Epoch",
             "type": "integer"
@@ -3898,6 +4371,17 @@
             ],
             "title": "Limit"
           },
+          "limit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Reason"
+          },
           "message_count": {
             "anyOf": [
               {
@@ -3909,10 +4393,35 @@
             ],
             "title": "Message Count"
           },
+          "message_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Limit"
+          },
           "metadata": {
             "additionalProperties": true,
             "title": "Metadata",
             "type": "object"
+          },
+          "model_fallbacks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModelFallback"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Fallbacks"
           },
           "model_usage": {
             "additionalProperties": {
@@ -3978,6 +4487,50 @@
             ],
             "title": "Target"
           },
+          "time_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Limit"
+          },
+          "token_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit"
+          },
+          "token_limit_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit Type"
+          },
+          "token_limit_usage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit Usage"
+          },
           "total_time": {
             "anyOf": [
               {
@@ -3988,6 +4541,17 @@
               }
             ],
             "title": "Total Time"
+          },
+          "turn_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn Count"
           },
           "uuid": {
             "anyOf": [
@@ -4268,6 +4832,179 @@
         "title": "EvalSetTask",
         "type": "object"
       },
+      "EvalShardEntry": {
+        "description": "Ledger entry for one shard, as of the merge that last read it.",
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "const": "",
+                "type": "string"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "eval_set_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eval Set Id"
+          },
+          "log": {
+            "title": "Log",
+            "type": "string"
+          },
+          "model_usage": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ModelUsage"
+            },
+            "title": "Model Usage",
+            "type": "object"
+          },
+          "mtime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mtime"
+          },
+          "role_usage": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ModelUsage"
+            },
+            "title": "Role Usage",
+            "type": "object"
+          },
+          "samples": {
+            "title": "Samples",
+            "type": "integer"
+          },
+          "selected": {
+            "title": "Selected",
+            "type": "integer"
+          },
+          "selection_digest": {
+            "title": "Selection Digest",
+            "type": "string"
+          },
+          "shard": {
+            "title": "Shard",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "const": "",
+                "type": "string"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "started",
+              "success",
+              "cancelled",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shard",
+          "log",
+          "status",
+          "samples",
+          "selected",
+          "selection_digest",
+          "started_at",
+          "completed_at",
+          "model_usage",
+          "role_usage",
+          "size"
+        ],
+        "title": "EvalShardEntry",
+        "type": "object"
+      },
+      "EvalShards": {
+        "description": "Provenance of a merged log: its shards and the ledger of the last merge.",
+        "properties": {
+          "ledger": {
+            "items": {
+              "$ref": "#/components/schemas/EvalShardEntry"
+            },
+            "title": "Ledger",
+            "type": "array"
+          },
+          "sample_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Count"
+          },
+          "selection": {
+            "enum": [
+              "ids",
+              "count",
+              "none"
+            ],
+            "title": "Selection",
+            "type": "string"
+          }
+        },
+        "required": [
+          "selection",
+          "ledger"
+        ],
+        "title": "EvalShards",
+        "type": "object"
+      },
       "EvalSpec": {
         "description": "Eval target and configuration.",
         "properties": {
@@ -4295,6 +5032,16 @@
               }
             ],
             "title": "Eval Set Id"
+          },
+          "headline_metric": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeadlineMetric"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "metadata": {
             "anyOf": [
@@ -4371,7 +5118,17 @@
             "anyOf": [
               {
                 "additionalProperties": {
-                  "$ref": "#/components/schemas/ModelConfig"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ModelConfig"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/ModelConfig"
+                      },
+                      "type": "array"
+                    }
+                  ]
                 },
                 "type": "object"
               },
@@ -4425,6 +5182,16 @@
               }
             ],
             "title": "Scorers"
+          },
+          "shards": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalShards"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "solver": {
             "anyOf": [
@@ -4493,6 +5260,17 @@
             "additionalProperties": true,
             "title": "Task Attribs",
             "type": "object"
+          },
+          "task_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Description"
           },
           "task_display_name": {
             "anyOf": [
@@ -4661,6 +5439,12 @@
           },
           {
             "$ref": "#/components/schemas/ApprovalEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ReviewEvent"
+          },
+          {
+            "$ref": "#/components/schemas/SentinelEvent"
           },
           {
             "$ref": "#/components/schemas/BranchEvent"
@@ -4913,6 +5697,31 @@
             ],
             "title": "Extra Headers"
           },
+          "fail_on_refusal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail On Refusal"
+          },
+          "fallback_models": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Models"
+          },
           "frequency_penalty": {
             "anyOf": [
               {
@@ -5107,6 +5916,21 @@
             ],
             "title": "Reasoning History"
           },
+          "reasoning_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "standard",
+                  "pro"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Mode"
+          },
           "reasoning_summary": {
             "anyOf": [
               {
@@ -5169,6 +5993,17 @@
               }
             ],
             "title": "Stop Seqs"
+          },
+          "stream_idle_timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Idle Timeout"
           },
           "system_message": {
             "anyOf": [
@@ -5323,6 +6158,7 @@
                         "compaction",
                         "branch",
                         "approval",
+                        "sentinel",
                         "sandbox",
                         "info",
                         "store",
@@ -5417,6 +6253,57 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeadlineMetric": {
+        "description": "Reference to the headline metric of an eval.\n\nThe headline metric is the single number that best summarises an eval (e.g.\nfor a leaderboard or log listing). Set fields narrow ``EvalResults.scores``\nin turn; unset ones resolve by convention. A ``metric`` on its own selects\nthe first score *carrying* that metric, so ``HeadlineMetric(metric=\"accuracy\")``\nskips scores that don't report one. With no ``metric``, the first metric of\nthe first remaining score is used \u2014 the default when nothing is declared.\n\nFields are matched literally. ``Task(headline_metric=...)`` additionally\naccepts a ``\"<scorer>.<score>\"`` shorthand string, which is split into these\nfields before it reaches the model \u2014 scorer names may themselves contain a\ndot (``@scorer(name=\"judge.v2\")``), so the shorthand is only applied where\nit is unambiguously requested.",
+        "properties": {
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "reducer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reducer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "scorer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scorer"
+          }
+        },
+        "title": "HeadlineMetric",
         "type": "object"
       },
       "ImageOutput": {
@@ -6145,6 +7032,7 @@
                         "compaction",
                         "branch",
                         "approval",
+                        "sentinel",
                         "sandbox",
                         "info",
                         "store",
@@ -6352,6 +7240,17 @@
           "log_dir": {
             "title": "Log Dir",
             "type": "string"
+          },
+          "log_dir_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Dir Uri"
           }
         },
         "required": [
@@ -6947,6 +7846,17 @@
             "title": "Model",
             "type": "string"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
           "output": {
             "$ref": "#/components/schemas/ModelOutput"
           },
@@ -6960,6 +7870,31 @@
               }
             ],
             "title": "Pending"
+          },
+          "request_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModelRequestId"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Ids"
+          },
+          "requested_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Model"
           },
           "retries": {
             "anyOf": [
@@ -7084,6 +8019,43 @@
         "title": "ModelEvent",
         "type": "object"
       },
+      "ModelFallback": {
+        "description": "A model fallback (request served by a different model than requested).",
+        "properties": {
+          "count": {
+            "default": 1,
+            "title": "Count",
+            "type": "integer"
+          },
+          "fallback_model": {
+            "title": "Fallback Model",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "fallback_model",
+          "count"
+        ],
+        "title": "ModelFallback",
+        "type": "object"
+      },
       "ModelOutput": {
         "description": "Output from model generation.",
         "properties": {
@@ -7111,6 +8083,27 @@
             ],
             "title": "Error"
           },
+          "fallback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelFallback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input_context_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Context Tokens"
+          },
           "metadata": {
             "anyOf": [
               {
@@ -7126,6 +8119,17 @@
           "model": {
             "title": "Model",
             "type": "string"
+          },
+          "response_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Id"
           },
           "time": {
             "anyOf": [
@@ -7155,6 +8159,30 @@
           "completion"
         ],
         "title": "ModelOutput",
+        "type": "object"
+      },
+      "ModelRequestId": {
+        "description": "Provider request id from an HTTP response.",
+        "properties": {
+          "header": {
+            "title": "Header",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "header",
+          "status"
+        ],
+        "title": "ModelRequestId",
         "type": "object"
       },
       "ModelUsage": {
@@ -7332,7 +8360,7 @@
         "type": "object"
       },
       "Reference": {
-        "description": "Reference to scanned content.",
+        "description": "Reference from a score to content in the scored transcript.\n\nReferences are stored as a list of dicts under a score's\n`metadata[\"scanner_references\"]` key. Inspect View identifies scanner\nscores by the presence of that key and renders cites in the score's\nexplanation (e.g. `[M22]`) as links to the referenced content.",
         "properties": {
           "cite": {
             "anyOf": [
@@ -7403,6 +8431,22 @@
           "json_schema"
         ],
         "title": "ResponseSchema",
+        "type": "object"
+      },
+      "ResticSnapshots": {
+        "description": "Incremental restic-based sandbox snapshots (the default).\n\nEach checkpoint stores only data changed since the previous one.\nBest choice when most files are stable across checkpoints. Requires\ninjecting a restic binary into the sandbox.",
+        "properties": {
+          "name": {
+            "const": "restic-incremental",
+            "default": "restic-incremental",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ResticSnapshots",
         "type": "object"
       },
       "Result": {
@@ -7493,6 +8537,178 @@
         "title": "Result",
         "type": "object"
       },
+      "ReviewEvent": {
+        "description": "Tool result review.",
+        "properties": {
+          "call": {
+            "$ref": "#/components/schemas/ToolCall"
+          },
+          "decision": {
+            "enum": [
+              "continue",
+              "terminate",
+              "escalate"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "event": {
+            "const": "review",
+            "default": "review",
+            "title": "Event",
+            "type": "string"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "pending": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending"
+          },
+          "reviewer": {
+            "title": "Reviewer",
+            "type": "string"
+          },
+          "span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Id"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uuid"
+          },
+          "working_start": {
+            "title": "Working Start",
+            "type": "number"
+          }
+        },
+        "required": [
+          "timestamp",
+          "working_start",
+          "event",
+          "message",
+          "call",
+          "reviewer",
+          "decision"
+        ],
+        "title": "ReviewEvent",
+        "type": "object"
+      },
+      "ReviewPolicyConfig": {
+        "properties": {
+          "reviewers": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewerPolicyConfig"
+            },
+            "title": "Reviewers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reviewers"
+        ],
+        "title": "ReviewPolicyConfig",
+        "type": "object"
+      },
+      "ReviewerPolicyConfig": {
+        "additionalProperties": true,
+        "description": "Configuration format for reviewer policies.\n\nFor example, here is a configuration in YAML:\n\n```yaml\nreviewers:\n  - name: mypackage/output_monitor\n    tools: bash, python\n\n  - name: mypackage/click_monitor\n    tools: computer\n    arguments: {action: \"*_click\"}\n\n  - name: human\n    tools: \"*\"\n```",
+        "properties": {
+          "arguments": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arguments"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Tools"
+          }
+        },
+        "required": [
+          "name",
+          "tools",
+          "params"
+        ],
+        "title": "ReviewerPolicyConfig",
+        "type": "object"
+      },
       "Sample": {
         "description": "Sample for an evaluation task.",
         "properties": {
@@ -7519,6 +8735,17 @@
               }
             ],
             "title": "Choices"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "files": {
             "anyOf": [
@@ -7819,6 +9046,7 @@
               "time",
               "working",
               "token",
+              "turn",
               "cost",
               "operator",
               "custom"
@@ -8131,6 +9359,52 @@
         "title": "SandboxEvent",
         "type": "object"
       },
+      "SandboxSnapshotConfig": {
+        "description": "Per-sandbox snapshot configuration: what to capture and how.\n\nUsed as a ``sandbox_paths`` value in place of a bare path list when\na sandbox needs a non-default snapshot strategy. The ``paths``\nfield carries the same semantics as a bare path-list value\n(``None`` = the sandbox default user's home directory; an empty\nlist opts the sandbox out entirely).",
+        "properties": {
+          "paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paths"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "archive": "#/components/schemas/ArchiveSnapshots",
+                    "restic-incremental": "#/components/schemas/ResticSnapshots"
+                  },
+                  "propertyName": "name"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ResticSnapshots"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ArchiveSnapshots"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          }
+        },
+        "title": "SandboxSnapshotConfig",
+        "type": "object"
+      },
       "ScannerResultField": {
         "description": "A built-in scanner-result section (e.g. `value`, `explanation`).",
         "properties": {
@@ -8271,6 +9545,27 @@
               }
             ],
             "title": "Metadata"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid_response_format",
+                  "refusal",
+                  "no_response",
+                  "grader_failed",
+                  "scoring_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
           },
           "value": {
             "anyOf": [
@@ -8438,6 +9733,32 @@
                 "type": "null"
               }
             ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid_response_format",
+                  "refusal",
+                  "no_response",
+                  "grader_failed",
+                  "scoring_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "const": "UNCHANGED",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "UNCHANGED",
+            "title": "Reason"
           },
           "value": {
             "anyOf": [
@@ -8818,6 +10139,304 @@
           "member_name"
         ],
         "title": "SegmentRef",
+        "type": "object"
+      },
+      "SentinelConfig": {
+        "description": "A sentinel configuration: one entry, a list of entries, or a mapping of instance names to entries.\n\nThe value of the `sentinel:` key in a configuration file, and what the eval log records. A mapping is one entry when its `name` is a string, and a mapping of instance names when every value is an entry, so an instance named `name` still configures a mapping.\n\nExperimental: not yet a stable API; may change without notice.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SentinelEntry"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/SentinelEntry"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SentinelEntry"
+            },
+            "minProperties": 1,
+            "type": "object"
+          }
+        ],
+        "title": "SentinelConfig"
+      },
+      "SentinelEntry": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/SentinelConfig"
+        },
+        "description": "One configured monitor or protocol.\n\nAny key besides `name`, `params`, `version` and `meta` names a parameter of the factory whose value is nested monitors or protocols, such as `monitors` for `threshold` or `children` for `concurrent`; it holds an entry, a list of entries, or a mapping of instance names to entries, and `nested` returns them.\n\nExperimental: not yet a stable API; may change without notice.",
+        "properties": {
+          "meta": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "name",
+          "params"
+        ],
+        "title": "SentinelEntry",
+        "type": "object"
+      },
+      "SentinelEvent": {
+        "description": "Report from a sentinel monitor or protocol about one step.\n\nA report's metadata is recorded in the event's `metadata` field.\n\nExperimental: not yet a stable API; may change without notice.",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "enum": [
+                  "proceed",
+                  "modify",
+                  "reject",
+                  "terminate",
+                  "escalate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "audit": {
+            "default": false,
+            "title": "Audit",
+            "type": "boolean"
+          },
+          "conversation": {
+            "title": "Conversation",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "event": {
+            "const": "sentinel",
+            "default": "sentinel",
+            "title": "Event",
+            "type": "string"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "factory": {
+            "title": "Factory",
+            "type": "string"
+          },
+          "function": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Function"
+          },
+          "kind": {
+            "enum": [
+              "observation",
+              "decision"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "modified": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolCall"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "pending": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending"
+          },
+          "references": {
+            "items": {
+              "$ref": "#/components/schemas/Reference"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Id"
+          },
+          "stage": {
+            "enum": [
+              "model_input",
+              "model_output",
+              "tool_call",
+              "tool_result"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "reported",
+              "cancelled",
+              "bypassed",
+              "superseded",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          },
+          "suspicion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "minProperties": 1,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspicion"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uuid"
+          },
+          "working_start": {
+            "title": "Working Start",
+            "type": "number"
+          }
+        },
+        "required": [
+          "timestamp",
+          "working_start",
+          "event",
+          "factory",
+          "path",
+          "step_id",
+          "conversation",
+          "stage",
+          "kind",
+          "status",
+          "audit",
+          "references"
+        ],
+        "title": "SentinelEvent",
         "type": "object"
       },
       "SnapshotDetails": {
@@ -9537,6 +11156,11 @@
       },
       "TaskDisplayMetric": {
         "properties": {
+          "headline": {
+            "default": false,
+            "title": "Headline",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -9568,6 +11192,17 @@
             "title": "Scorer",
             "type": "string"
           },
+          "scorer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scorer Name"
+          },
           "value": {
             "anyOf": [
               {
@@ -9585,6 +11220,7 @@
         },
         "required": [
           "scorer",
+          "headline",
           "name"
         ],
         "title": "TaskDisplayMetric",
@@ -10100,6 +11736,7 @@
               "limit",
               "approval",
               "cancelled",
+              "sandbox_unavailable",
               "unknown",
               "output_limit"
             ],
@@ -10158,7 +11795,7 @@
         "title": "ToolChoice"
       },
       "ToolEvent": {
-        "description": "Call to a tool.",
+        "description": "Call to a tool.\n\nA host tool that `sandbox_agent_bridge(bridged_tools=...)` runs for a\nsandboxed agent is recorded with `metadata[\"bridge\"]`: `server` and `tool`\n(the bridged server and the tool name within it, also the event's\n`function`), `function` (the name the model called it by, or `None`),\n`proposal_id` (the id of the model's proposing tool call, or `None`) and\n`grant` (`\"consumed\"` when a proposal matched, `\"denied\"` when the call\nwas refused for lack of one, `\"exempt\"` when a server registered with\n`require_proposal=False` ran it without one, or `None` when the request\nwas rejected before that check).",
         "properties": {
           "agent": {
             "anyOf": [
@@ -10699,7 +12336,7 @@
         "type": "object"
       },
       "ViewerConfig": {
-        "description": "Top-level viewer configuration.\n\nThis allows per task customization of the\nTask's sample list and each sample's score and scanner result display.",
+        "description": "Top-level viewer configuration.\n\nThis allows per task customization of the\nTask's sample list, each sample's score and scanner result display,\nand whether log content is trusted enough to render richly.",
         "properties": {
           "sample_score_view": {
             "anyOf": [
@@ -10741,6 +12378,17 @@
               }
             ],
             "title": "Task Samples View"
+          },
+          "trust_content": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trust Content"
           }
         },
         "required": [
@@ -11015,8 +12663,8 @@
       }
     },
     "/log-delete/{log}": {
-      "get": {
-        "operationId": "api_log_delete_log_delete__log__get",
+      "delete": {
+        "operationId": "api_log_delete_log_delete__log__delete",
         "parameters": [
           {
             "in": "path",
@@ -11033,7 +12681,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Api Log Delete Log Delete  Log  Get",
+                  "title": "Response Api Log Delete Log Delete  Log  Delete",
                   "type": "boolean"
                 }
               }
@@ -11249,8 +12897,8 @@
       }
     },
     "/log-message": {
-      "get": {
-        "operationId": "api_log_message_log_message_get",
+      "post": {
+        "operationId": "api_log_message_log_message_post",
         "parameters": [
           {
             "in": "query",

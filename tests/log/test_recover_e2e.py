@@ -4,13 +4,20 @@ import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
+from test_helpers.buffer import simulate_crashed_buffer_db
 
 from inspect_ai._util.asyncfiles import AsyncFilesystem
 from inspect_ai._util.constants import LOG_SCHEMA_VERSION
+from inspect_ai._util.content import Content, ContentImage, ContentText
+from inspect_ai.dataset._dataset import Sample
 from inspect_ai.event._model import ModelEvent
-from inspect_ai.log._file import read_eval_log
+from inspect_ai.event._sample_init import SampleInitEvent
+from inspect_ai.event._score import ScoreEvent
+from inspect_ai.log._condense import condense_sample
+from inspect_ai.log._file import read_eval_log_async
 from inspect_ai.log._log import (
     EvalConfig,
     EvalDataset,
@@ -19,7 +26,11 @@ from inspect_ai.log._log import (
     EvalSampleSummary,
     EvalSpec,
 )
-from inspect_ai.log._recorders.buffer.database import SampleBufferDatabase
+from inspect_ai.log._recorders.buffer.database import (
+    SampleBufferDatabase,
+    sync_to_filestore,
+)
+from inspect_ai.log._recorders.buffer.filestore import SampleBufferFilestore
 from inspect_ai.log._recorders.eval import LogStart, ZipLogFile
 from inspect_ai.log._recorders.types import SampleEvent
 from inspect_ai.log._recover import (
@@ -88,20 +99,14 @@ def _make_realistic_sample(
     )
 
 
-_DEAD_PID = 99999999
-
-
 def _simulate_crashed_buffer(buffer: SampleBufferDatabase) -> None:
-    """Rename the buffer DB to use a dead PID, simulating a crashed process."""
-    old_path = buffer.db_path
-    new_path = old_path.parent / old_path.name.replace(
-        f".{os.getpid()}.", f".{_DEAD_PID}."
-    )
-    old_path.rename(new_path)
-    buffer.db_path = new_path
+    """Snapshot the buffer DB (incl. hot WAL) under a dead PID, simulating a crash."""
+    simulate_crashed_buffer_db(buffer)
 
 
-def _make_model_event(input_msgs: list[ChatMessage], output_content: str) -> ModelEvent:
+def _make_model_event(
+    input_msgs: list[ChatMessage], output_content: str | list[Content]
+) -> ModelEvent:
     return ModelEvent(
         model="mockllm/model",
         input=input_msgs,
@@ -184,7 +189,7 @@ async def test_e2e_recovery_with_recorder_created_eval() -> None:
                     started_at=datetime.now(timezone.utc).isoformat(),
                     completed_at=datetime.now(timezone.utc).isoformat(),
                 )
-                buffer.complete_sample(completed_summary)
+                buffer.complete_sample(completed_summary, sample_metadata=None)
 
                 # One in-progress sample in buffer (was running when crash happened)
                 in_progress_summary = EvalSampleSummary(
@@ -225,7 +230,7 @@ async def test_e2e_recovery_with_recorder_created_eval() -> None:
                 assert "mockllm/model" in log.stats.model_usage
 
                 # Read back from disk and verify round-trip
-                read_log = read_eval_log(output_path)
+                read_log = await read_eval_log_async(output_path)
                 assert read_log.status == "error"
                 assert read_log.samples is not None
                 assert len(read_log.samples) == 5
@@ -352,7 +357,7 @@ async def test_e2e_recovery_overwrite() -> None:
                     started_at=datetime.now(timezone.utc).isoformat(),
                     completed_at=datetime.now(timezone.utc).isoformat(),
                 )
-                buffer.complete_sample(completed)
+                buffer.complete_sample(completed, sample_metadata=None)
                 _simulate_crashed_buffer(buffer)
 
                 # Recover with overwrite — should replace the original file
@@ -365,7 +370,7 @@ async def test_e2e_recovery_overwrite() -> None:
                 assert len(log.samples) == 4
 
                 # The original file should now be the recovered version
-                read_log = read_eval_log(eval_path)
+                read_log = await read_eval_log_async(eval_path)
                 assert read_log.status == "error"
                 assert read_log.samples is not None
                 assert len(read_log.samples) == 4
@@ -454,7 +459,7 @@ async def test_e2e_recovery_overwrite_blocked_by_successful_sibling() -> None:
                     started_at=datetime.now(timezone.utc).isoformat(),
                     completed_at=datetime.now(timezone.utc).isoformat(),
                 )
-                buffer.complete_sample(completed)
+                buffer.complete_sample(completed, sample_metadata=None)
                 _simulate_crashed_buffer(buffer)
 
                 with pytest.raises(RecoveryNotAvailable, match="successful log"):
@@ -463,7 +468,7 @@ async def test_e2e_recovery_overwrite_blocked_by_successful_sibling() -> None:
                     )
 
                 # Recovery should fail before mutating the crashed log
-                crashed_log = read_eval_log(eval_path)
+                crashed_log = await read_eval_log_async(eval_path)
                 assert crashed_log.status == "started"
                 assert crashed_log.samples is not None
                 assert len(crashed_log.samples) == 0
@@ -522,7 +527,7 @@ async def test_e2e_recovery_crash_before_first_flush() -> None:
                         started_at=datetime.now(timezone.utc).isoformat(),
                         completed_at=datetime.now(timezone.utc).isoformat(),
                     )
-                    buffer.complete_sample(completed)
+                    buffer.complete_sample(completed, sample_metadata=None)
 
                 _simulate_crashed_buffer(buffer)
 
@@ -535,7 +540,7 @@ async def test_e2e_recovery_crash_before_first_flush() -> None:
                 assert all(s.scores is not None for s in log.samples)
 
                 # Read back
-                read_log = read_eval_log(output_path)
+                read_log = await read_eval_log_async(output_path)
                 assert read_log.samples is not None
                 assert len(read_log.samples) == 2
             finally:
@@ -595,7 +600,7 @@ async def test_e2e_recovery_duplicate_samples_in_buffer_and_eval() -> None:
                         started_at=datetime.now(timezone.utc).isoformat(),
                         completed_at=datetime.now(timezone.utc).isoformat(),
                     )
-                    buffer.complete_sample(completed)
+                    buffer.complete_sample(completed, sample_metadata=None)
 
                 _simulate_crashed_buffer(buffer)
 
@@ -676,7 +681,7 @@ async def test_e2e_recovery_multiple_flush_batches() -> None:
                         started_at=datetime.now(timezone.utc).isoformat(),
                         completed_at=datetime.now(timezone.utc).isoformat(),
                     )
-                    buffer.complete_sample(completed)
+                    buffer.complete_sample(completed, sample_metadata=None)
 
                 # In-progress at crash
                 started = EvalSampleSummary(
@@ -715,7 +720,7 @@ async def test_e2e_recovery_multiple_flush_batches() -> None:
                 assert s1.scores is not None
 
                 # Round-trip
-                read_log = read_eval_log(output_path)
+                read_log = await read_eval_log_async(output_path)
                 assert read_log.samples is not None
                 assert len(read_log.samples) == 7
             finally:
@@ -767,7 +772,7 @@ async def test_e2e_recovery_sample_with_error() -> None:
                     started_at=datetime.now(timezone.utc).isoformat(),
                     completed_at=datetime.now(timezone.utc).isoformat(),
                 )
-                buffer.complete_sample(errored)
+                buffer.complete_sample(errored, sample_metadata=None)
 
                 # Sample 2: normal completed
                 started2 = EvalSampleSummary(
@@ -791,7 +796,7 @@ async def test_e2e_recovery_sample_with_error() -> None:
                     started_at=datetime.now(timezone.utc).isoformat(),
                     completed_at=datetime.now(timezone.utc).isoformat(),
                 )
-                buffer.complete_sample(completed2)
+                buffer.complete_sample(completed2, sample_metadata=None)
 
                 _simulate_crashed_buffer(buffer)
 
@@ -812,7 +817,7 @@ async def test_e2e_recovery_sample_with_error() -> None:
                 s2 = next(s for s in log.samples if s.id == 2)
                 assert s2.scores is not None
 
-                read_log = read_eval_log(output_path)
+                read_log = await read_eval_log_async(output_path)
                 assert read_log.samples is not None
                 assert len(read_log.samples) == 2
             finally:
@@ -908,7 +913,7 @@ def test_sync_recover_eval_log() -> None:
             started_at=datetime.now(timezone.utc).isoformat(),
             completed_at=datetime.now(timezone.utc).isoformat(),
         )
-        buffer.complete_sample(completed)
+        buffer.complete_sample(completed, sample_metadata=None)
         _simulate_crashed_buffer(buffer)
 
         # Patch resolve_db_dir so recovery finds the buffer DB in our temp dir
@@ -976,6 +981,7 @@ async def test_streaming_recovery_synthesizes_uuid_for_in_progress_sample() -> N
                 epoch=1,
                 input="Question 42",
                 target="answer",
+                description="Answer question 42.",
                 started_at=datetime.now(timezone.utc).isoformat(),
                 # uuid intentionally omitted — simulates old buffer rows
             )
@@ -1035,11 +1041,12 @@ async def test_streaming_recovery_synthesizes_uuid_for_in_progress_sample() -> N
             assert log.samples is not None
             assert len(log.samples) == 1
 
-            recovered = read_eval_log(output_path, resolve_attachments=True)
+            recovered = await read_eval_log_async(output_path, resolve_attachments=True)
             assert recovered.samples is not None
             target = next(s for s in recovered.samples if s.id == 42 and s.epoch == 1)
             assert target.uuid is not None
             assert len(target.uuid) >= 20
+            assert target.description == "Answer question 42."
 
 
 async def test_recovery_preserves_uuid_from_in_progress_buffer_row() -> None:
@@ -1090,7 +1097,369 @@ async def test_recovery_preserves_uuid_from_in_progress_buffer_row() -> None:
             finally:
                 buffer.cleanup()
 
-            recovered = read_eval_log(output_path, resolve_attachments=True)
+            recovered = await read_eval_log_async(output_path, resolve_attachments=True)
             assert recovered.samples is not None
             target = next(s for s in recovered.samples if s.id == 7 and s.epoch == 1)
             assert target.uuid == expected_uuid
+
+
+async def test_streaming_recovery_output_message_stays_inline_in_messages() -> None:
+    """Long output message content must stay inline in recovered sample.messages.
+
+    _write_sample_streaming walks ModelEvent.output through condense_event
+    (events_context) and separately walks accumulated messages through
+    walk_chat_messages (messages_context). The output choice message ends up
+    in both walks because MessageAccumulator.result() appends it to messages.
+
+    If the two walks shared a WalkContext cache, the events walk (which uses
+    events_fn -- pooling text >100 chars as attachment refs) would cache the
+    rewritten message, and the subsequent messages walk would hit that cache
+    entry and return the attachment ref instead of the original inline content.
+    The split into events_context/messages_context prevents this; this test
+    would FAIL if the split were reverted to a single shared context.
+    """
+    import json
+    from zipfile import ZipFile
+
+    from pydantic_core import to_jsonable_python
+
+    from inspect_ai._util.constants import LOG_SCHEMA_VERSION
+    from inspect_ai.log._condense import ATTACHMENT_PROTOCOL
+    from inspect_ai.log._recorders.buffer.filestore import (
+        Manifest,
+        SampleManifest,
+        Segment,
+        segment_file_name,
+        segment_name,
+    )
+    from inspect_ai.log._recorders.buffer.types import EventData, SampleData
+    from inspect_ai.log._recorders.eval import LogStart
+
+    async with AsyncFilesystem():
+        with tempfile.TemporaryDirectory() as temp_dir:
+            eval_path = os.path.join(temp_dir, "ctx_split.eval")
+            output_path = os.path.join(temp_dir, "ctx_split-recovered.eval")
+
+            eval_spec = _make_eval_spec(task="ctx_split_test", num_samples=1)
+            plan = EvalPlan()
+            log_start = LogStart(version=LOG_SCHEMA_VERSION, eval=eval_spec, plan=plan)
+
+            with ZipFile(eval_path, "w") as zf:
+                zf.writestr(
+                    "_journal/start.json",
+                    json.dumps(to_jsonable_python(log_start, exclude_none=True)),
+                )
+
+            eval_name = os.path.splitext(os.path.basename(eval_path))[0]
+            buffer_dir = os.path.join(temp_dir, ".buffer", eval_name)
+            os.makedirs(buffer_dir, exist_ok=True)
+
+            # Long assistant reply: >100 chars so events_fn pools it as attachment.
+            # The same message (by object identity -- ModelOutput.message is a
+            # ChatMessageAssistant created once at construction time) will also
+            # appear in MessageAccumulator.result() messages.
+            long_reply = "assistant long reply " * 10  # 210 chars > 100-char threshold
+            model_event = ModelEvent(
+                model="mockllm/model",
+                input=[ChatMessageUser(content="hi")],
+                tools=[],
+                tool_choice="auto",
+                config=GenerateConfig(),
+                output=ModelOutput.from_content(
+                    model="mockllm/model", content=long_reply
+                ),
+            )
+            event_dict = to_jsonable_python(model_event, exclude_none=True)
+
+            summary = EvalSampleSummary(
+                id=99,
+                epoch=1,
+                input="hi",
+                target="reply",
+                started_at=datetime.now(timezone.utc).isoformat(),
+                completed_at=datetime.now(timezone.utc).isoformat(),
+            )
+
+            sample_data = SampleData(
+                events=[
+                    EventData(
+                        id=1,
+                        event_id="evt-1-0",
+                        sample_id=str(summary.id),
+                        epoch=summary.epoch,
+                        event=event_dict,
+                    )
+                ],
+                attachments=[],
+            )
+            seg_zip_path = os.path.join(buffer_dir, segment_name(1))
+            with ZipFile(seg_zip_path, "w") as zf:
+                zf.writestr(
+                    segment_file_name(summary.id, summary.epoch),
+                    json.dumps(to_jsonable_python(sample_data, exclude_none=True)),
+                )
+
+            manifest = Manifest(
+                samples=[SampleManifest(summary=summary, segments=[1])],
+                segments=[Segment(id=1, last_event_id=1, last_attachment_id=0)],
+            )
+            with open(os.path.join(buffer_dir, "manifest.json"), "w") as f:
+                f.write(manifest.model_dump_json())
+            with open(os.path.join(buffer_dir, ".keep"), "w") as f:
+                pass
+
+            empty_db_dir = os.path.join(temp_dir, "empty_db_dir")
+            await recover_eval_log_async(
+                eval_path, output=output_path, cleanup=False, _db_dir=empty_db_dir
+            )
+
+            # Read without resolving attachments so we can inspect the raw content.
+            recovered = await read_eval_log_async(
+                output_path, resolve_attachments=False
+            )
+            assert recovered.samples is not None
+            sample = next(s for s in recovered.samples if s.id == 99 and s.epoch == 1)
+
+            # messages side: the assistant reply must be the original long text,
+            # NOT an attachment:// reference (proves messages_context is separate).
+            assistant_msgs = [
+                m for m in sample.messages if isinstance(m, ChatMessageAssistant)
+            ]
+            assert len(assistant_msgs) >= 1
+            assistant_content = assistant_msgs[-1].content
+            assert isinstance(assistant_content, str), (
+                f"Expected str content in messages, got {type(assistant_content)}"
+            )
+            assert not assistant_content.startswith(ATTACHMENT_PROTOCOL), (
+                "messages walk leaked attachment ref from events walk: "
+                f"content={assistant_content!r}"
+            )
+            assert assistant_content == long_reply
+
+            # events side: the same long content must have become an attachment ref,
+            # proving the events walk DID run with the attachment-creating fn.
+            # The condensed event's output choice message content is the ref.
+            model_events = [e for e in sample.events if isinstance(e, ModelEvent)]
+            assert len(model_events) >= 1
+            output_content = model_events[-1].output.choices[0].message.content
+            assert isinstance(output_content, str)
+            assert output_content.startswith(ATTACHMENT_PROTOCOL), (
+                "events walk did not pool long output content as attachment: "
+                f"content={output_content!r}"
+            )
+
+
+@pytest.mark.parametrize("buffer_kind", ["database", "filestore"])
+async def test_recovery_restores_full_input_target_and_scores(
+    buffer_kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A completed but unflushed sample is rebuilt from its events.
+
+    The buffered summary is thinned (images dropped, long text truncated, score
+    answer/explanation/metadata shortened), so recovering from it would lose
+    data a normal run keeps.
+    """
+    png = (
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlE"
+        "QVR4nGNgAAAAAgABVKJPXQAAAABJRU5ErkJggg=="
+    )
+    sample = Sample(
+        id="s1",
+        input=[
+            ChatMessageUser(
+                content=[ContentText(text="T" * 6000), ContentImage(image=png)]
+            )
+        ],
+        target="X" * 6000,
+        choices=["yes", "no"],
+    )
+    score = Score(
+        value=1.0,
+        answer="A" * 3000,
+        explanation="word " * 400,
+        metadata={"grading": "G" * 2000},
+    )
+    started_at = datetime.now(timezone.utc).isoformat()
+    completed = EvalSampleSummary(
+        id="s1",
+        epoch=1,
+        input=sample.input,
+        target=sample.target,
+        choices=sample.choices,
+        scores={"long_scorer": score},
+        started_at=started_at,
+        completed_at=datetime.now(timezone.utc).isoformat(),
+    )
+    assert completed.scores is not None
+    assert completed.scores["long_scorer"].answer != score.answer  # thinned
+
+    async with AsyncFilesystem():
+        with tempfile.TemporaryDirectory() as temp_dir:
+            eval_path = os.path.join(temp_dir, "thinned.eval")
+            output_path = os.path.join(temp_dir, "thinned-recovered.eval")
+            zip_log = ZipLogFile(eval_path)
+            await zip_log.init(log_start=None, summary_counter=0, summaries=[])
+            await zip_log.start(
+                LogStart(
+                    version=LOG_SCHEMA_VERSION,
+                    eval=_make_eval_spec(num_samples=1),
+                    plan=EvalPlan(),
+                )
+            )
+            await zip_log.flush()
+
+            db_dir = os.path.join(temp_dir, "bufferdb")
+            buffer = SampleBufferDatabase(eval_path, create=True, db_dir=Path(db_dir))
+            buffer.start_sample(
+                EvalSampleSummary(
+                    id="s1",
+                    epoch=1,
+                    input=sample.input,
+                    target=sample.target,
+                    choices=sample.choices,
+                    started_at=started_at,
+                )
+            )
+            buffer.log_events(
+                [
+                    SampleEvent(
+                        id="s1", epoch=1, event=SampleInitEvent(sample=sample, state={})
+                    ),
+                    SampleEvent(
+                        id="s1",
+                        epoch=1,
+                        event=ScoreEvent(
+                            score=score, target=sample.target, scorer="long_scorer"
+                        ),
+                    ),
+                    # an intermediate score is not the sample's score
+                    SampleEvent(
+                        id="s1",
+                        epoch=1,
+                        event=ScoreEvent(
+                            score=Score(value=0.0),
+                            intermediate=True,
+                            scorer="long_scorer",
+                        ),
+                    ),
+                ]
+            )
+            buffer.complete_sample(completed, sample_metadata=None)
+
+            if buffer_kind == "filestore":
+                sync_to_filestore(buffer, SampleBufferFilestore(eval_path, create=True))
+                db_dir = os.path.join(temp_dir, "empty_db_dir")
+            else:
+                _simulate_crashed_buffer(buffer)
+
+            from inspect_ai._eval.task import results as results_module
+
+            metric_scores: list[Score] = []
+            original_eval_results = results_module.eval_results
+
+            def capture_eval_results(*args: Any, **kwargs: Any) -> Any:
+                metric_scores.extend(s["long_scorer"].score for s in kwargs["scores"])
+                return original_eval_results(*args, **kwargs)
+
+            monkeypatch.setattr(results_module, "eval_results", capture_eval_results)
+
+            await recover_eval_log_async(
+                eval_path, output=output_path, cleanup=False, _db_dir=db_dir
+            )
+            assert metric_scores == [score]
+
+            # long input text stays inline, as in a normal run's log
+            recovered = await read_eval_log_async(output_path)
+            assert recovered.samples is not None
+            input = recovered.samples[0].input
+            assert isinstance(input, list)
+            assert isinstance(input[0].content, list)
+            assert input[0].content[0] == ContentText(text="T" * 6000)
+
+            recovered = await read_eval_log_async(output_path, resolve_attachments=True)
+            assert recovered.samples is not None
+            recovered_sample = recovered.samples[0]
+            assert recovered_sample.input == sample.input
+            assert recovered_sample.target == sample.target
+            assert recovered_sample.choices == sample.choices
+            assert recovered_sample.scores == {"long_scorer": score}
+
+
+@pytest.mark.parametrize("buffer_kind", ["database", "filestore"])
+async def test_recovery_keeps_messages_and_output_inline(buffer_kind: str) -> None:
+    """Recovered messages and output match a normal run's log.
+
+    The buffer condenses long text and images in model events into
+    attachments; a normal run's log keeps message text and the whole output,
+    images included, inline, and turns only message images into attachments.
+    """
+    png = (
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlE"
+        "QVR4nGNgAAAAAgABVKJPXQAAAABJRU5ErkJggg=="
+    )
+    user = ChatMessageUser(
+        content=[ContentText(text="Q" * 2000), ContentImage(image=png)]
+    )
+    model_event = _make_model_event(
+        [user], [ContentText(text="R" * 2000), ContentImage(image=png)]
+    )
+    started_at = datetime.now(timezone.utc).isoformat()
+    summary = EvalSampleSummary(
+        id="s1", epoch=1, input="hi", target="reply", started_at=started_at
+    )
+    # what a normal run writes for this sample
+    expected = condense_sample(
+        EvalSample(
+            id="s1",
+            epoch=1,
+            input="hi",
+            target="reply",
+            messages=[user, model_event.output.message],
+            output=model_event.output,
+        )
+    )
+
+    async with AsyncFilesystem():
+        with tempfile.TemporaryDirectory() as temp_dir:
+            eval_path = os.path.join(temp_dir, "inline.eval")
+            output_path = os.path.join(temp_dir, "inline-recovered.eval")
+            zip_log = ZipLogFile(eval_path)
+            await zip_log.init(log_start=None, summary_counter=0, summaries=[])
+            await zip_log.start(
+                LogStart(
+                    version=LOG_SCHEMA_VERSION,
+                    eval=_make_eval_spec(num_samples=1),
+                    plan=EvalPlan(),
+                )
+            )
+            await zip_log.flush()
+
+            db_dir = os.path.join(temp_dir, "bufferdb")
+            buffer = SampleBufferDatabase(eval_path, create=True, db_dir=Path(db_dir))
+            buffer.start_sample(summary)
+            buffer.log_events([SampleEvent(id="s1", epoch=1, event=model_event)])
+            buffer.complete_sample(
+                summary.model_copy(
+                    update={"completed_at": datetime.now(timezone.utc).isoformat()}
+                ),
+                sample_metadata=None,
+            )
+
+            if buffer_kind == "filestore":
+                sync_to_filestore(buffer, SampleBufferFilestore(eval_path, create=True))
+                db_dir = os.path.join(temp_dir, "empty_db_dir")
+            else:
+                _simulate_crashed_buffer(buffer)
+
+            await recover_eval_log_async(
+                eval_path, output=output_path, cleanup=False, _db_dir=db_dir
+            )
+
+            recovered = await read_eval_log_async(
+                output_path, resolve_attachments=False
+            )
+            assert recovered.samples is not None
+            recovered_sample = recovered.samples[0]
+            assert recovered_sample.messages == expected.messages
+            assert recovered_sample.output == expected.output
+            assert expected.attachments.items() <= recovered_sample.attachments.items()

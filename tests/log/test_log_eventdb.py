@@ -1,24 +1,34 @@
+import inspect
 import json
 import os
 import re
 import sqlite3
 import tempfile
-from contextlib import contextmanager
+import threading
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Any, Generator, Iterator, cast
 
 import pytest
+from test_helpers.transcript import make_model_event
 
+from inspect_ai._util.json import to_json_str_safe
 from inspect_ai.event._event import Event
 from inspect_ai.event._info import InfoEvent
 from inspect_ai.log._log import EvalSampleSummary
 from inspect_ai.log._recorders.buffer import SampleBufferDatabase
 from inspect_ai.log._recorders.buffer import database as database_module
-from inspect_ai.log._recorders.buffer.database import sync_to_filestore
+from inspect_ai.log._recorders.buffer import types as buffer_types_module
+from inspect_ai.log._recorders.buffer.database import (
+    sample_buffer_dbs,
+    sample_buffer_shutdown_pending,
+    sync_to_filestore,
+)
 from inspect_ai.log._recorders.buffer.filestore import SampleBufferFilestore
 from inspect_ai.log._recorders.buffer.types import Samples
 from inspect_ai.log._recorders.types import SampleEvent
 from inspect_ai.model._chat_message import ChatMessage, ChatMessageUser
+from inspect_ai.model._model_call import ModelCall
 
 
 @pytest.fixture
@@ -127,12 +137,108 @@ def test_complete_sample(db: SampleBufferDatabase, sample: EvalSampleSummary) ->
     summary = EvalSampleSummary(
         id=sample.id, epoch=sample.epoch, input=sample.input, target=sample.target
     )
-    db.complete_sample(summary=summary)
+    db.complete_sample(summary=summary, sample_metadata=None)
 
     # Verify summary was added
     samples = get_samples(db)
     assert len(samples.samples) == 1
     assert samples.samples[0] == summary
+
+
+def test_complete_sample_requires_metadata_keyword() -> None:
+    parameter = inspect.signature(SampleBufferDatabase.complete_sample).parameters[
+        "sample_metadata"
+    ]
+
+    assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
+    assert parameter.default is inspect.Parameter.empty
+
+
+def test_complete_sample_preserves_full_metadata_separately(
+    db: SampleBufferDatabase,
+) -> None:
+    initial = {"world": {f"cell-{i}": {"active": True} for i in range(80)}}
+    final = {"world": {**initial["world"], "solver-added": {"active": False}}}
+    summary = EvalSampleSummary(
+        id="sample1",
+        epoch=1,
+        input="test input",
+        target="test target",
+        metadata=initial,
+    )
+
+    assert summary.metadata["world"] == "Key removed from summary (> 1k)"
+    db.start_sample(summary)
+    db.complete_sample(summary, sample_metadata=final)
+
+    [stored_summary] = get_samples(db).samples
+    assert stored_summary.metadata["world"] == "Key removed from summary (> 1k)"
+    assert db.get_sample_metadata("sample1", 1) == final
+
+
+def test_get_sample_metadata_tolerates_legacy_schema(
+    db: SampleBufferDatabase,
+) -> None:
+    summary = EvalSampleSummary(
+        id="sample1",
+        epoch=1,
+        input="test input",
+        target="test target",
+        metadata={"source": "legacy"},
+    )
+    db.start_sample(summary)
+
+    with db._get_connection(write=True) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE legacy_samples (
+                id TEXT,
+                epoch INTEGER,
+                data TEXT,
+                PRIMARY KEY (id, epoch)
+            );
+            INSERT INTO legacy_samples (id, epoch, data)
+                SELECT id, epoch, data FROM samples;
+            DROP TABLE samples;
+            ALTER TABLE legacy_samples RENAME TO samples;
+            """
+        )
+
+    assert db.get_sample_metadata("sample1", 1) is None
+
+
+@pytest.mark.parametrize("stored_metadata", ["{", "[]"])
+def test_get_sample_metadata_falls_back_on_invalid_json_object(
+    db: SampleBufferDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+    stored_metadata: str,
+) -> None:
+    warnings: list[str] = []
+
+    def capture_warning(msg: object, *args: object, **_kwargs: object) -> None:
+        warnings.append(str(msg) % args if args else str(msg))
+
+    monkeypatch.setattr(buffer_types_module.logger, "warning", capture_warning)
+    summary = EvalSampleSummary(
+        id="sample1",
+        epoch=1,
+        input="test input",
+        target="test target",
+    )
+    db.start_sample(summary)
+    db.complete_sample(summary, sample_metadata={"source": "complete"})
+
+    with db._get_connection(write=True) as conn:
+        conn.execute(
+            "UPDATE samples SET sample_metadata = ? WHERE id = ? AND epoch = ?",
+            (stored_metadata, "sample1", 1),
+        )
+
+    assert db.get_sample_metadata("sample1", 1) is None
+    assert any(
+        "Unable to read sample metadata for id=sample1 epoch=1" in warning
+        for warning in warnings
+    )
 
 
 def test_get_events_with_filters(db: SampleBufferDatabase) -> None:
@@ -558,3 +664,382 @@ def test_running_tasks():
             log_uri = Path(log_dir).absolute().as_uri()
             assert len(SampleBufferDatabase.running_tasks(log_uri)) == 2
             assert len(SampleBufferFilestore.running_tasks(log_dir)) == 2
+
+
+def test_running_tasks_hashes_canonical_log_uri(tmp_path, monkeypatch):
+    class StubFileSystem:
+        def path_as_uri(self, path: str) -> str:
+            assert path == "raw-log-dir"
+            return "canonical-log-dir"
+
+    db_dir = tmp_path / database_module.log_dir_hash("canonical-log-dir")
+    db_dir.mkdir()
+    (db_dir / "task.eval.123.db").touch()
+
+    monkeypatch.setattr(database_module, "filesystem", lambda _: StubFileSystem())
+    monkeypatch.setattr(database_module, "resolve_db_dir", lambda: tmp_path)
+
+    assert SampleBufferDatabase.running_tasks("raw-log-dir") == ["task.eval"]
+
+
+def test_connection_is_reused_within_thread(
+    db: SampleBufferDatabase, sample: EvalSampleSummary
+) -> None:
+    """Operations on one thread reuse a single persistent connection."""
+    db.start_sample(sample=sample)
+
+    with db._get_connection() as conn1:
+        pass
+    with db._get_connection() as conn2:
+        pass
+
+    assert conn1 is conn2
+    assert conn1 is db._local.conn
+    # only the one per-thread connection is tracked
+    assert len(db._connections) == 1
+
+
+def test_connection_self_heals_after_error(
+    db: SampleBufferDatabase, sample: EvalSampleSummary
+) -> None:
+    """A failed operation discards the connection; the next op reopens cleanly."""
+    db.start_sample(sample=sample)
+    conn_before = db._local.conn
+
+    # force a failure inside a write transaction
+    with pytest.raises(sqlite3.OperationalError):
+        with db._get_connection(write=True) as conn:
+            conn.execute("INSERT INTO nonexistent_table VALUES (1)")
+
+    # the poisoned connection was discarded (self-heal)
+    assert getattr(db._local, "conn", None) is None
+    assert conn_before not in db._connections
+
+    # subsequent operations succeed with a fresh connection
+    db.log_events(
+        [SampleEvent(id="sample1", epoch=1, event=InfoEvent(data="after-error"))]
+    )
+    conn_after = db._local.conn
+    assert conn_after is not None
+    assert conn_after is not conn_before
+
+    with db._get_connection() as conn:
+        events = list(db._get_events(conn, id="sample1", epoch=1))
+    assert len(events) == 1
+
+
+def test_cleanup_closes_all_connections(
+    db: SampleBufferDatabase, sample: EvalSampleSummary
+) -> None:
+    """Cleanup closes every tracked connection before unlinking the db."""
+    db.start_sample(sample=sample)
+    tracked = list(db._connections)
+    assert len(tracked) >= 1
+
+    db.cleanup()
+
+    assert db._connections == []
+    assert db._closed is True
+    for conn in tracked:
+        with pytest.raises(sqlite3.ProgrammingError):
+            conn.execute("SELECT 1")
+
+
+@pytest.mark.parametrize("reader_fails", [False, True])
+def test_close_preserves_data_until_readers_finish(
+    db: SampleBufferDatabase, sample: EvalSampleSummary, reader_fails: bool
+) -> None:
+    db.start_sample(sample)
+    tracked = list(db._connections)
+    with (
+        pytest.raises(ValueError, match="reader failed")
+        if reader_fails
+        else nullcontext()
+    ):
+        with db._acquire_sample_read_lease(sample.id, sample.epoch):
+            with db._acquire_sample_read_lease(sample.id, sample.epoch):
+                db.close()
+                assert not db._closed
+                assert sample_buffer_shutdown_pending(db.location)
+                assert get_samples(db).samples == [sample]
+            assert not db._closed
+            if reader_fails:
+                raise ValueError("reader failed")
+
+    assert db._closed and not db._connections
+    assert not sample_buffer_shutdown_pending(db.location)
+    for conn in tracked:
+        with pytest.raises(sqlite3.ProgrammingError):
+            conn.execute("SELECT 1")
+    db.close()
+    assert db.db_path.exists()
+    reopened = SampleBufferDatabase(
+        db.location, create=False, read_only=True, db_dir=db.db_path.parent.parent
+    )
+    try:
+        assert get_samples(reopened).samples == [sample]
+    finally:
+        reopened.close()
+
+
+def test_use_after_cleanup_raises_and_does_not_resurrect_db(
+    db: SampleBufferDatabase, sample: EvalSampleSummary
+) -> None:
+    """After cleanup, operations raise rather than recreating the db files."""
+    db.start_sample(sample=sample)
+    db.cleanup()
+    assert not os.path.exists(db.db_path)
+
+    with pytest.raises(RuntimeError):
+        db.start_sample(sample=sample)
+
+    # the unlinked db (and WAL sidecars) were not resurrected
+    assert not os.path.exists(db.db_path)
+    assert not os.path.exists(f"{db.db_path}-wal")
+    assert not os.path.exists(f"{db.db_path}-shm")
+
+
+def test_per_thread_connections_and_cross_thread_cleanup(
+    db: SampleBufferDatabase, sample: EvalSampleSummary
+) -> None:
+    """Each thread gets its own connection; cleanup closes them cross-thread."""
+    db.start_sample(sample=sample)
+    main_conn = db._local.conn
+
+    worker_conn: list[sqlite3.Connection] = []
+
+    def worker() -> None:
+        # a write from another thread opens that thread's own connection
+        db.log_events(
+            [SampleEvent(id="sample1", epoch=1, event=InfoEvent(data="from-worker"))]
+        )
+        worker_conn.append(db._local.conn)
+
+    t = threading.Thread(target=worker)
+    t.start()
+    t.join()
+
+    assert len(worker_conn) == 1
+    assert worker_conn[0] is not main_conn
+    assert main_conn in db._connections
+    assert worker_conn[0] in db._connections
+    assert len(db._connections) == 2
+
+    # cleanup on the main thread closes the (now dead) worker thread's
+    # connection without raising, thanks to check_same_thread=False
+    db.cleanup()
+    assert db._connections == []
+    with pytest.raises(sqlite3.ProgrammingError):
+        worker_conn[0].execute("SELECT 1")
+
+
+def test_thread_connection_discards_on_cleanup_race(
+    db: SampleBufferDatabase, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If cleanup wins the race during open, the new connection is discarded.
+
+    The used-after-cleanup guard re-checks ``_closed`` under the lock after
+    opening, so a connection opened concurrently with cleanup is closed and not
+    tracked (rather than left pointing at an unlinked database).
+    """
+    real_open = db._open_connection
+    opened: list[sqlite3.Connection] = []
+
+    def open_then_cleanup_wins() -> sqlite3.Connection:
+        conn = real_open()
+        opened.append(conn)
+        db._closed = True  # simulate cleanup completing while we were opening
+        return conn
+
+    monkeypatch.setattr(db, "_open_connection", open_then_cleanup_wins)
+    db._local.conn = None  # force a fresh open on this thread
+
+    with pytest.raises(RuntimeError):
+        db._thread_connection()
+
+    # the just-opened connection was closed and never tracked
+    assert len(opened) == 1
+    assert opened[0] not in db._connections
+    with pytest.raises(sqlite3.ProgrammingError):
+        opened[0].execute("SELECT 1")
+
+
+def test_open_connection_closes_conn_on_non_operational_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A non-OperationalError during PRAGMA setup must not leak the connection."""
+    original_connect = sqlite3.connect
+    closed: list[bool] = []
+
+    class FailingConnection(sqlite3.Connection):
+        def execute(self, sql: str, *args: Any, **kwargs: Any) -> sqlite3.Cursor:
+            if sql.strip().upper() == "PRAGMA SYNCHRONOUS=OFF":
+                raise ValueError("boom during PRAGMA setup")
+            return super().execute(sql, *args, **kwargs)
+
+        def close(self) -> None:
+            closed.append(True)
+            super().close()
+
+    def connect(*args: Any, **kwargs: Any) -> sqlite3.Connection:
+        kwargs["factory"] = FailingConnection
+        return original_connect(*args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", connect)
+
+    with pytest.raises(ValueError):
+        SampleBufferDatabase(location="test_location", db_dir=tmp_path)
+
+    # the half-open connection was closed before the error propagated
+    assert closed
+
+
+def test_event_attachments_shipped_once(
+    db: SampleBufferDatabase,
+    sample: EvalSampleSummary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-logging an event must not re-ship identical attachment content.
+
+    Updates re-log the event on every notification. The long payload lives in
+    the event's output rather than the call request: call-request messages
+    are already deduped by the call-pool prefix cache before this filter
+    ever runs (a same-content retry there produces no new attachment
+    content), so a payload placed there wouldn't exercise the filter. An
+    unchanged ``ModelEvent.output`` has no such cache -- it's re-walked from
+    scratch by ``_condense_model_event``'s trailing full-event walk on every
+    call, which is the path this filter guards.
+    """
+    db.start_sample(sample)
+
+    shipped: list[dict[str, str]] = []
+    original = SampleBufferDatabase._insert_attachments
+
+    def recording(
+        self: SampleBufferDatabase,
+        conn: sqlite3.Connection,
+        id: int | str,
+        epoch: int,
+        attachments: dict[str, str],
+    ) -> None:
+        shipped.append(dict(attachments))
+        return original(self, conn, id, epoch, attachments)
+
+    monkeypatch.setattr(SampleBufferDatabase, "_insert_attachments", recording)
+
+    event = make_model_event(
+        [ChatMessageUser(content="q")], uuid="e1", content="z" * 150
+    )
+    db.log_events([SampleEvent(id=sample.id, epoch=1, event=event)])
+    db.log_events([SampleEvent(id=sample.id, epoch=1, event=event)])
+
+    total_pairs = sum(len(s) for s in shipped)
+    unique_hashes = {h for s in shipped for h in s}
+    assert total_pairs == len(unique_hashes), (
+        f"duplicate attachment content shipped: {total_pairs} pairs, "
+        f"{len(unique_hashes)} unique hashes"
+    )
+    # content still stored and resolvable
+    with db._get_connection() as conn:
+        stored = list(db._get_attachments(conn, sample.id, 1))
+    assert any(a.content.startswith("z") for a in stored)
+
+
+def test_removed_sample_reinserts_attachments(
+    db: SampleBufferDatabase, sample: EvalSampleSummary
+) -> None:
+    """A retry's attachment content must survive a stale seen-mark.
+
+    Sample retry removes then re-logs the same (id, epoch).
+    """
+
+    def log_payload_event(uuid: str) -> None:
+        event = make_model_event([ChatMessageUser(content="q")], uuid=uuid, content="a")
+        event.call = ModelCall.create(
+            {"messages": [{"role": "user", "content": "w" * 150}]}, None
+        )
+        db.log_events([SampleEvent(id=sample.id, epoch=1, event=event)])
+
+    db.start_sample(sample)
+    log_payload_event("e1")
+    db.remove_samples([(sample.id, 1)])
+
+    db.start_sample(sample)
+    log_payload_event("e2")
+    with db._get_connection() as conn:
+        stored = list(db._get_attachments(conn, sample.id, 1))
+    assert any(a.content.startswith("w") for a in stored), (
+        "retry's attachment content was skipped by a stale seen-mark"
+    )
+
+
+def test_failed_batch_does_not_mark_attachments_seen(
+    db: SampleBufferDatabase,
+    sample: EvalSampleSummary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A rolled-back log_events batch must not leave attachment hashes marked seen.
+
+    Buffer-write errors are swallowed upstream, and the retried batch would
+    silently skip the content while events reference attachment://hash.
+    """
+    db.start_sample(sample)
+    event = make_model_event([ChatMessageUser(content="q")], uuid="e1", content="a")
+    event.call = ModelCall.create(
+        {"messages": [{"role": "user", "content": "v" * 150}]}, None
+    )
+
+    original = to_json_str_safe
+
+    def failing(value: Any) -> str:
+        assert db._pending_seen_hashes, (
+            "failure injected before attachments were staged - test is vacuous"
+        )
+        raise RuntimeError("injected serialization failure")
+
+    monkeypatch.setattr(database_module, "to_json_str_safe", failing)
+    with pytest.raises(RuntimeError):
+        db.log_events([SampleEvent(id=sample.id, epoch=1, event=event)])
+    monkeypatch.setattr(database_module, "to_json_str_safe", original)
+
+    # retry the batch: content must be inserted (not filtered by a
+    # seen-mark from the rolled-back attempt)
+    db.log_events([SampleEvent(id=sample.id, epoch=1, event=event)])
+    with db._get_connection() as conn:
+        stored = list(db._get_attachments(conn, sample.id, 1))
+    assert any(a.content.startswith("v") for a in stored)
+
+
+def test_completed_samples_release_seen_hash_state(
+    db: SampleBufferDatabase, sample: EvalSampleSummary
+) -> None:
+    """Per-sample seen-hash state must not accumulate across completed samples."""
+    db.start_sample(sample)
+    event = make_model_event(
+        [ChatMessageUser(content="q")], uuid="e1", content="z" * 150
+    )
+    db.log_events([SampleEvent(id=sample.id, epoch=1, event=event)])
+    assert db._inserted_attachment_hashes
+    db.complete_sample(sample, sample_metadata=None)
+    assert (str(sample.id), 1) not in db._inserted_attachment_hashes
+
+
+def test_sample_buffer_dbs_matches_the_log_file_name_literally(tmp_path: Path) -> None:
+    """Glob characters in a log file name select only that log's databases.
+
+    `task[1].eval` read as a pattern would match `task1.eval`'s database and
+    miss its own.
+    """
+    db_dir = tmp_path / "db"
+    bracketed = SampleBufferDatabase(str(tmp_path / "task[1].eval"), db_dir=db_dir)
+    plain = SampleBufferDatabase(str(tmp_path / "task1.eval"), db_dir=db_dir)
+    try:
+        assert sample_buffer_dbs(str(tmp_path / "task[1].eval"), db_dir) == [
+            bracketed.db_path
+        ]
+        assert sample_buffer_dbs(str(tmp_path / "task1.eval"), db_dir) == [
+            plain.db_path
+        ]
+    finally:
+        bracketed.cleanup()
+        plain.cleanup()

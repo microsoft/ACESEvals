@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from logging import getLogger
 from time import time
 from typing import TYPE_CHECKING, Any
@@ -8,29 +9,32 @@ from shortuuid import uuid
 
 from inspect_ai.agent._bridge.types import AgentBridge
 from inspect_ai.model._chat_message import ChatMessageSystem
-from inspect_ai.model._generate_config import (
-    GenerateConfig,
-    ResponseSchema,
-)
+from inspect_ai.model._generate_config import GenerateConfig
 from inspect_ai.model._openai_convert import messages_from_openai
 from inspect_ai.model._providers.providers import validate_openai_client
 from inspect_ai.tool._tool_choice import ToolChoice, ToolFunction
 from inspect_ai.tool._tool_info import ToolInfo
 from inspect_ai.tool._tool_params import ToolParams
-from inspect_ai.util._json import JSONSchema
 
+from ._errors import BridgePolicyError
 from .util import (
     apply_message_ids,
     bridge_generate,
     clear_generation_params,
+    client_json_schema,
+    client_request_object,
+    client_request_string,
+    client_response_schema,
+    resolve_bridge_model,
     resolve_generate_config,
-    resolve_inspect_model,
+    tool_choice_from_openai_string,
+    validate_bridge_media,
+    validate_client_config,
 )
 
 if TYPE_CHECKING:
     from openai.types.chat import (
         ChatCompletion,
-        ChatCompletionToolChoiceOptionParam,
         ChatCompletionToolParam,
     )
 
@@ -56,17 +60,27 @@ async def inspect_completions_api_request(
     )
 
     bridge_model_name = str(json_data["model"])
-    model = resolve_inspect_model(bridge_model_name, bridge.model_aliases, bridge.model)
+    routing = resolve_bridge_model(
+        bridge_model_name,
+        model_aliases=bridge.model_aliases,
+        model_resolver=bridge.model_resolver,
+        model=bridge.model,
+        allow_client_model_names=bridge.allow_client_model_names,
+        provider="openai",
+    )
+    model = routing.model
     model_name = model.api.model_name
 
     # convert openai messages to inspect messages
     openai_messages: list[ChatCompletionMessageParam] = json_data["messages"]
     messages = await messages_from_openai(openai_messages, model_name)
+    await validate_bridge_media(bridge, messages)
 
     # extract generate config (hoist instructions into system_message)
     config = generate_config_from_openai_completions(json_data)
     if not bridge.forward_generation_config:
         clear_generation_params(config)
+    validate_client_config(config)
     config.extra_headers = headers
     if config.system_message is not None:
         messages.insert(0, ChatMessageSystem(content=config.system_message))
@@ -78,23 +92,29 @@ async def inspect_completions_api_request(
     # read openai tools and tool choice
     openai_tools: list[ChatCompletionToolParam] = json_data.get("tools", [])
     tools = tools_from_openai_tools(openai_tools)
-    openai_tool_choice: ChatCompletionToolChoiceOptionParam | None = json_data.get(
-        "tool_choice", None
+    tool_choice = tool_choice_from_openai_tool_choice(
+        json_data.get("tool_choice", None)
     )
-    tool_choice = tool_choice_from_openai_tool_choice(openai_tool_choice)
 
     # give inspect-level config priority over agent default config
     config = resolve_generate_config(model, config)
 
     # if there is a bridge filter give it a shot first
     output, c_message = await bridge_generate(
-        bridge, model, messages, tools, tool_choice, config
+        bridge,
+        model,
+        messages,
+        tools,
+        tool_choice,
+        config,
+        requested_model=bridge_model_name,
+        routing=routing,
     )
     if c_message is not None:
         messages.append(c_message)
 
     # update state if we have more messages than the last generation
-    bridge._track_state(messages, output)
+    await bridge._track_state(messages, output)
 
     # inspect completion to openai completion
     return ChatCompletion(
@@ -108,21 +128,33 @@ async def inspect_completions_api_request(
 
 
 def tool_choice_from_openai_tool_choice(
-    tool_choice: "ChatCompletionToolChoiceOptionParam" | None,
+    tool_choice: Any,
 ) -> ToolChoice | None:
-    inspect_tool_choice: ToolChoice | None = None
-    if tool_choice is not None:
-        match tool_choice:
-            case "auto" | "none":
-                inspect_tool_choice = tool_choice
-            case "required":
-                inspect_tool_choice = "any"
-            case _:
-                assert tool_choice["type"] == "function", (
-                    '"custom" tool calls are not supported'
-                )
-                inspect_tool_choice = ToolFunction(name=tool_choice["function"]["name"])
-    return inspect_tool_choice
+    # `Any` rather than `ChatCompletionToolChoiceOptionParam`: the value is
+    # client-controlled JSON, so its shape is guarded before the first subscript
+    # for a mistyped value to 400 rather than escape as a raw `TypeError`/`KeyError`.
+    if tool_choice is None:
+        return None
+    if isinstance(tool_choice, str):
+        return tool_choice_from_openai_string(tool_choice, "tool_choice")
+    tool_choice = client_request_object(tool_choice, "tool_choice")
+    tool_type = tool_choice.get("type", None)
+    if tool_type != "function":
+        # `custom` and `allowed_tools` are valid API values the bridge does not
+        # translate; previously a bare `assert` (status-less `AssertionError`).
+        raise BridgePolicyError(
+            "invalid request field in bridged request (tool_choice.type: only "
+            f"'function' is supported by the agent bridge, got {tool_type!r})"
+        )
+    function = (
+        client_request_object(tool_choice.get("function", None), "tool_choice.function")
+        or {}
+    )
+    return ToolFunction(
+        name=client_request_string(
+            function.get("name", None), "tool_choice.function.name"
+        )
+    )
 
 
 def tools_from_openai_tools(tools: "list[ChatCompletionToolParam]") -> list[ToolInfo]:
@@ -160,13 +192,11 @@ def _resolve_schema_refs(
         # Only handle local "#/$defs/Name" references.
         prefix = "#/$defs/"
         if ref.startswith(prefix):
-            name = ref[len(prefix):]
+            name = ref[len(prefix) :]
             if name in seen:
                 # Circular reference – break the cycle.
                 return {"type": "object"}
             if name in defs:
-                from copy import deepcopy
-
                 resolved = deepcopy(defs[name])
                 return _resolve_schema_refs(resolved, defs, seen | {name})
         # Unknown $ref – return as-is (will likely be stripped by JSONSchema).
@@ -178,9 +208,7 @@ def _resolve_schema_refs(
             continue
         val = node[key]
         if key == "properties" and isinstance(val, dict):
-            node[key] = {
-                k: _resolve_schema_refs(v, defs, seen) for k, v in val.items()
-            }
+            node[key] = {k: _resolve_schema_refs(v, defs, seen) for k, v in val.items()}
         elif isinstance(val, dict):
             node[key] = _resolve_schema_refs(val, defs, seen)
 
@@ -192,7 +220,7 @@ def _resolve_schema_refs(
 
 
 def _fix_strict_json_schema(node: dict[str, Any]) -> dict[str, Any]:
-    """Ensure every schema node has a 'type' key so strict mode works.
+    """Normalize empty schemas and inline references for strict mode.
 
     Some Pydantic models produce ``items: {}`` or bare ``{}`` for untyped
     fields.  OpenAI structured-output strict mode rejects these.  This
@@ -207,11 +235,10 @@ def _fix_strict_json_schema(node: dict[str, Any]) -> dict[str, Any]:
         return node
 
     # Phase 1: resolve $ref → inline definitions.
+    node = deepcopy(node)
     defs = node.pop("$defs", None) or node.pop("definitions", None) or {}
     if defs:
-        from copy import deepcopy
-
-        node = _resolve_schema_refs(deepcopy(node), defs)
+        node = _resolve_schema_refs(node, defs)
 
     # Phase 2: patch type-less sub-schemas.
     return _patch_typeless(node)
@@ -226,8 +253,7 @@ def _patch_typeless(node: dict[str, Any]) -> dict[str, Any]:
     if node == {}:
         return {"type": "object"}
 
-    # If there is no 'type' and no '$ref', add a default.
-    if "type" not in node and "$ref" not in node:
+    if not any(key in node for key in ("type", "$ref", "allOf", "anyOf", "oneOf")):
         node["type"] = "object"
 
     # Recurse into 'properties'.
@@ -244,17 +270,14 @@ def _patch_typeless(node: dict[str, Any]) -> dict[str, Any]:
     for kw in ("allOf", "anyOf", "oneOf"):
         if kw in node and isinstance(node[kw], list):
             node[kw] = [
-                _patch_typeless(s) if isinstance(s, dict) else s
-                for s in node[kw]
+                _patch_typeless(s) if isinstance(s, dict) else s for s in node[kw]
             ]
 
     # Recurse into 'additionalProperties' when it's a schema dict.
     if "additionalProperties" in node and isinstance(
         node["additionalProperties"], dict
     ):
-        node["additionalProperties"] = _patch_typeless(
-            node["additionalProperties"]
-        )
+        node["additionalProperties"] = _patch_typeless(node["additionalProperties"])
 
     return node
 
@@ -283,21 +306,27 @@ def generate_config_from_openai_completions(
     config.reasoning_effort = json_data.get("reasoning_effort", None)
 
     # response format
-    response_format: dict[str, Any] | None = json_data.get("response_format", None)
+    response_format = client_request_object(
+        json_data.get("response_format", None), "response_format"
+    )
     if response_format is not None:
-        json_schema: dict[str, Any] | None = response_format.get("json_schema", None)
+        json_schema = client_request_object(
+            response_format.get("json_schema", None), "response_format.json_schema"
+        )
         if json_schema is not None:
             schema_body = json_schema.get("schema", {})
             strict = json_schema.get("strict", None)
-            # Sanitise the schema when strict mode is requested so that
-            # empty sub-schemas (items: {}, bare {}) don't cause 400s.
-            if strict:
+            if strict is True and isinstance(schema_body, dict):
                 schema_body = _fix_strict_json_schema(schema_body)
-            config.response_schema = ResponseSchema(
+            config.response_schema = client_response_schema(
                 name=json_schema.get("name", "schema"),
                 description=json_schema.get("description", None),
-                json_schema=JSONSchema.model_validate(schema_body),
-                strict=strict,
+                json_schema=client_json_schema(
+                    schema_body,
+                    "response_format.json_schema.schema",
+                ),
+                strict=json_schema.get("strict", None),
+                dialect_field="response_format.json_schema",
             )
 
     return config

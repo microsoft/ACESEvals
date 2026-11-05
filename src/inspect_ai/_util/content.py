@@ -28,11 +28,14 @@ class ContentText(ContentBase):
     citations: Sequence[Citation] | None = Field(default=None)
     """Citations supporting the text block."""
 
+    cache_breakpoint: bool | None = Field(default=None)
+    """Place an explicit prompt-cache boundary after this block, replacing the provider's automatic breakpoints for the whole request. Unsupported placements (e.g. tool results, mid-conversation system messages, empty blocks) or models fall back to normal automatic caching. Anthropic Claude API and OpenAI `gpt-5.6`+ only."""
+
 
 class ContentReasoning(ContentBase):
     """Reasoning content.
 
-    See the specification for [thinking blocks](https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking#understanding-thinking-blocks) for Claude models.
+    See the specification for [thinking blocks](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for Claude models.
     """
 
     type: Literal["reasoning"] = Field(default="reasoning")
@@ -97,7 +100,7 @@ class ContentImage(ContentBase):
     detail: Literal["auto", "low", "high", "original"] = Field(default="auto")
     """Specifies the detail level of the image.
 
-    Currently only supported for OpenAI. Learn more in the    [Vision guide](https://platform.openai.com/docs/guides/vision/low-or-high-fidelity-image-understanding).
+    Currently only supported for OpenAI. Learn more in the [Vision guide](https://developers.openai.com/api/docs/guides/images-vision#choose-an-image-detail-level).
     """
 
 
@@ -147,6 +150,15 @@ class ContentDocument(ContentBase):
 
     mime_type: str = Field(default_factory=str)
     """Document mime type (automatically determined from 'document' if not specified)."""
+
+    citations: bool = Field(default=False)
+    """Enable model-generated citations for text or PDF documents.
+
+    Anthropic requires citations on all citation-capable documents in a request;
+    the provider enables them on every text or PDF document when any document
+    enables them. Image citations are unsupported. Providers without document-
+    citation support ignore this field.
+    """
 
     @model_validator(mode="before")
     @classmethod

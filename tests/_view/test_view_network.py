@@ -1,0 +1,732 @@
+import importlib
+import inspect
+import json
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Protocol
+
+import pytest
+from starlette.testclient import TestClient
+from starlette.types import ASGIApp
+
+from inspect_ai._view._csp import (
+    CSP_FILENAME,
+    ContentSecurityPolicyError,
+    read_content_security_policy,
+)
+from inspect_ai._view.fastapi_server import (
+    VIEW_REQUEST_HEADER,
+    VIEW_REQUEST_HEADER_VALUE,
+    standalone_view_app,
+    view_server,
+)
+from inspect_ai._view.network import (
+    Authority,
+    Origin,
+    ViewerNetworkPolicy,
+    ViewerNetworkPolicyError,
+    resolve_viewer_network_policy,
+    unsafe_network_warning,
+)
+
+
+def _policy(
+    *,
+    bind_host: str = "127.0.0.1",
+    port: int = 7575,
+    trusted_hosts: tuple[str, ...] = (),
+    trusted_origins: tuple[str, ...] = (),
+    authorization: str | None = None,
+    unsafe_allow_unauthenticated: bool = False,
+) -> ViewerNetworkPolicy:
+    return resolve_viewer_network_policy(
+        bind_host=bind_host,
+        port=port,
+        trusted_hosts=trusted_hosts,
+        trusted_origins=trusted_origins,
+        authorization=authorization,
+        unsafe_allow_unauthenticated=unsafe_allow_unauthenticated,
+    )
+
+
+def _app(tmp_path: Path, policy: ViewerNetworkPolicy) -> tuple[ASGIApp, Path]:
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir(parents=True)
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir(parents=True)
+    (dist_dir / "index.html").write_text("<html>viewer</html>", encoding="utf-8")
+    app = standalone_view_app(
+        log_dir=str(log_dir),
+        network_policy=policy,
+        dist_dir=dist_dir,
+    )
+    return app, log_dir
+
+
+class _ResponseLike(Protocol):
+    """The slice of a client response the framing assertions need.
+
+    Structural rather than `httpx.Response` because starlette's TestClient
+    returns httpx2 responses when the httpx2 package is installed (pulled in
+    by recent fastapi/mcp releases), and the two Response types don't unify.
+    """
+
+    @property
+    def headers(self) -> Mapping[str, str]: ...
+
+
+def _assert_framing_headers(response: _ResponseLike) -> None:
+    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+    assert response.headers["x-frame-options"] == "DENY"
+
+
+def test_loopback_policy_defaults() -> None:
+    policy = _policy()
+    assert Authority("127.0.0.1", 7575) in policy.trusted_hosts
+    assert Authority("localhost", 7575) in policy.trusted_hosts
+    assert Origin("http", Authority("127.0.0.1", 7575)) in policy.trusted_origins
+    assert Origin("http", Authority("localhost", 7575)) in policy.trusted_origins
+
+
+def test_ipv6_loopback_policy_defaults() -> None:
+    policy = _policy(bind_host="::1")
+    assert Authority("::1", 7575) in policy.trusted_hosts
+    assert Authority("localhost", 7575) in policy.trusted_hosts
+
+
+def test_custom_loopback_dns_origin_adds_host_authority() -> None:
+    policy = _policy(
+        trusted_origins=("HTTP://My-Inspect.:7575/",),
+    )
+    authority = Authority("my-inspect", 7575)
+    assert authority in policy.trusted_hosts
+    assert Origin("http", authority) in policy.trusted_origins
+
+
+def test_trusted_host_does_not_authorize_browser_origin() -> None:
+    policy = _policy(trusted_hosts=("my-inspect:7575",))
+    assert Authority("my-inspect", 7575) in policy.trusted_hosts
+    assert Origin("http", Authority("my-inspect", 7575)) not in policy.trusted_origins
+
+
+def test_default_origin_ports_are_canonicalized() -> None:
+    policy = _policy(trusted_origins=("https://Inspect.Example:443",))
+    origin = Origin("https", Authority("inspect.example"))
+    assert origin in policy.trusted_origins
+    assert origin.authority in policy.trusted_hosts
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "null",
+        "ftp://inspect.example",
+        "http://user@inspect.example",
+        "http://inspect.example/path",
+        "http://inspect.example?query",
+        "http://inspect.example#fragment",
+        "http://*.inspect.example",
+        "http://inspect_example",
+        "http://inspect.example:",
+        "http://inspect.example:0",
+        "http://inspect.example:65536",
+    ],
+)
+def test_invalid_trusted_origins_rejected(origin: str) -> None:
+    with pytest.raises(ViewerNetworkPolicyError):
+        _policy(trusted_origins=(origin,))
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "*.inspect.example",
+        "inspect.example/path",
+        "user@inspect.example",
+        "inspect_example",
+        "[::1",
+        "::1",
+        "inspect.example:0",
+        "inspect.example:65536",
+    ],
+)
+def test_invalid_trusted_hosts_rejected(host: str) -> None:
+    with pytest.raises(ViewerNetworkPolicyError):
+        _policy(trusted_hosts=(host,))
+
+
+def test_concrete_non_loopback_bind_requires_authorization() -> None:
+    with pytest.raises(ViewerNetworkPolicyError, match="without request authorization"):
+        _policy(bind_host="192.0.2.10")
+
+    policy = _policy(bind_host="192.0.2.10", authorization="secret")
+    assert Authority("192.0.2.10", 7575) in policy.trusted_hosts
+    assert Origin("http", Authority("192.0.2.10", 7575)) in policy.trusted_origins
+
+
+def test_wildcard_bind_requires_explicit_trust_even_with_authorization() -> None:
+    with pytest.raises(ViewerNetworkPolicyError, match="explicit trusted"):
+        _policy(bind_host="0.0.0.0", authorization="secret")
+
+    policy = _policy(
+        bind_host="0.0.0.0",
+        trusted_origins=("https://inspect.example",),
+        authorization="secret",
+    )
+    assert Origin("https", Authority("inspect.example")) in policy.trusted_origins
+
+
+def test_explicit_unsafe_non_loopback_policy_warns() -> None:
+    policy = _policy(
+        bind_host="0.0.0.0",
+        trusted_origins=("http://192.0.2.10:7575",),
+        unsafe_allow_unauthenticated=True,
+    )
+    warning = unsafe_network_warning(policy)
+    assert warning is not None
+    assert "0.0.0.0:7575" in warning
+    assert "Any network client" in warning
+
+
+def test_unsafe_flag_does_not_warn_when_authorization_is_configured() -> None:
+    policy = _policy(
+        bind_host="0.0.0.0",
+        trusted_origins=("https://inspect.example",),
+        authorization="secret",
+        unsafe_allow_unauthenticated=True,
+    )
+    assert unsafe_network_warning(policy) is None
+
+
+def test_attacker_selected_host_rejected_for_document_and_api(
+    tmp_path: Path,
+) -> None:
+    app, _ = _app(tmp_path, _policy())
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        document = client.get("/", headers={"Host": "rebind.test:7575"})
+        api = client.get(
+            "/api/app-config",
+            headers={
+                "Host": "rebind.test:7575",
+                "Origin": "http://rebind.test:7575",
+                "Sec-Fetch-Site": "same-origin",
+            },
+        )
+
+    assert document.status_code == 400
+    assert api.status_code == 400
+    _assert_framing_headers(document)
+    _assert_framing_headers(api)
+
+
+def test_trusted_host_only_rejects_browser_fetch_but_allows_non_browser(
+    tmp_path: Path,
+) -> None:
+    app, _ = _app(
+        tmp_path,
+        _policy(trusted_hosts=("health.internal:7575",)),
+    )
+    with TestClient(app, base_url="http://health.internal:7575") as client:
+        browser = client.get(
+            "/api/app-config",
+            headers={"Sec-Fetch-Site": "same-origin"},
+        )
+        non_browser = client.get("/api/app-config")
+
+    assert browser.status_code == 403
+    assert non_browser.status_code == 200
+
+
+def test_duplicate_host_headers_are_rejected(tmp_path: Path) -> None:
+    app, _ = _app(tmp_path, _policy())
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.get(
+            "/",
+            headers=[
+                ("Host", "localhost:7575"),
+                ("Host", "rebind.test:7575"),
+            ],
+        )
+
+    assert response.status_code == 400
+
+
+def test_matching_loopback_host_and_origin_can_read_api(tmp_path: Path) -> None:
+    app, _ = _app(tmp_path, _policy())
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.get(
+            "/api/app-config",
+            headers={
+                "Origin": "http://localhost:7575",
+                "Sec-Fetch-Site": "same-origin",
+            },
+        )
+        without_origin = client.get(
+            "/api/app-config",
+            headers={"Sec-Fetch-Site": "same-origin"},
+        )
+
+    assert response.status_code == 200
+    assert without_origin.status_code == 200
+    assert "access-control-allow-origin" not in response.headers
+    _assert_framing_headers(response)
+
+
+def test_custom_loopback_dns_origin_is_configurable(tmp_path: Path) -> None:
+    trusted_app, _ = _app(
+        tmp_path / "trusted",
+        _policy(trusted_origins=("http://my-inspect:7575",)),
+    )
+    with TestClient(trusted_app, base_url="http://my-inspect:7575") as client:
+        trusted = client.get(
+            "/api/app-config",
+            headers={"Origin": "http://my-inspect:7575"},
+        )
+
+    untrusted_app, _ = _app(tmp_path / "untrusted", _policy())
+    with TestClient(untrusted_app, base_url="http://my-inspect:7575") as client:
+        untrusted = client.get(
+            "/api/app-config",
+            headers={"Origin": "http://my-inspect:7575"},
+        )
+
+    assert trusted.status_code == 200
+    assert untrusted.status_code == 400
+
+
+def test_untrusted_or_mismatched_browser_origin_rejected(tmp_path: Path) -> None:
+    app, _ = _app(
+        tmp_path,
+        _policy(
+            trusted_origins=(
+                "http://my-inspect:7575",
+                "http://other-inspect:7575",
+            )
+        ),
+    )
+    with TestClient(app, base_url="http://my-inspect:7575") as client:
+        attacker = client.get(
+            "/api/app-config",
+            headers={"Origin": "https://attacker.example"},
+        )
+        other_trusted_host = client.get(
+            "/api/app-config",
+            headers={"Origin": "http://other-inspect:7575"},
+        )
+
+    assert attacker.status_code == 403
+    assert other_trusted_host.status_code == 403
+    _assert_framing_headers(attacker)
+
+
+def test_origin_scheme_must_match_request_scheme(tmp_path: Path) -> None:
+    app, _ = _app(
+        tmp_path,
+        _policy(trusted_origins=("https://inspect.example",)),
+    )
+    with TestClient(app, base_url="http://inspect.example") as client:
+        response = client.get(
+            "/api/app-config",
+            headers={"Origin": "https://inspect.example"},
+        )
+
+    assert response.status_code == 403
+
+
+def test_cross_site_fetch_metadata_rejected_without_origin(
+    tmp_path: Path,
+) -> None:
+    app, _ = _app(tmp_path, _policy())
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.get(
+            "/api/app-config",
+            headers={"Sec-Fetch-Site": "cross-site"},
+        )
+
+    assert response.status_code == 403
+
+
+def test_same_site_fetch_metadata_rejected_with_trusted_origin(
+    tmp_path: Path,
+) -> None:
+    app, _ = _app(tmp_path, _policy())
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.get(
+            "/api/app-config",
+            headers={
+                "Origin": "http://localhost:7575",
+                "Sec-Fetch-Site": "same-site",
+            },
+        )
+
+    assert response.status_code == 403
+
+
+def test_null_and_duplicate_origins_are_rejected(tmp_path: Path) -> None:
+    app, _ = _app(tmp_path, _policy())
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        null_origin = client.get(
+            "/api/app-config",
+            headers={"Origin": "null"},
+        )
+        duplicate_origin = client.get(
+            "/api/app-config",
+            headers=[
+                ("Origin", "http://localhost:7575"),
+                ("Origin", "https://attacker.example"),
+            ],
+        )
+
+    assert null_origin.status_code == 403
+    assert duplicate_origin.status_code == 403
+
+
+def test_authorized_non_browser_request_without_origin_succeeds(
+    tmp_path: Path,
+) -> None:
+    app, _ = _app(tmp_path, _policy(authorization="secret"))
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.get(
+            "/api/app-config",
+            headers={"Authorization": "secret"},
+        )
+        unauthorized = client.get("/api/app-config")
+
+    assert response.status_code == 200
+    assert unauthorized.status_code == 401
+    _assert_framing_headers(unauthorized)
+
+
+def test_authorization_does_not_bypass_origin_validation(
+    tmp_path: Path,
+) -> None:
+    app, _ = _app(tmp_path, _policy(authorization="secret"))
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.get(
+            "/api/app-config",
+            headers={
+                "Authorization": "secret",
+                "Origin": "https://attacker.example",
+            },
+        )
+
+    assert response.status_code == 403
+
+
+def test_authenticated_reverse_proxy_origin_succeeds(tmp_path: Path) -> None:
+    policy = _policy(
+        bind_host="0.0.0.0",
+        trusted_origins=("https://inspect.example",),
+        authorization="secret",
+    )
+    app, _ = _app(tmp_path, policy)
+    with TestClient(app, base_url="https://inspect.example") as client:
+        response = client.get(
+            "/api/app-config",
+            headers={
+                "Authorization": "secret",
+                "Origin": "https://inspect.example",
+                "Sec-Fetch-Site": "same-origin",
+            },
+        )
+
+    assert response.status_code == 200
+
+
+def test_untrusted_origin_cannot_delete_with_public_frontend_headers(
+    tmp_path: Path,
+) -> None:
+    app, log_dir = _app(tmp_path, _policy())
+    fixture = log_dir / "fixture.eval"
+    fixture.write_bytes(b"fixture")
+
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.delete(
+            f"/api/log-delete/{fixture}",
+            headers={
+                "Origin": "https://attacker.example",
+                VIEW_REQUEST_HEADER: VIEW_REQUEST_HEADER_VALUE,
+                "Sec-Fetch-Dest": "empty",
+            },
+        )
+
+    assert response.status_code == 403
+    assert fixture.exists()
+
+
+def test_local_origin_switch_cannot_delete(tmp_path: Path) -> None:
+    app, log_dir = _app(tmp_path, _policy())
+    fixture = log_dir / "fixture.eval"
+    fixture.write_bytes(b"fixture")
+
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        response = client.delete(
+            f"/api/log-delete/{fixture}",
+            headers={
+                "Host": "rebind.test:7575",
+                "Origin": "http://rebind.test:7575",
+                "Sec-Fetch-Site": "same-origin",
+                VIEW_REQUEST_HEADER: VIEW_REQUEST_HEADER_VALUE,
+                "Sec-Fetch-Dest": "empty",
+            },
+        )
+
+    assert response.status_code == 400
+    assert fixture.exists()
+
+
+def test_framing_headers_cover_static_and_error_responses(
+    tmp_path: Path,
+) -> None:
+    app, _ = _app(tmp_path, _policy())
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        root = client.get("/")
+        missing = client.get("/missing")
+        forbidden = client.get(
+            "/api/app-config",
+            headers={"Origin": "https://attacker.example"},
+        )
+
+    assert root.status_code == 200
+    assert missing.status_code == 404
+    assert forbidden.status_code == 403
+    _assert_framing_headers(root)
+    _assert_framing_headers(missing)
+    _assert_framing_headers(forbidden)
+
+
+_VIEWER_CSP_DIRECTIVES: dict[str, list[str]] = {
+    "default-src": ["'none'"],
+    "script-src": ["'self'", "'sha256-abc+/='", "'wasm-unsafe-eval'"],
+    "worker-src": ["'self'"],
+    "style-src-attr": ["'unsafe-inline'"],
+    "img-src": ["'self'", "data:"],
+}
+_VIEWER_CSP = (
+    "default-src 'none'; "
+    "script-src 'self' 'sha256-abc+/=' 'wasm-unsafe-eval'; "
+    "worker-src 'self'; "
+    "style-src-attr 'unsafe-inline'; "
+    "img-src 'self' data:"
+)
+
+
+def _dist_with_policy(tmp_path: Path, policy_json: str | None) -> Path:
+    dist_dir = tmp_path / "dist"
+    (dist_dir / "assets").mkdir(parents=True)
+    (dist_dir / "index.html").write_text("<html>viewer</html>", encoding="utf-8")
+    (dist_dir / "assets" / "worker.js").write_text("", encoding="utf-8")
+    if policy_json is not None:
+        (dist_dir / CSP_FILENAME).write_text(policy_json, encoding="utf-8")
+    return dist_dir
+
+
+@pytest.mark.parametrize(
+    ("policy_json", "viewer_expected"),
+    [
+        (None, "frame-ancestors 'none'"),
+        (
+            json.dumps({"version": 1, "directives": _VIEWER_CSP_DIRECTIVES}),
+            f"{_VIEWER_CSP}; frame-ancestors 'none'",
+        ),
+    ],
+    ids=["no-policy-file", "policy-file"],
+)
+def test_viewer_csp_header_scoped_to_viewer_files(
+    tmp_path: Path, policy_json: str | None, viewer_expected: str
+) -> None:
+    dist_dir = _dist_with_policy(tmp_path, policy_json)
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    app = standalone_view_app(
+        log_dir=str(log_dir), network_policy=_policy(), dist_dir=dist_dir
+    )
+    # Encoded aliases beneath the docs endpoints reach the static mount, which
+    # resolves the `..` and serves a viewer file. A bare `/api` isn't under
+    # the API mount, so it reaches the static mount too.
+    viewer_status = {
+        "/": 200,
+        "/assets/worker.js": 200,
+        "/missing": 404,
+        "/docs%2f..%2findex.html": 200,
+        "/docs%2F..%2Fassets/worker.js": 200,
+        "/docs/oauth2-redirect%2f..%2f..%2findex.html": 200,
+        "/redoc%2f..%2findex.html": 200,
+        "/openapi.json%2f..%2fassets/worker.js": 200,
+        "/api": 404,
+    }
+    with TestClient(app, base_url="http://localhost:7575") as client:
+        viewer = {path: client.get(path) for path in viewer_status}
+        # the API mount gets every path beneath it, `..` included
+        api_aliases = {
+            path: client.get(path)
+            for path in ("/api%2f..%2findex.html", "/api/..%2fassets/worker.js")
+        }
+        non_viewer = {
+            path: client.get(path)
+            for path in (
+                "/api/app-config",
+                "/api/docs",
+                "/api/openapi.json",
+                "/docs",
+                "/docs/oauth2-redirect",
+                "/redoc",
+                "/openapi.json",
+            )
+        }
+        forbidden = client.get(
+            "/api/app-config", headers={"Origin": "https://attacker.example"}
+        )
+
+    assert {path: r.status_code for path, r in viewer.items()} == viewer_status
+    assert all(
+        r.status_code == 404 and r.json() == {"detail": "Not Found"}
+        for r in api_aliases.values()
+    )
+    assert all(r.status_code == 200 for r in non_viewer.values())
+    assert forbidden.status_code == 403
+
+    # a duplicate header would read back comma-joined, failing equality
+    for response in viewer.values():
+        assert response.headers["content-security-policy"] == viewer_expected
+    for response in [*api_aliases.values(), *non_viewer.values(), forbidden]:
+        assert response.headers["content-security-policy"] == "frame-ancestors 'none'"
+    for response in [
+        *viewer.values(),
+        *api_aliases.values(),
+        *non_viewer.values(),
+        forbidden,
+    ]:
+        assert response.headers["x-frame-options"] == "DENY"
+
+
+def test_read_content_security_policy_joins_directives_in_file_order(
+    tmp_path: Path,
+) -> None:
+    dist_dir = _dist_with_policy(
+        tmp_path, json.dumps({"version": 1, "directives": _VIEWER_CSP_DIRECTIVES})
+    )
+    assert read_content_security_policy(dist_dir) == _VIEWER_CSP
+
+
+def test_read_content_security_policy_allows_value_less_directives(
+    tmp_path: Path,
+) -> None:
+    dist_dir = _dist_with_policy(
+        tmp_path,
+        json.dumps(
+            {
+                "version": 1,
+                "directives": {
+                    "default-src": ["'none'"],
+                    "upgrade-insecure-requests": [],
+                    "img-src": ["'self'"],
+                },
+            }
+        ),
+    )
+    assert (
+        read_content_security_policy(dist_dir)
+        == "default-src 'none'; upgrade-insecure-requests; img-src 'self'"
+    )
+
+
+def test_read_content_security_policy_absent_file_is_none(tmp_path: Path) -> None:
+    assert read_content_security_policy(_dist_with_policy(tmp_path, None)) is None
+
+
+@pytest.mark.parametrize(
+    "policy_json",
+    [
+        "",
+        "{not json",
+        "[]",
+        json.dumps({"directives": {"default-src": ["'none'"]}}),
+        json.dumps({"version": 2, "directives": {"default-src": ["'none'"]}}),
+        json.dumps({"version": "1", "directives": {"default-src": ["'none'"]}}),
+        json.dumps({"version": True, "directives": {"default-src": ["'none'"]}}),
+        json.dumps({"version": 1}),
+        json.dumps({"version": 1, "directives": {}}),
+        json.dumps({"version": 1, "directives": [["default-src", ["'none'"]]]}),
+        json.dumps({"version": 1, "directives": {"": ["'none'"]}}),
+        json.dumps({"version": 1, "directives": {"default-src": None}}),
+        json.dumps({"version": 1, "directives": {"default-src": "'none'"}}),
+        json.dumps({"version": 1, "directives": {"default-src": [""]}}),
+        json.dumps({"version": 1, "directives": {"default-src": [1]}}),
+        json.dumps({"version": 1, "directives": {"default-src": ["'none';"]}}),
+        json.dumps({"version": 1, "directives": {"default-src": ["'none',"]}}),
+        json.dumps({"version": 1, "directives": {"default-src": ["a\nb"]}}),
+        json.dumps({"version": 1, "directives": {"default-src": ["a\u0000"]}}),
+        json.dumps({"version": 1, "directives": {"default-src": ["a b"]}}),
+        json.dumps({"version": 1, "directives": {"default-src": ["\u00e9"]}}),
+        json.dumps({"version": 1, "directives": {"default;src": ["'none'"]}}),
+        json.dumps({"version": 1, "directives": {"frame-ancestors": ["'none'"]}}),
+        json.dumps(
+            {
+                "version": 1,
+                "directives": {"default-src": ["'none'"], "Default-Src": ["'self'"]},
+            }
+        ),
+        '{"version": 1, "directives": {"img-src": ["data:"], "img-src": ["*"]}}',
+    ],
+)
+def test_malformed_viewer_csp_file_raises(tmp_path: Path, policy_json: str) -> None:
+    dist_dir = _dist_with_policy(tmp_path, policy_json)
+    with pytest.raises(ContentSecurityPolicyError, match=CSP_FILENAME):
+        read_content_security_policy(dist_dir)
+
+
+def test_malformed_viewer_csp_file_fails_server_startup(tmp_path: Path) -> None:
+    dist_dir = _dist_with_policy(tmp_path, json.dumps({"version": 1}))
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    with pytest.raises(ContentSecurityPolicyError):
+        standalone_view_app(
+            log_dir=str(log_dir), network_policy=_policy(), dist_dir=dist_dir
+        )
+
+
+def test_unsafe_bind_is_rejected_before_port_acquisition(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    view_module = importlib.import_module("inspect_ai._view.view")
+    acquired = False
+
+    def acquire_port(_app_dir: Path, _port: int) -> None:
+        nonlocal acquired
+        acquired = True
+
+    monkeypatch.setattr(view_module, "init_dotenv", lambda: None)
+    monkeypatch.setattr(view_module, "init_logger", lambda _level: None)
+    monkeypatch.setattr(view_module, "view_acquire_port", acquire_port)
+
+    with pytest.raises(ViewerNetworkPolicyError):
+        view_module.view(
+            log_dir=str(tmp_path),
+            host="0.0.0.0",
+            trusted_origins=("http://192.0.2.10:7575",),
+        )
+
+    assert acquired is False
+
+
+def test_existing_view_positional_parameter_order_is_preserved() -> None:
+    view_module = importlib.import_module("inspect_ai._view.view")
+    assert list(inspect.signature(view_module.view).parameters)[:7] == [
+        "log_dir",
+        "recursive",
+        "host",
+        "port",
+        "authorization",
+        "log_level",
+        "fs_options",
+    ]
+    assert list(inspect.signature(view_server).parameters)[:7] == [
+        "log_dir",
+        "recursive",
+        "host",
+        "port",
+        "authorization",
+        "fs_options",
+        "generate_direct_urls",
+    ]

@@ -36,13 +36,17 @@ from __future__ import annotations
 import asyncio
 import math
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Callable, Final, Literal
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 import anyio
 from acp.exceptions import RequestError
 from pydantic import BaseModel, Field, ValidationError
 
 from inspect_ai.agent._acp._guards import acp_guard, acp_send_guard
+
+# Runtime import (not TYPE_CHECKING): pydantic resolves `CancelSampleParams`'
+# `action` annotation when the model class is built.
+from inspect_ai.log._samples import SampleCancelAction
 
 if TYPE_CHECKING:
     from acp.connection import Connection
@@ -97,6 +101,7 @@ MESSAGE_ID_META_KEY = "inspect.message_id"
 MESSAGE_ROLE_META_KEY = "inspect.message_role"
 USER_SOURCE_META_KEY = "inspect.user_source"
 MODEL_META_KEY = "inspect.model"
+MODEL_FALLBACK_META_KEY = "inspect.model_fallback"
 MODEL_EVENT_UUID_META_KEY = "inspect.model_event_uuid"
 MODEL_EVENT_PENDING_META_KEY = "inspect.model_event_pending"
 MODEL_EVENT_COMPLETE_META_KEY = "inspect.model_event_complete"
@@ -128,7 +133,10 @@ TOTAL_MESSAGES_META_KEY = "inspect.total_messages"
 # Inspect, so there's no pending ``ToolEvent`` for the connection handler to
 # cancel — the request would silently no-op. The Inspect TUI reads this off the
 # tool card to suppress the per-tool "cancel tool" affordance (the operator can
-# still interrupt the whole turn). Absent ⇒ cancelable (the react default).
+# still interrupt the whole turn). Absent ⇒ cancelable (the react default). A
+# ``ToolCallProgress`` carrying the key changes it: when a sandbox bridge runs a
+# host tool for a proposed call, the real pending ``ToolEvent`` makes the card
+# cancelable.
 TOOL_CALL_CANCELABLE_META_KEY = "inspect.tool_call_cancelable"
 
 
@@ -163,6 +171,17 @@ INSPECT_LIST_SAMPLES_METHOD = "inspect/list_samples"
 # stays alive so the client can switch to a different sample via the
 # picker). Params: ``{"sessionId": "<live-session-uuid>"}``.
 INSPECT_SESSION_ENDED_METHOD = "inspect/session_ended"
+
+# Server → client notification: the bound agent's turn scope has
+# transitioned. Params: ``{"sessionId": "...", "state": "started" |
+# "ended" | "cancelled"}``. Standard ACP expects ``session/prompt`` to
+# span the turn (request → ``end_turn`` response), but Inspect's
+# producer/consumer channel decouples prompt delivery from turn
+# execution — ``session/prompt`` returns immediately and the agent
+# drains the prompt at its own boundary. This notification gives an
+# ACP client an exact "agent is working" signal it would otherwise
+# have to infer from message-chunk traffic.
+INSPECT_TURN_STATE_METHOD = "inspect/turn_state"
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +218,7 @@ class CancelSampleParams(BaseModel):
     """Pydantic param model for :data:`INSPECT_CANCEL_SAMPLE_METHOD`."""
 
     session_id: str = Field(alias="sessionId")
-    action: Literal["score", "error"]
+    action: SampleCancelAction
 
     model_config = {"populate_by_name": True}
 
@@ -459,9 +478,12 @@ def assistant_content_chunk_meta(event: ModelEvent, uuid: str | None) -> dict[st
     model switches mid-conversation), plus :data:`MODEL_EVENT_UUID_META_KEY`
     when the originating ``ModelEvent`` has a uuid (so clients can
     cross-reference back to the transcript event — the ACP message_id
-    is a UUIDv5 hash, one-way).
+    is a UUIDv5 hash, one-way). When a model fallback served the
+    generation, :data:`MODEL_FALLBACK_META_KEY` names the serving model.
     """
     meta: dict[str, Any] = {MODEL_META_KEY: event.model}
+    if event.output.fallback is not None:
+        meta[MODEL_FALLBACK_META_KEY] = event.output.fallback.fallback_model
     if uuid is not None:
         meta[MODEL_EVENT_UUID_META_KEY] = uuid
     return meta
@@ -491,11 +513,14 @@ def assistant_complete_chunk_meta(event: ModelEvent, uuid: str) -> dict[str, Any
     :data:`MODEL_EVENT_COMPLETE_META_KEY` = ``True`` to distinguish
     from the pending marker.
     """
-    return {
+    meta: dict[str, Any] = {
         MODEL_META_KEY: event.model,
         MODEL_EVENT_UUID_META_KEY: uuid,
         MODEL_EVENT_COMPLETE_META_KEY: True,
     }
+    if event.output.fallback is not None:
+        meta[MODEL_FALLBACK_META_KEY] = event.output.fallback.fallback_model
+    return meta
 
 
 # ---------------------------------------------------------------------------

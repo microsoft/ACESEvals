@@ -1,3 +1,5 @@
+import asyncio
+import gc
 import os
 import shutil
 import sys
@@ -6,12 +8,15 @@ from pathlib import Path
 from random import random
 from typing import cast
 
+import anyio
 import psutil
 import pytest
 from anyio.abc import ByteReceiveStream
+from test_helpers.utils import skip_if_trio
 
+import inspect_ai.util._subprocess as _subprocess_mod
 from inspect_ai.util import subprocess
-from inspect_ai.util._subprocess import _log_stream
+from inspect_ai.util._subprocess import _log_stream, run_subprocess
 from inspect_ai.util._subprocess import logger as _subprocess_logger
 
 
@@ -47,6 +52,112 @@ async def test_subprocess_binary():
     assert result.stdout.decode().strip() == input.decode()
 
 
+# Well past any OS pipe buffer (64KiB on Linux), so a write to a child that
+# never reads its stdin cannot complete before the child exits, and a child
+# writing this much to stdout blocks until the parent drains it.
+_LARGE_IO = b"x" * (1 << 20)
+
+
+@pytest.mark.anyio
+async def test_subprocess_stdin_child_exits_without_reading():
+    """A child that exits before reading stdin yields its ExecResult, not an error.
+
+    The write hits a closed pipe (EPIPE/ECONNRESET) once the child is gone; the
+    caller must still see the child's exit status and stderr rather than a
+    BrokenResourceError.
+    """
+    result = await subprocess(
+        ["python3", "-c", "import sys; print('gave up', file=sys.stderr); sys.exit(3)"],
+        input=_LARGE_IO,
+    )
+    assert result.success is False
+    assert result.returncode == 3
+    assert result.stderr.strip() == "gave up"
+
+
+@pytest.mark.anyio
+async def test_run_subprocess_reports_whether_stdin_was_written():
+    """`run_subprocess()` tells a caller that the child left its stdin unread.
+
+    `subprocess()` deliberately hides this (the child's result is the answer),
+    but the Docker compose retry needs the signal, so it is exposed alongside
+    the same result.
+    """
+    unread = await run_subprocess(
+        ["python3", "-c", "import sys; sys.exit(3)"], input=_LARGE_IO
+    )
+    assert unread.stdin_written is False
+    assert unread.result.returncode == 3
+
+    read = await run_subprocess(
+        ["python3", "-c", "import sys; sys.stdin.buffer.read()"], input=_LARGE_IO
+    )
+    assert read.stdin_written is True
+    assert read.result.success is True
+
+    no_input = await run_subprocess(["python3", "-c", "import sys; sys.exit(3)"])
+    assert no_input.stdin_written is True
+    assert no_input.result.returncode == 3
+
+
+@skip_if_trio
+@pytest.mark.parametrize("error", [BrokenPipeError, ConnectionResetError])
+async def test_run_subprocess_raw_pipe_error_from_drain(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, error: type[OSError]
+):
+    """A raw pipe error from asyncio's `drain()` reports stdin as unwritten.
+
+    anyio converts a broken pipe to `BrokenResourceError` only once the
+    transport is closing; if the pipe breaks first, `drain()`'s own
+    `BrokenPipeError` or `ConnectionResetError` reaches the caller. The child
+    cannot exit until `drain()` has raised (it waits for `release`, which the
+    patched `drain()` creates just before raising), so the transport is still
+    open and anyio passes the raw error through.
+    """
+    release = tmp_path / "release"
+
+    async def broken_drain(self: asyncio.StreamWriter) -> None:
+        assert not self.transport.is_closing()
+        release.touch()
+        raise error()
+
+    monkeypatch.setattr(asyncio.StreamWriter, "drain", broken_drain)
+    script = (
+        "import os, sys, time\n"
+        f"while not os.path.exists({str(release)!r}):\n"
+        "    time.sleep(0.01)\n"
+        "sys.exit(3)\n"
+    )
+    with anyio.fail_after(30):
+        run = await run_subprocess(["python3", "-c", script], input="unread")
+    assert run.stdin_written is False
+    assert run.result.returncode == 3
+
+
+@pytest.mark.anyio
+async def test_subprocess_stdin_written_while_output_is_drained():
+    """The stdin write runs alongside the stdout read, so neither side deadlocks.
+
+    The child fills its stdout pipe before it reads stdin; if the parent only
+    started draining stdout after the stdin write completed, both would block
+    on each other forever.
+    """
+    script = (
+        "import sys\n"
+        f"sys.stdout.buffer.write(b'y' * {len(_LARGE_IO)})\n"
+        "sys.stdout.flush()\n"
+        "data = sys.stdin.buffer.read()\n"
+        "print(len(data), file=sys.stderr)\n"
+    )
+    with anyio.fail_after(30):
+        result = await subprocess(
+            ["python3", "-c", script], input=_LARGE_IO, text=False
+        )
+    assert result.success is True
+    assert result.stdout == b"y" * len(_LARGE_IO)
+    assert result.stderr.strip() == str(len(_LARGE_IO)).encode()
+
+
 @pytest.mark.anyio
 async def test_subprocess_cwd():
     parent_dir = Path(os.getcwd()).parent.as_posix()
@@ -68,7 +179,10 @@ async def test_subprocess_env():
 
 
 @pytest.mark.anyio
-async def test_subprocess_timeout():
+async def test_subprocess_timeout(monkeypatch):
+    # Shrink the post-SIGTERM grace so the test doesn't pay the full 2s
+    # production grace on top of the 1s timeout (behavior is unchanged).
+    monkeypatch.setattr(_subprocess_mod, "SUBPROCESS_SIGTERM_GRACE_SECONDS", 0.2)
     # The random() serves as adding a unique "signature" to the subprocess command
     timeout_duration = 10 + random()
     subprocess_cmds = ["sleep", str(timeout_duration)]
@@ -108,11 +222,101 @@ async def test_subprocess_which_ignores_sigterm_timeout():
     assert time.time() - start_time < 5, "Process was not killed in time"
 
 
+@pytest.mark.anyio
+async def test_subprocess_registers_resizable_limiter():
+    """subprocess() tracks its resizable limiter for the control channel.
+
+    The `"subprocesses"` concurrency key is backed by a ResizableSemaphore and
+    registered with the process-global slot the `ctl config --max-subprocesses`
+    directive reads, so a mid-flight retune reaches the limiter that later
+    subprocess() calls acquire from (the registry coalesces on key).
+    """
+    from inspect_ai.util._concurrency import (
+        ResizableSemaphore,
+        init_concurrency,
+        subprocess_limiter,
+    )
+
+    init_concurrency()
+    try:
+        assert subprocess_limiter() is None
+        result = await subprocess(["python3", "-c", "print('ok')"])
+        assert result.success
+        limiter = subprocess_limiter()
+        assert isinstance(limiter, ResizableSemaphore)
+
+        # a retune sticks: later calls reuse the same registry instance
+        limiter.concurrency = 2
+        result = await subprocess(["python3", "-c", "print('ok')"])
+        assert result.success
+        assert subprocess_limiter() is limiter
+        assert limiter.concurrency == 2
+    finally:
+        # the limiter is event-loop-bound; don't leak it to other tests
+        init_concurrency()
+    assert subprocess_limiter() is None
+
+
 def _process_found(pattern: str) -> bool:
     return any(
         pattern in " ".join(p.info["cmdline"] or [])
         for p in psutil.process_iter(["cmdline"])
     )
+
+
+@pytest.mark.anyio
+async def test_subprocess_timeout_with_lost_child_watcher(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: timeout must still fire when process.wait() never resolves.
+
+    Under heavy subprocess churn, asyncio's child watcher can miss a process
+    exit, leaving ``process.wait()`` parked forever. The shielded cleanup paths
+    (``gracefully_terminate_cancelled_subprocess`` and the inlined ``aclose``)
+    must bound their final ``wait()`` so the caller's TimeoutError still
+    propagates instead of deadlocking inside an uncancellable shield.
+    """
+    # Keep the test fast: the bound is a safety net, not a tuning knob.
+    monkeypatch.setattr(_subprocess_mod, "LOST_SUBPROCESS_WAIT_TIMEOUT", 1)
+    monkeypatch.setattr(_subprocess_mod, "SUBPROCESS_SIGTERM_GRACE_SECONDS", 0.2)
+
+    real_open_process = anyio.open_process
+
+    async def hung_wait() -> int:
+        await anyio.sleep_forever()
+        raise AssertionError("unreachable")
+
+    async def open_process_lost_watcher(*args, **kwargs):
+        process = await real_open_process(*args, **kwargs)
+        # Simulate the child-watcher race: the OS process is reapable (and
+        # SIGTERM/SIGKILL still land), but the transport's wait() never
+        # observes the exit.
+        monkeypatch.setattr(process, "wait", hung_wait)
+        return process
+
+    monkeypatch.setattr(_subprocess_mod, "open_process", open_process_lost_watcher)
+
+    # inspect_ai's package loggers have propagate=False once init_logger()
+    # has run (any prior test in the worker may have triggered it), so caplog
+    # never sees these — capture at the call site instead, matching the
+    # pattern used elsewhere in this file.
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        _subprocess_logger, "warning", lambda msg, *a: warnings.append(msg % a)
+    )
+
+    start = time.monotonic()
+    with pytest.raises(TimeoutError):
+        # Outer fail_after guards against regression to an unbounded shielded
+        # wait — without the fix this would hang here indefinitely.
+        with anyio.fail_after(20):
+            await subprocess(["sleep", "30"], timeout=1)
+    elapsed = time.monotonic() - start
+
+    # 1s timeout + 2s SIGTERM grace + 1s bounded wait (graceful) + 1s bounded
+    # wait (aclose) ≈ 5s; allow generous slack.
+    assert elapsed < 15, f"cleanup took {elapsed:.1f}s; shielded wait not bounded?"
+    assert any("child watcher" in w for w in warnings), warnings
 
 
 @pytest.mark.anyio
@@ -191,6 +395,95 @@ async def test_subprocess_output_limit_no_limit():
     assert len(result.stdout.strip()) == 1000
 
 
+async def _read_all(stream: ByteReceiveStream) -> bytes:
+    return b"".join([chunk async for chunk in stream])
+
+
+@pytest.mark.anyio
+async def test_run_subprocess_stdout_reader():
+    """A `stdout_reader` supplies stdout; `output_limit` still bounds stderr."""
+    script = (
+        "import sys; sys.stdout.buffer.write('héllo'.encode()); "
+        "sys.stderr.write('e' * 1000)"
+    )
+    run = await run_subprocess(
+        ["python3", "-c", script], output_limit=100, stdout_reader=_read_all
+    )
+    assert run.result.stdout == "héllo"
+    assert run.result.stderr == "e" * 100
+
+
+class _StopReading(Exception):
+    pass
+
+
+_FLOOD_STDOUT = """
+import os, sys
+sys.stdout.buffer.write(f"{os.getpid()}\\n".encode())
+sys.stdout.flush()
+while True:
+    sys.stdout.buffer.write(b"x" * 65536)
+"""
+
+
+def _wait_gone(pid: int, timeout: float) -> bool:
+    try:
+        process = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        return True
+    _, alive = psutil.wait_procs([process], timeout=timeout)
+    for survivor in alive:
+        survivor.kill()
+    return not alive
+
+
+@pytest.mark.anyio
+@pytest.mark.skipif(sys.platform == "win32", reason="num_fds() is POSIX only")
+async def test_run_subprocess_stdout_reader_error_closes_pipes():
+    """When the reader raises, the pipes close even if a grandchild holds them.
+
+    The grandchild keeps writing after its parent is killed, like a Docker CLI
+    plugin that the CLI does not stop; closing the pipes ends it with a broken pipe.
+    """
+    parent = (
+        "import subprocess, sys; "
+        "subprocess.Popen([sys.executable, '-c', sys.argv[1]]).wait()"
+    )
+    pid = 0
+
+    async def read_until_flooded(stream: ByteReceiveStream) -> bytes:
+        nonlocal pid
+        output = bytearray()
+        async for chunk in stream:
+            output += chunk
+            if len(output) > 1_000_000:
+                pid = int(output.split(b"\n", 1)[0])
+                raise _StopReading()
+        return bytes(output)
+
+    process = psutil.Process()
+    gc.disable()
+    try:
+        fds_before = process.num_fds()
+        with pytest.raises(_StopReading):
+            await run_subprocess(
+                ["python3", "-c", parent, _FLOOD_STDOUT],
+                text=False,
+                timeout=30,
+                stdout_reader=read_until_flooded,
+            )
+        assert process.num_fds() == fds_before
+    finally:
+        gc.enable()
+    assert _wait_gone(pid, timeout=10)
+
+
+@pytest.mark.anyio
+async def test_run_subprocess_stdout_reader_requires_capture_output():
+    with pytest.raises(ValueError, match="capture_output"):
+        await run_subprocess(["true"], capture_output=False, stdout_reader=_read_all)
+
+
 @pytest.mark.anyio
 async def test_subprocess_redirect_to_logger(monkeypatch) -> None:
     monkeypatch.setenv("INSPECT_SUBPROCESS_REDIRECT_TO_LOGGER", "1")
@@ -261,3 +554,15 @@ async def test_log_stream_empty_lines(monkeypatch) -> None:
     stream = cast(ByteReceiveStream, _FakeStream([b"a\n\nb\n"]))
     await _log_stream(stream)
     assert messages == ["a", "", "b"]
+
+
+@pytest.mark.anyio
+async def test_subprocess_timeout_while_stdin_writer_is_blocked(monkeypatch):
+    """A timeout still fires and kills the child when the stdin write is stuck.
+
+    The child never reads its stdin and never exits, so the writer is parked in
+    `send()` when the timeout cancels the task group.
+    """
+    monkeypatch.setattr(_subprocess_mod, "SUBPROCESS_SIGTERM_GRACE_SECONDS", 0.2)
+    with pytest.raises(TimeoutError):
+        await subprocess(["sleep", "30"], input=_LARGE_IO, timeout=1)

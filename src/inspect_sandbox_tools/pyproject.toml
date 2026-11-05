@@ -93,10 +93,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "certifi>=2026.10.23",
     "aiohttp",
     "httpx",
     "jsonrpcserver",
-    "mcp",
     "packaging",
     "pydantic",
     "returns",
@@ -120,6 +120,14 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-dotenv",
+    # Provider SDKs the model-proxy tests point at the proxy to exercise it
+    # end-to-end (dummy keys + mock bridge service; no real API access).
+    "anthropic",
+    "openai",
+    "google-genai",
+    # Test-only: wire-parity tests round-trip the host's mcp models through the
+    # vendored JSON-RPC models (the shipped binary does not bundle mcp).
+    "mcp",
 ]
 
 dist = ["twine", "build"]

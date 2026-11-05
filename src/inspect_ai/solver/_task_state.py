@@ -27,6 +27,7 @@ from inspect_ai.util._limit import (
     check_cost_limit,
     check_message_limit,
     check_token_limit,
+    token_limit_usage,
 )
 from inspect_ai.util._limit import cost_limit as create_cost_limit
 from inspect_ai.util._limit import message_limit as create_message_limit
@@ -105,7 +106,7 @@ class Choices(Sequence[Choice]):
 
     def shuffle(self, rand: Random = Random()) -> None:
         """
-        Shuffle the choice order, setting the `original_position` so they can be mapped back to their original order.
+        Shuffle the choice order, preserving `original_position` so they can be mapped back to their original order.
 
         Some evals will shuffle the choices from the original sample to try to
         avoid the model answering correctly due to fine-tuning (or similar) on
@@ -114,13 +115,7 @@ class Choices(Sequence[Choice]):
         shuffled_positions = list(range(len(self._choices)))
         rand.shuffle(shuffled_positions)
 
-        shuffled_choices = [Choice("notachoice", None, -1)] * len(self._choices)
-
-        for i, shuffled_position in enumerate(shuffled_positions):
-            shuffled_choices[i] = self._choices[shuffled_position]
-            shuffled_choices[i].original_position = shuffled_position
-
-        self._choices = shuffled_choices
+        self._choices = [self._choices[p] for p in shuffled_positions]
 
     def prompt(self, question: str, template: str) -> str:
         """Format a prompt for these choices.
@@ -159,13 +154,15 @@ class TaskState:
         output: ModelOutput | None = None,
         message_limit: int | None = None,
         token_limit: int | None = None,
+        token_limit_type: str = "all",
         cost_limit: float | None = None,
-        tool_call_limit: int | None = None,
         completed: bool = False,
         metadata: dict[str, Any] | None = None,
         store: dict[str, Any] | None = None,
         scores: dict[str, Score] | None = None,
         sample_uuid: str | None = None,
+        *,
+        tool_call_limit: int | None = None,
     ) -> None:
         self._model = model
         self._sample_id = sample_id
@@ -177,7 +174,7 @@ class TaskState:
         self._tools: list[Tool] = []
         self._output = output if output else ModelOutput(model=str(model))
         self._message_limit = create_message_limit(message_limit)
-        self._token_limit = create_token_limit(token_limit)
+        self._token_limit = create_token_limit(token_limit, type=token_limit_type)
         self._cost_limit = create_cost_limit(cost_limit)
         self._tool_call_limit = create_tool_call_limit(tool_call_limit)
         self._completed = completed
@@ -216,24 +213,32 @@ class TaskState:
         Convenience function for accessing the initial input from the `Sample` as a string.
 
         If the `input` is a `list[ChatMessage]`, this will return the text from
-        the last chat message
+        the last user message. If that message has no text but does have
+        non-text content (e.g. an image), a placeholder naming each part
+        (e.g. `[image]`) is returned instead.
         """
         if isinstance(self._input, str):
             return self._input
         else:
             input = next(
                 (
-                    message.text
+                    message
                     for message in reversed(self._input)
                     if message.role == "user"
                 ),
                 None,
             )
-            if input:
-                return input
-            else:
+            if input is None:
                 raise ValueError(
                     "input_text requested from TaskState but none available"
+                )
+            elif input.text or isinstance(input.content, str):
+                return input.text
+            else:
+                return " ".join(
+                    f"[{content.type}]"
+                    for content in input.content
+                    if content.type != "text"
                 )
 
     @property
@@ -336,21 +341,41 @@ class TaskState:
 
     @property
     def token_limit(self) -> int | None:
-        """Limit on total tokens allowed per conversation."""
+        """Limit on tokens allowed per conversation."""
         return self._token_limit.limit
 
     @token_limit.setter
     def token_limit(self, tokens: int | None) -> None:
-        """Set limit on total tokens allowed per conversation.
+        """Set limit on tokens allowed per conversation.
+
+        The metering type (all vs. output tokens) is fixed at sample init and
+        is not affected by setting a new numeric limit.
 
         Also checks whether the current token usage exceeds the new limit.
         """
+        from inspect_ai.log._samples import (
+            set_active_sample_token_limit,
+            set_active_sample_token_limit_type,
+            set_active_sample_token_limit_usage,
+        )
+
         self._token_limit.limit = tokens
+
+        # push the full limit group (ceiling, type, metered usage) before the
+        # check so the control channel reflects the new ceiling even when the
+        # check trips; type and usage are reported only alongside a ceiling
+        set_active_sample_token_limit(tokens)
+        set_active_sample_token_limit_type(
+            self._token_limit.type if tokens is not None else None
+        )
+        set_active_sample_token_limit_usage(token_limit_usage())
+
         check_token_limit()
 
-        from inspect_ai.log._samples import set_active_sample_token_limit
-
-        set_active_sample_token_limit(tokens)
+    @property
+    def token_limit_type(self) -> str:
+        """Which tokens the token limit meters (fixed at sample init)."""
+        return self._token_limit.type
 
     @property
     def token_usage(self) -> int:
@@ -382,25 +407,20 @@ class TaskState:
 
     @property
     def tool_call_limit(self) -> int | None:
-        """Limit on total tool calls allowed per conversation."""
+        """Limit on requested tool calls per sample."""
         return self._tool_call_limit.limit
 
     @tool_call_limit.setter
     def tool_call_limit(self, calls: int | None) -> None:
-        """Set limit on total tool calls allowed per conversation.
-
-        Note: Tool call limits are checked cooperatively during tool execution,
-        not immediately on limit setting.
-        """
-        self._tool_call_limit.limit = calls
-
+        """Set the budget within the evaluation ceiling, checked on tool execution."""
         from inspect_ai.log._samples import set_active_sample_tool_call_limit
 
-        set_active_sample_tool_call_limit(calls)
+        self._tool_call_limit.limit = calls
+        set_active_sample_tool_call_limit(self._tool_call_limit.limit)
 
     @property
     def tool_call_usage(self) -> int:
-        """Total tool calls used for the current sample."""
+        """Total requested tool calls for the current sample."""
         return int(self._tool_call_limit.usage)
 
     @property
@@ -475,8 +495,31 @@ def sample_state() -> TaskState | None:
     return _sample_state.get(None)
 
 
-def set_sample_state(state: TaskState) -> None:
+def set_sample_state(state: TaskState, *, replacing: TaskState | None = None) -> None:
+    """Set the context's current `TaskState`.
+
+    Called wherever the current `TaskState` may have been replaced with a
+    different object — a solver can return a deepcopy or a state it got from
+    `fork()` rather than the state it was passed — so that `sample_state()`
+    and the control channel's live-conversation handle
+    (`ActiveSample.live_state`) follow the threaded state.
+
+    The ContextVar is context-isolated, but the handle is a plain attribute
+    on the shared `ActiveSample` — reachable from `fork()` subtasks, whose
+    branch conversations must not be served as the sample's main thread.
+    Callers that can themselves be running inside a fork() branch (the
+    `Chain` / `Plan` step loops, the `@solver` call wrapper) therefore pass
+    ``replacing`` (the state the step superseded) to make the handle refresh
+    a compare-and-swap: it only lands if the handle currently points at
+    ``replacing``, so a lineage that never owned the handle (a fork branch
+    threads a deepcopy) can't capture it. Without ``replacing`` the refresh
+    is unconditional — reserved for callers that are by definition on the
+    sample's main thread (sample start, pre-scoring).
+    """
     _sample_state.set(state)
+    from inspect_ai.log._samples import set_active_sample_state
+
+    set_active_sample_state(state, replacing=replacing)
 
 
 _sample_state: ContextVar[TaskState] = ContextVar("sample_state")

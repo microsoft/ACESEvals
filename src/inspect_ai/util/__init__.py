@@ -1,5 +1,13 @@
+from enum import StrEnum
+
 from inspect_ai._util.download import download, gdrive_download
-from inspect_ai._util.images import MediaResolverFunc, media_resolver
+from inspect_ai._util.images import (
+    MediaKind,
+    MediaResolverFunc,
+    UnresolvedMediaError,
+    materialize_media,
+    media_resolver,
+)
 from inspect_ai._util.logger import warn_once
 from inspect_ai._util.registry import (
     RegistryInfo,
@@ -13,28 +21,38 @@ from inspect_ai.util._limit import (
     LimitExceededError,
     LimitScope,
     SampleLimits,
+    TokenLimit,
     apply_limits,
     cost_limit,
     message_limit,
     sample_limits,
     suspend_token_limit,
+    suspend_turn_limit,
+    suspend_working_limit,
     time_limit,
     token_limit,
     tool_call_limit,
+    turn_limit,
     working_limit,
 )
 
 from ._background import background
 from ._checkpoint import (
+    ArchiveSnapshots,
     CheckpointConfig,
     Checkpointer,
     CheckpointSampleConfig,
     CheckpointTrigger,
     Manual,
+    ResticSnapshots,
+    ResumeReport,
+    SandboxSnapshotConfig,
+    SnapshotStrategyConfig,
     TimeInterval,
     TokenInterval,
     TurnInterval,
     checkpointer,
+    current_checkpointer,
 )
 from ._collect import collect
 from ._concurrency import AdaptiveConcurrency, concurrency
@@ -55,6 +73,7 @@ from ._sandbox import (
     ComposeConfig,
     ComposeHealthcheck,
     ComposeService,
+    ComposeVolumeMount,
     ExecCompleted,
     ExecOutput,
     ExecRemoteAwaitableOptions,
@@ -70,8 +89,11 @@ from ._sandbox import (
     SandboxEnvironments,
     SandboxEnvironmentSpec,
     SandboxEnvironmentType,
+    SandboxUnavailableError,
+    SandboxUserUnsupportedError,
     is_compose_yaml,
     is_dockerfile,
+    override_sandbox_output_limit,
     parse_compose_yaml,
     sandbox,
     sandbox_default,
@@ -88,10 +110,18 @@ from ._subprocess import (
 )
 from ._subtask import Subtask, subtask
 from ._throttle import throttle
+from ._tool_state import (
+    private_tool_instance,
+    tool_state_instance,
+    tool_state_scope,
+)
 
 __all__ = [
     "media_resolver",
+    "materialize_media",
+    "MediaKind",
     "MediaResolverFunc",
+    "UnresolvedMediaError",
     "apply_limits",
     "sample_limits",
     "SampleLimits",
@@ -99,6 +129,7 @@ __all__ = [
     "ComposeConfig",
     "ComposeHealthcheck",
     "ComposeService",
+    "ComposeVolumeMount",
     "ExecResult",
     "AdaptiveConcurrency",
     "concurrency",
@@ -117,11 +148,13 @@ __all__ = [
     "is_dockerfile",
     "JSONType",
     "JSONSchema",
+    "StrEnum",
     "json_schema",
     "Limit",
     "message_limit",
     "notify",
     "OutputLimitExceededError",
+    "override_sandbox_output_limit",
     "parse_compose_yaml",
     "resource",
     "subprocess",
@@ -133,6 +166,8 @@ __all__ = [
     "SandboxEnvironments",
     "SandboxEnvironmentSpec",
     "SandboxEnvironmentType",
+    "SandboxUnavailableError",
+    "SandboxUserUnsupportedError",
     "SandboxConnection",
     "sandboxenv",
     "sandbox",
@@ -145,6 +180,9 @@ __all__ = [
     "store_from_events_as",
     "StoreModel",
     "store_as",
+    "tool_state_scope",
+    "tool_state_instance",
+    "private_tool_instance",
     "span",
     "current_span_id",
     "span_id_provider",
@@ -156,9 +194,13 @@ __all__ = [
     "background",
     "cost_limit",
     "suspend_token_limit",
+    "suspend_turn_limit",
+    "suspend_working_limit",
     "token_limit",
-    "time_limit",
     "tool_call_limit",
+    "TokenLimit",
+    "turn_limit",
+    "time_limit",
     "working_limit",
     "trace_action",
     "trace_message",
@@ -179,11 +221,17 @@ __all__ = [
     "ExecStderr",
     "ExecStdout",
     "checkpointer",
+    "current_checkpointer",
+    "ArchiveSnapshots",
     "Checkpointer",
     "CheckpointConfig",
     "CheckpointSampleConfig",
     "CheckpointTrigger",
     "Manual",
+    "ResticSnapshots",
+    "ResumeReport",
+    "SandboxSnapshotConfig",
+    "SnapshotStrategyConfig",
     "TimeInterval",
     "TokenInterval",
     "TurnInterval",

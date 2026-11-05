@@ -1,21 +1,57 @@
+import contextlib
 import json
+import struct
 import sys
-from typing import Any
+import threading
+import time
+import zlib
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import anyio
 import pytest
-from botocore.exceptions import ClientError
+from botocore.exceptions import (
+    ClientError,
+    ConnectionClosedError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
+from test_helpers.utils import skip_if_trio
 
-from inspect_ai.model import ChatMessageAssistant, ChatMessageUser, GenerateConfig
+from inspect_ai._util.registry import RegistryInfo, set_registry_info
+from inspect_ai._util.working import (
+    init_sample_working_time,
+    sample_waiting_time,
+    sample_working_time,
+)
+from inspect_ai.model import (
+    ChatMessageAssistant,
+    ChatMessageUser,
+    GenerateConfig,
+    ModelOutput,
+)
 from inspect_ai.model._chat_message import (
     ChatMessageSystem,
     ChatMessageTool,
 )
+from inspect_ai.model._model import Model
 from inspect_ai.model._providers.sagemaker import (
+    SagemakerAPI,
     collapse_consecutive_messages,
     model_output_from_response,
     process_chat_message,
     process_content,
+)
+from inspect_ai.model._response_headers import ResponseHeaders, track_response_headers
+from inspect_ai.model._stream import (
+    ModelStreamObserver,
+    StreamReasoningEvent,
+    StreamTextEvent,
+    StreamToolCallEvent,
+    model_stream_observer,
 )
 from inspect_ai.tool import ToolInfo
 from inspect_ai.tool._tool_choice import ToolFunction
@@ -24,12 +60,11 @@ from inspect_ai.tool._tool_choice import ToolFunction
 
 
 def _make_api(**model_args: Any):
-    """Create a SagemakerAPI instance with mocked aioboto3."""
-    mock_aioboto3 = MagicMock()
-    mock_aioboto3.Session.return_value = MagicMock()
-    mock_aioboto3.__version__ = "13.0.0"
+    """Create a SagemakerAPI instance with mocked aiobotocore."""
+    mock_session_module = MagicMock()
+    mock_session_module.get_session.return_value = MagicMock()
 
-    with patch.dict(sys.modules, {"aioboto3": mock_aioboto3}):
+    with patch.dict(sys.modules, {"aiobotocore.session": mock_session_module}):
         from inspect_ai.model._providers.sagemaker import SagemakerAPI
 
         return SagemakerAPI(
@@ -64,6 +99,242 @@ OPENAI_RESPONSE = {
 }
 
 
+# -- Real client ---------------------------------------------------------------
+
+STREAM_CHUNK = {
+    "id": "chatcmpl-abc123",
+    "created": 1700000000,
+    "model": "default",
+    "choices": [
+        {"index": 0, "delta": {"content": "Hello world"}, "finish_reason": "stop"}
+    ],
+}
+
+
+def _payload_part(payload: bytes) -> bytes:
+    """A PayloadPart event in the AWS event stream encoding."""
+    headers = b"".join(
+        bytes([len(name)]) + name + b"\x07" + struct.pack("!H", len(value)) + value
+        for name, value in (
+            (b":message-type", b"event"),
+            (b":event-type", b"PayloadPart"),
+        )
+    )
+    prelude = struct.pack("!II", 16 + len(headers) + len(payload), len(headers))
+    message = prelude + struct.pack("!I", zlib.crc32(prelude)) + headers + payload
+    return message + struct.pack("!I", zlib.crc32(message))
+
+
+class _EndpointHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    # set when a test is over, to let go of a response left unfinished
+    release = threading.Event()
+
+    def do_POST(self) -> None:
+        self.rfile.read(int(self.headers["Content-Length"]))
+        operation = self.path.rsplit("/", 1)[-1]
+        status = 200
+        unfinished = "/truncating-endpoint/" in self.path or (
+            "/stalling-endpoint/" in self.path
+        )
+        if "/refusing-endpoint/" in self.path:
+            status = 400
+            content_type = "application/json"
+            body = b'{"message": "no"}'
+        elif unfinished:
+            status = 503
+            content_type = "application/json"
+            body = b'{"message": "n'
+        elif "/redirecting-endpoint/" in self.path:
+            status = 307
+            content_type = "application/json"
+            body = b""
+        elif operation == "invocations-response-stream":
+            content_type = "application/vnd.amazon.eventstream"
+            body = _payload_part(
+                f"data: {json.dumps(STREAM_CHUNK)}\n\ndata: [DONE]\n\n".encode()
+            )
+        else:
+            content_type = "application/json"
+            body = json.dumps(OPENAI_RESPONSE).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        # an unfinished response promises more body than it sends
+        self.send_header("Content-Length", str(len(body) + (100 if unfinished else 0)))
+        self.send_header("X-Served-By", operation)
+        if status == 307:
+            # nothing listens there
+            self.send_header("Location", "http://127.0.0.1:1/")
+        self.end_headers()
+        self.wfile.write(body)
+        self.wfile.flush()
+        if "/stalling-endpoint/" in self.path:
+            self.release.wait(10)
+        if unfinished:
+            self.close_connection = True
+
+    def log_message(self, format: str, *args: Any) -> None:
+        pass
+
+
+@pytest.fixture
+def endpoint_server(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "test")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "test")
+    monkeypatch.delenv("AWS_SESSION_TOKEN", raising=False)
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _EndpointHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    _EndpointHandler.release.clear()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
+    finally:
+        _EndpointHandler.release.set()
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+OPERATIONS = pytest.mark.parametrize(
+    ("stream", "operation"),
+    [(False, "invocations"), (True, "invocations-response-stream")],
+)
+
+
+def _real_api(
+    endpoint_name: str, endpoint_url: str, stream: bool, region_name: str = "us-west-2"
+) -> SagemakerAPI:
+    return SagemakerAPI(
+        model_name=endpoint_name,
+        config=GenerateConfig(),
+        region_name=region_name,
+        endpoint_url=endpoint_url,
+        stream=stream,
+    )
+
+
+# aiobotocore runs on asyncio only
+@skip_if_trio
+@OPERATIONS
+async def test_real_client_records_response_headers(
+    endpoint_server: str, stream: bool, operation: str
+) -> None:
+    api = _real_api("test-endpoint", endpoint_server, stream)
+    headers = ResponseHeaders()
+
+    with track_response_headers(headers):
+        result = await api.generate(
+            [ChatMessageUser(content="hello")], [], "auto", GenerateConfig()
+        )
+
+    assert isinstance(result, tuple) and isinstance(result[0], ModelOutput)
+    assert result[0].completion == "Hello world"
+    assert headers.latest is not None
+    assert headers.latest["x-served-by"] == operation
+
+
+@skip_if_trio
+@OPERATIONS
+async def test_real_client_records_a_failed_responses_headers(
+    endpoint_server: str, stream: bool, operation: str
+) -> None:
+    api = _real_api("refusing-endpoint", endpoint_server, stream)
+    headers = ResponseHeaders()
+
+    with track_response_headers(headers), pytest.raises(ClientError) as raised:
+        await api.generate(
+            [ChatMessageUser(content="hello")], [], "auto", GenerateConfig()
+        )
+
+    assert raised.value.response["ResponseMetadata"]["HTTPStatusCode"] == 400
+    assert headers.latest is not None
+    assert headers.latest["x-served-by"] == operation
+
+
+# botocore rebuilds the client's config for a FIPS region name, and aiobotocore
+# 2.18 leaves the HTTP session class out of the result
+@skip_if_trio
+@OPERATIONS
+async def test_real_client_records_response_headers_for_a_fips_region(
+    endpoint_server: str, stream: bool, operation: str
+) -> None:
+    api = _real_api("test-endpoint", endpoint_server, stream, "us-west-2-fips")
+    headers = ResponseHeaders()
+
+    with track_response_headers(headers):
+        await api.generate(
+            [ChatMessageUser(content="hello")], [], "auto", GenerateConfig()
+        )
+
+    assert headers.latest is not None
+    assert headers.latest["x-served-by"] == operation
+
+
+# aiobotocore reads an error's body before it reports the response, so a body
+# that can't be read used to take the headers with it
+@skip_if_trio
+@OPERATIONS
+async def test_real_client_records_the_headers_of_a_response_cut_short(
+    endpoint_server: str, stream: bool, operation: str
+) -> None:
+    api = _real_api("truncating-endpoint", endpoint_server, stream)
+    headers = ResponseHeaders()
+
+    with track_response_headers(headers), pytest.raises(Exception) as raised:
+        await api.generate(
+            [ChatMessageUser(content="hello")], [], "auto", GenerateConfig()
+        )
+
+    assert not isinstance(raised.value, ClientError)
+    assert headers.latest is not None
+    assert headers.latest["x-served-by"] == operation
+
+
+@skip_if_trio
+@OPERATIONS
+async def test_real_client_records_the_headers_of_a_redirect_it_could_not_follow(
+    endpoint_server: str, stream: bool, operation: str
+) -> None:
+    api = _real_api("redirecting-endpoint", endpoint_server, stream)
+    headers = ResponseHeaders()
+
+    with track_response_headers(headers), pytest.raises(Exception) as raised:
+        await api.generate(
+            [ChatMessageUser(content="hello")], [], "auto", GenerateConfig()
+        )
+
+    assert not isinstance(raised.value, ClientError)
+    assert headers.latest is not None
+    assert headers.latest["x-served-by"] == operation
+
+
+@skip_if_trio
+@OPERATIONS
+async def test_real_client_cancelled_reading_a_body_keeps_the_headers(
+    endpoint_server: str, stream: bool, operation: str
+) -> None:
+    api = _real_api("stalling-endpoint", endpoint_server, stream)
+    headers = ResponseHeaders()
+
+    async def call() -> None:
+        await api.generate(
+            [ChatMessageUser(content="hello")], [], "auto", GenerateConfig()
+        )
+
+    with track_response_headers(headers):
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(call)
+            # the headers have arrived and the rest of the body never will
+            with anyio.fail_after(5):
+                while headers.latest is None:
+                    await anyio.sleep(0.01)
+            tg.cancel_scope.cancel()
+
+    assert headers.latest is not None
+    assert headers.latest["x-served-by"] == operation
+
+
 # -- Constructor / config tests ----------------------------------------------
 
 
@@ -74,7 +345,8 @@ class TestSagemakerInit:
         assert api.model_args["region_name"] == "us-west-2"
         assert api.model_args["read_timeout"] == 600
         assert api.model_args["connect_timeout"] == 60
-        assert api.stream is False
+        # unset stream is "auto" (streams when the caller passes on_stream)
+        assert api.stream is None
 
     def test_stream_bool(self):
         api = _make_api(stream=True)
@@ -91,6 +363,16 @@ class TestSagemakerInit:
     def test_stream_string_True(self):
         api = _make_api(stream="True")
         assert api.stream is True
+
+    def test_stream_string_auto(self):
+        # -M stream=auto arrives as the YAML string "auto" and must map to
+        # the auto sentinel (stream only with on_stream), not explicit False
+        api = _make_api(stream="auto")
+        assert api.stream is None
+
+    def test_stream_invalid_raises(self):
+        with pytest.raises(ValueError, match="stream"):
+            _make_api(stream="always")
 
     def test_timeout_coercion_from_string(self):
         api = _make_api(read_timeout="300", connect_timeout="30")
@@ -156,6 +438,34 @@ class TestShouldRetry:
     def test_no_retry_on_non_client_error(self):
         api = _make_api()
         assert api.should_retry(RuntimeError("boom")).retry is False
+
+    def test_retry_on_endpoint_connection_error(self):
+        api = _make_api()
+        ex = EndpointConnectionError(endpoint_url="https://runtime.sagemaker")
+        assert api.should_retry(ex).retry is True
+
+    def test_retry_on_connection_closed_error(self):
+        api = _make_api()
+        ex = ConnectionClosedError(endpoint_url="https://runtime.sagemaker")
+        assert api.should_retry(ex).retry is True
+
+    def test_retry_on_connect_timeout_error(self):
+        api = _make_api()
+        ex = ConnectTimeoutError(endpoint_url="https://runtime.sagemaker")
+        assert api.should_retry(ex).retry is True
+
+    def test_retry_on_read_timeout_error(self):
+        api = _make_api()
+        ex = ReadTimeoutError(endpoint_url="https://runtime.sagemaker")
+        assert api.should_retry(ex).retry is True
+
+    def test_transport_retry_is_transient_not_rate_limit(self):
+        api = _make_api()
+        decision = api.should_retry(
+            EndpointConnectionError(endpoint_url="https://runtime.sagemaker")
+        )
+        assert decision.retry is True
+        assert decision.kind == "transient"
 
 
 # -- Request body building tests ---------------------------------------------
@@ -745,12 +1055,12 @@ class TestStreamingMetadataTracking:
             },
         ]
 
-        # Build mock streaming response
+        # Build mock streaming response (newline-delimited SSE)
         async def mock_event_stream():
             for chunk in chunks:
                 yield {
                     "PayloadPart": {
-                        "Bytes": f"data: {json.dumps(chunk)}".encode("utf-8")
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
                     }
                 }
 
@@ -813,7 +1123,7 @@ class TestStreamingMetadataTracking:
             for chunk in chunks:
                 yield {
                     "PayloadPart": {
-                        "Bytes": f"data: {json.dumps(chunk)}".encode("utf-8")
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
                     }
                 }
 
@@ -921,7 +1231,7 @@ class TestInferenceComponentName:
             for chunk in chunks:
                 yield {
                     "PayloadPart": {
-                        "Bytes": f"data: {json.dumps(chunk)}".encode("utf-8")
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
                     }
                 }
 
@@ -967,7 +1277,7 @@ class TestInferenceComponentName:
             for chunk in chunks:
                 yield {
                     "PayloadPart": {
-                        "Bytes": f"data: {json.dumps(chunk)}".encode("utf-8")
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
                     }
                 }
 
@@ -1123,6 +1433,785 @@ class TestPromptLogprobsInSagemakerChatMode:
         assert choice.prompt_logprobs.content[1].logprob == -1.2
 
 
+# -- Streaming reasoning tests ------------------------------------------------
+
+
+class TestStreamingReasoning:
+    """Tests for streaming handler capturing reasoning tokens from thinking models."""
+
+    @pytest.mark.anyio
+    async def test_streaming_captures_reasoning_field(self):
+        """Reasoning in delta.reasoning is captured and included in response."""
+        api = _make_api(stream=True)
+
+        chunks = [
+            {
+                "id": "chatcmpl-789",
+                "created": 1700000000,
+                "model": "qwen3-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"reasoning": "Let me think"},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-789",
+                "created": 1700000000,
+                "model": "qwen3-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"reasoning": " about this"},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-789",
+                "created": 1700000000,
+                "model": "qwen3-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": "The answer is A"},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-789",
+                "created": 1700000000,
+                "model": "qwen3-model",
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+            },
+            {
+                "id": "chatcmpl-789",
+                "created": 1700000000,
+                "model": "qwen3-model",
+                "choices": [],
+                "usage": {
+                    "prompt_tokens": 20,
+                    "completion_tokens": 10,
+                    "total_tokens": 30,
+                },
+            },
+        ]
+
+        async def mock_event_stream():
+            for chunk in chunks:
+                yield {
+                    "PayloadPart": {
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+                    }
+                }
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="What is the answer?")]
+        config = GenerateConfig(max_tokens=1000, temperature=0)
+
+        result = await api.generate(messages, [], "auto", config)
+        model_output, model_call = result
+
+        assert model_output.completion == "The answer is A"
+        # Verify reasoning was captured in the response for downstream parsing
+        assert (
+            model_call.response["choices"][0]["message"].get("reasoning_content")
+            == "Let me think about this"
+        )
+
+    @pytest.mark.anyio
+    async def test_streaming_captures_reasoning_content_field(self):
+        """Reasoning in delta.reasoning_content is captured (OpenAI-compatible style)."""
+        api = _make_api(stream=True)
+
+        chunks = [
+            {
+                "id": "chatcmpl-rc",
+                "created": 1700000000,
+                "model": "thinking-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": None, "reasoning_content": "Thinking..."},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-rc",
+                "created": 1700000000,
+                "model": "thinking-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": "Answer: B"},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-rc",
+                "created": 1700000000,
+                "model": "thinking-model",
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                "usage": {
+                    "prompt_tokens": 15,
+                    "completion_tokens": 8,
+                    "total_tokens": 23,
+                },
+            },
+        ]
+
+        async def mock_event_stream():
+            for chunk in chunks:
+                yield {
+                    "PayloadPart": {
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+                    }
+                }
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="What is the answer?")]
+        config = GenerateConfig(max_tokens=1000, temperature=0)
+
+        result = await api.generate(messages, [], "auto", config)
+        model_output, model_call = result
+
+        assert model_output.completion == "Answer: B"
+        assert (
+            model_call.response["choices"][0]["message"].get("reasoning_content")
+            == "Thinking..."
+        )
+
+    @pytest.mark.anyio
+    async def test_streaming_reasoning_only_no_content(self):
+        """When model only produces reasoning (no content), content is empty but reasoning preserved."""
+        api = _make_api(stream=True)
+
+        chunks = [
+            {
+                "id": "chatcmpl-empty",
+                "created": 1700000000,
+                "model": "qwen3-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"reasoning": "Deep reasoning here..."},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-empty",
+                "created": 1700000000,
+                "model": "qwen3-model",
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 5,
+                    "total_tokens": 15,
+                },
+            },
+        ]
+
+        async def mock_event_stream():
+            for chunk in chunks:
+                yield {
+                    "PayloadPart": {
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+                    }
+                }
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="Think about this")]
+        config = GenerateConfig(max_tokens=1000, temperature=0)
+
+        result = await api.generate(messages, [], "auto", config)
+        model_output, model_call = result
+
+        # Content is empty but reasoning is preserved
+        assert model_output.completion == ""
+        assert (
+            model_call.response["choices"][0]["message"]["reasoning_content"]
+            == "Deep reasoning here..."
+        )
+
+    @pytest.mark.anyio
+    async def test_streaming_no_reasoning_field_when_absent(self):
+        """When no reasoning is produced, reasoning_content is not in the response."""
+        api = _make_api(stream=True)
+
+        chunks = [
+            {
+                "id": "chatcmpl-normal",
+                "created": 1700000000,
+                "model": "normal-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": "Just text"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 5,
+                    "completion_tokens": 2,
+                    "total_tokens": 7,
+                },
+            },
+        ]
+
+        async def mock_event_stream():
+            for chunk in chunks:
+                yield {
+                    "PayloadPart": {
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+                    }
+                }
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="Hello")]
+        config = GenerateConfig(max_tokens=100, temperature=0)
+
+        result = await api.generate(messages, [], "auto", config)
+        model_output, model_call = result
+
+        assert model_output.completion == "Just text"
+        assert "reasoning_content" not in model_call.response["choices"][0]["message"]
+
+    @pytest.mark.anyio
+    async def test_streaming_zero_chunks_raises(self):
+        """Zero data chunks should raise RuntimeError for retry."""
+        api = _make_api(stream=True)
+
+        async def mock_event_stream():
+            # Only yields a non-data event (no PayloadPart)
+            return
+            yield  # make it an async generator
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="Hello")]
+        config = GenerateConfig(max_tokens=100, temperature=0)
+
+        with pytest.raises(RuntimeError, match="No data chunks"):
+            await api.generate(messages, [], "auto", config)
+
+    @pytest.mark.anyio
+    async def test_streaming_tool_calls_accumulated(self):
+        """Streamed tool_call deltas are accumulated into complete tool calls."""
+        api = _make_api(stream=True)
+
+        chunks = [
+            {
+                "id": "chatcmpl-tc",
+                "created": 1700000000,
+                "model": "tool-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
+                            "tool_calls": [
+                                {
+                                    "index": 0,
+                                    "id": "call_1",
+                                    "type": "function",
+                                    "function": {"name": "search", "arguments": ""},
+                                }
+                            ]
+                        },
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-tc",
+                "created": 1700000000,
+                "model": "tool-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
+                            "tool_calls": [
+                                {"index": 0, "function": {"arguments": '{"query":'}}
+                            ]
+                        },
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-tc",
+                "created": 1700000000,
+                "model": "tool-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
+                            "tool_calls": [
+                                {"index": 0, "function": {"arguments": ' "hello"}'}}
+                            ]
+                        },
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-tc",
+                "created": 1700000000,
+                "model": "tool-model",
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}],
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 5,
+                    "total_tokens": 15,
+                },
+            },
+        ]
+
+        async def mock_event_stream():
+            for chunk in chunks:
+                yield {
+                    "PayloadPart": {
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+                    }
+                }
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="Search for hello")]
+        config = GenerateConfig(max_tokens=100, temperature=0)
+
+        result = await api.generate(messages, [], "auto", config)
+        _, model_call = result
+
+        tool_calls = model_call.response["choices"][0]["message"].get("tool_calls")
+        assert tool_calls is not None
+        assert len(tool_calls) == 1
+        assert tool_calls[0]["id"] == "call_1"
+        assert tool_calls[0]["function"]["name"] == "search"
+        assert tool_calls[0]["function"]["arguments"] == '{"query": "hello"}'
+
+    @pytest.mark.anyio
+    async def test_streaming_multibyte_split_across_chunks(self):
+        """Multi-byte UTF-8 characters split across PayloadPart boundaries are handled."""
+        api = _make_api(stream=True)
+
+        # "δ" is U+03B4, encoded as 2 bytes: 0xCE 0xB4
+        # We'll split a chunk containing "δE" across two PayloadParts
+        full_line = 'data: {"id":"x","created":0,"model":"m","choices":[{"index":0,"delta":{"content":"δE"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}\n\n'
+        raw_bytes = full_line.encode("utf-8")
+        # Find the position of δ (0xCE 0xB4) and split between them
+        delta_pos = raw_bytes.index(b"\xce\xb4")
+        part1 = raw_bytes[: delta_pos + 1]  # includes 0xCE but not 0xB4
+        part2 = raw_bytes[delta_pos + 1 :]  # starts with 0xB4
+
+        async def mock_event_stream():
+            yield {"PayloadPart": {"Bytes": part1}}
+            yield {"PayloadPart": {"Bytes": part2}}
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="Hi")]
+        config = GenerateConfig(max_tokens=100, temperature=0)
+
+        result = await api.generate(messages, [], "auto", config)
+        model_output, _ = result
+
+        assert model_output.completion == "δE"
+
+    @pytest.mark.anyio
+    async def test_streaming_includes_stream_options(self):
+        """stream_options.include_usage is set in the request body when streaming."""
+        api = _make_api(stream=True)
+
+        chunks = [
+            {
+                "id": "chatcmpl-opt",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [
+                    {"index": 0, "delta": {"content": "ok"}, "finish_reason": "stop"}
+                ],
+                "usage": {
+                    "prompt_tokens": 1,
+                    "completion_tokens": 1,
+                    "total_tokens": 2,
+                },
+            },
+        ]
+
+        async def mock_event_stream():
+            for chunk in chunks:
+                yield {
+                    "PayloadPart": {
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+                    }
+                }
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        messages = [ChatMessageUser(content="Hi")]
+        config = GenerateConfig(max_tokens=100, temperature=0)
+
+        await api.generate(messages, [], "auto", config)
+
+        call_args = mock_client.invoke_endpoint_with_response_stream.call_args
+        sent_body = json.loads(call_args.kwargs["Body"])
+        assert sent_body["stream"] is True
+        assert sent_body["stream_options"] == {"include_usage": True}
+
+
+class TestStreamObserver:
+    """Streamed chunks are reported to the model layer's stream observer."""
+
+    def _mock_streaming_client(self, api, chunks: list[dict[str, Any]]):
+        async def mock_event_stream():
+            for chunk in chunks:
+                yield {
+                    "PayloadPart": {
+                        "Bytes": f"data: {json.dumps(chunk)}\n\n".encode("utf-8")
+                    }
+                }
+
+        mock_client = AsyncMock()
+        mock_client.invoke_endpoint_with_response_stream = AsyncMock(
+            return_value={"Body": mock_event_stream()}
+        )
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+        return mock_client
+
+    @pytest.mark.anyio
+    async def test_on_stream_auto_enables_streaming_and_reports_deltas(self):
+        """Unset stream + on_stream streams and reports deltas by kind."""
+        api = _make_api()  # stream unset ("auto")
+
+        chunks = [
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"reasoning_content": "hmm"},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": "hel"},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
+                            "tool_calls": [
+                                {
+                                    "index": 0,
+                                    "id": "call_1",
+                                    "function": {
+                                        "name": "bash",
+                                        "arguments": '{"cmd": ',
+                                    },
+                                }
+                            ]
+                        },
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            # continuation fragment: id/name arrive only on the first fragment
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
+                            "tool_calls": [
+                                {
+                                    "index": 0,
+                                    "function": {"arguments": '"ls"}'},
+                                }
+                            ]
+                        },
+                        "finish_reason": "tool_calls",
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [],
+                "usage": {
+                    "prompt_tokens": 3,
+                    "completion_tokens": 7,
+                    "total_tokens": 10,
+                },
+            },
+        ]
+        mock_client = self._mock_streaming_client(api, chunks)
+
+        events: list[Any] = []
+
+        async def collect(event: Any) -> None:
+            events.append(event)
+
+        observer = ModelStreamObserver("sagemaker/test", collect)
+        with model_stream_observer(observer):
+            result = await api.generate(
+                [ChatMessageUser(content="Hi")],
+                [],
+                "auto",
+                GenerateConfig(max_tokens=100, temperature=0),
+            )
+
+        # on_stream alone enabled streaming
+        mock_client.invoke_endpoint_with_response_stream.assert_called_once()
+        model_output, _ = result
+        assert model_output.completion == "hel"
+
+        assert [type(e) for e in events] == [
+            StreamReasoningEvent,
+            StreamTextEvent,
+            StreamToolCallEvent,
+            StreamToolCallEvent,
+        ]
+        assert events[0].reasoning == "hmm"
+        assert events[1].text == "hel"
+        assert events[2].id == "call_1"
+        assert events[2].function == "bash"
+        assert events[2].arguments == '{"cmd": '
+        # the continuation fragment is attributed to its call (id/name are
+        # remembered from the first fragment)
+        assert events[3].id == "call_1"
+        assert events[3].function == "bash"
+        assert events[3].arguments == '"ls"}'
+        # the usage chunk reported cumulative output tokens
+        assert observer._tokens_current == 7
+
+    @pytest.mark.anyio
+    async def test_stream_gated_without_on_stream(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Without an on_stream consumer only usage/heartbeat progress runs.
+
+        Explicit stream=true callers stream without asking for stream events,
+        so delta construction (on_stream support code) must not run for them.
+        """
+        import inspect_ai.model._providers.sagemaker as sagemaker_module
+
+        async def fail(delta: Any) -> None:
+            raise AssertionError("delta reported without an on_stream consumer")
+
+        monkeypatch.setattr(sagemaker_module, "report_model_stream_delta", fail)
+
+        api = _make_api(stream=True)
+        chunks = [
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": "hel"},
+                        "finish_reason": None,
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": "lo"},
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
+            {
+                "id": "chatcmpl-obs",
+                "created": 1700000000,
+                "model": "m",
+                "choices": [],
+                "usage": {
+                    "prompt_tokens": 3,
+                    "completion_tokens": 7,
+                    "total_tokens": 10,
+                },
+            },
+        ]
+        mock_client = self._mock_streaming_client(api, chunks)
+
+        observer = ModelStreamObserver("sagemaker/test", None)
+        with model_stream_observer(observer):
+            result = await api.generate(
+                [ChatMessageUser(content="Hi")],
+                [],
+                "auto",
+                GenerateConfig(max_tokens=100, temperature=0),
+            )
+
+        # response assembly and the usage progress channel are unaffected
+        mock_client.invoke_endpoint_with_response_stream.assert_called_once()
+        model_output, _ = result
+        assert model_output.completion == "hello"
+        assert observer._tokens_current == 7
+
+    @pytest.mark.anyio
+    async def test_explicit_stream_false_wins_over_on_stream(self):
+        """An explicit stream=False opt-out wins over an on_stream callback."""
+        api = _make_api(stream=False)
+
+        mock_client = AsyncMock()
+        mock_body = AsyncMock()
+        mock_body.read = AsyncMock(
+            return_value=json.dumps(OPENAI_RESPONSE).encode("utf-8")
+        )
+        mock_client.invoke_endpoint = AsyncMock(return_value={"Body": mock_body})
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        async def collect(event: Any) -> None:
+            pass
+
+        with model_stream_observer(ModelStreamObserver("sagemaker/test", collect)):
+            await api.generate(
+                [ChatMessageUser(content="Hi")],
+                [],
+                "auto",
+                GenerateConfig(max_tokens=100, temperature=0),
+            )
+
+        mock_client.invoke_endpoint.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_auto_stream_disabled_for_lossy_configs(self):
+        """Auto-streaming stays off when the parser would drop response data."""
+        api = _make_api()  # stream unset ("auto")
+
+        mock_client = AsyncMock()
+        mock_body = AsyncMock()
+        mock_body.read = AsyncMock(
+            return_value=json.dumps(OPENAI_RESPONSE).encode("utf-8")
+        )
+        mock_client.invoke_endpoint = AsyncMock(return_value={"Body": mock_body})
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        api._create_client = MagicMock(return_value=mock_ctx)
+
+        async def collect(event: Any) -> None:
+            pass
+
+        with model_stream_observer(ModelStreamObserver("sagemaker/test", collect)):
+            await api.generate(
+                [ChatMessageUser(content="Hi")],
+                [],
+                "auto",
+                GenerateConfig(max_tokens=100, temperature=0, num_choices=2),
+            )
+
+        # the streaming parser only reads the first choice, so num_choices > 1
+        # must not auto-stream
+        mock_client.invoke_endpoint.assert_called_once()
+
+
 class TestCompletionModePromptLogprobs:
     @pytest.mark.anyio
     async def test_completion_mode_uses_config_prompt_logprobs(self):
@@ -1211,3 +2300,54 @@ class TestCompletionModePromptLogprobs:
         assert model_output.choices[0].prompt_logprobs.content[0].logprob == -0.4
         assert model_output.choices[0].prompt_logprobs.content[1].token == "great"
         assert model_output.choices[0].prompt_logprobs.content[1].logprob == -0.9
+
+
+# -- Working time ------------------------------------------------------------
+
+
+WORKING_TIME_COMPLETION_RESPONSE = {
+    "choices": [{"text": "Hello world", "finish_reason": "stop"}],
+    "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+}
+
+
+@pytest.mark.parametrize(
+    "model_args,response",
+    [
+        ({"stream": False}, OPENAI_RESPONSE),
+        ({"stream": True}, OPENAI_RESPONSE),
+        ({"completion_mode": True}, WORKING_TIME_COMPLETION_RESPONSE),
+    ],
+)
+async def test_successful_request_is_working_time(
+    model_args: dict[str, Any], response: dict[str, Any]
+) -> None:
+    """SageMaker reports no request time, so a successful call is all working time."""
+    api = _make_api(**model_args)
+    set_registry_info(api, RegistryInfo(type="modelapi", name="sagemaker"))
+
+    @contextlib.asynccontextmanager
+    async def client() -> AsyncIterator[Any]:
+        yield MagicMock()
+
+    async def invoke(client: Any, request_body: dict[str, Any]) -> bytes:
+        await anyio.sleep(0.3)
+        return json.dumps(response).encode()
+
+    async def invoke_streaming(
+        client: Any, request_body: dict[str, Any]
+    ) -> tuple[bytes, dict[str, Any]]:
+        await anyio.sleep(0.3)
+        return b"", response
+
+    init_sample_working_time(time.monotonic())
+    with (
+        patch.object(api, "_create_client", client),
+        patch.object(api, "_invoke_endpoint", invoke),
+        patch.object(api, "_invoke_endpoint_streaming", invoke_streaming),
+    ):
+        output = await Model(api, GenerateConfig()).generate("hi")
+
+    assert output.completion == "Hello world"
+    assert sample_waiting_time() < 0.05
+    assert sample_working_time() >= 0.3

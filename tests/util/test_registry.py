@@ -1,11 +1,24 @@
-from inspect_ai import Task, eval, task
+from typing import cast
+
+import pytest
+
+from inspect_ai import Task, TaskSource, eval, task, task_source
 from inspect_ai._util.constants import PKG_NAME
 from inspect_ai._util.registry import (
+    RegistryInfo,
+    RegistryType,
+    _registry,
     extract_named_params,
+    is_registry_dict,
+    registry_add,
+    registry_create,
     registry_create_from_dict,
+    registry_has,
     registry_info,
+    registry_key,
     registry_kwargs,
     registry_lookup,
+    registry_tag,
     registry_value,
 )
 from inspect_ai.dataset import Sample
@@ -15,8 +28,10 @@ from inspect_ai.model._compaction.native import CompactionNative
 from inspect_ai.model._compaction.summary import CompactionSummary
 from inspect_ai.model._compaction.trim import CompactionTrim
 from inspect_ai.model._compaction.types import CompactionStrategy
-from inspect_ai.scorer import Metric, metric
+from inspect_ai.scorer import Metric, ScoreReducer, at_least, metric, pass_at, pass_k
 from inspect_ai.scorer._metric import SampleScore
+from inspect_ai.scorer._reducer.reducer import mean_score
+from inspect_ai.scorer._reducer.registry import reducer_log_name
 from inspect_ai.solver import Solver, solver, use_tools
 from inspect_ai.tool import Tool, bash
 
@@ -36,6 +51,47 @@ def test_registry_namespaces() -> None:
     info = registry_info(registry_lookup("metric", f"{PKG_NAME}/accuracy"))
     assert info
     assert info.name == f"{PKG_NAME}/accuracy"
+
+
+def test_validation_predicate_registry_type() -> None:
+    async def predicate() -> None:
+        pass
+
+    info = RegistryInfo(type="validation_predicate", name="test_predicate")
+    registry_add(predicate, info)
+    try:
+        assert registry_lookup("validation_predicate", "test_predicate") is predicate
+        assert registry_info(predicate) == info
+    finally:
+        _registry.pop(registry_key("validation_predicate", "test_predicate"), None)
+
+
+@pytest.mark.parametrize("registry_type", ["swarm_controller", "swarm_channel"])
+def test_swarm_registry_types(registry_type: RegistryType) -> None:
+    class Component:
+        def __init__(self, size: int) -> None:
+            self.size = size
+
+    name = f"test_{registry_type}"
+    info = RegistryInfo(type=registry_type, name=name)
+
+    def factory(size: int = 1) -> Component:
+        component = Component(size)
+        registry_tag(factory, component, info, size=size)
+        return component
+
+    registry_add(factory, info)
+    try:
+        assert registry_lookup(registry_type, name) is factory
+        logged = registry_value(factory(size=3))
+        assert logged == {"type": registry_type, "name": name, "params": {"size": 3}}
+        assert is_registry_dict(logged)
+        restored = registry_create_from_dict(logged)
+        assert isinstance(restored, Component)
+        assert restored.size == 3
+        assert registry_info(restored) == info
+    finally:
+        _registry.pop(registry_key(registry_type, name), None)
 
 
 def test_registry_dict() -> None:
@@ -120,6 +176,156 @@ def test_registry_kwargs() -> None:
         assert isinstance(arg_solver, Solver)
 
 
+def test_create_registry_object_allowed_types() -> None:
+    """An allow-list refuses other objects at any depth, before any factory runs."""
+    from inspect_ai._util.registry import (
+        LOG_METRIC_OPTION_TYPES,
+        DisallowedRegistryArg,
+        create_registry_object,
+    )
+
+    calls: list[object] = []
+
+    @metric
+    def allow_list_metric(option: object = None) -> Metric:
+        calls.append(option)
+
+        def compute(scores: list[SampleScore]) -> float:
+            return 0.0
+
+        return compute
+
+    model: dict[str, object] = {
+        "model": "mockllm/model",
+        "config": {},
+        "base_url": None,
+        "model_args": {},
+    }
+    nested = {"type": "metric", "name": "allow_list_metric", "params": {}}
+    for option, path, kind in (
+        (model, "option", "a model"),
+        ([{"x": model}], "option.0.x", "a model"),
+        (
+            {"type": "solver", "name": "generate", "params": {}},
+            "option",
+            "a solver ('generate')",
+        ),
+        (
+            {**nested, "params": {"option": model}},
+            "option.params.option",
+            "a model",
+        ),
+    ):
+        with pytest.raises(DisallowedRegistryArg) as ex:
+            create_registry_object(
+                "metric",
+                "allow_list_metric",
+                {"option": option},
+                allowed_types=LOG_METRIC_OPTION_TYPES,
+            )
+        assert str(ex.value) == (
+            f"Metric 'allow_list_metric' option '{path}': {kind} cannot be "
+            "created from metric options in an untrusted log."
+        )
+        assert calls == []
+
+    # allowed types are built, at every depth
+    create_registry_object(
+        "metric",
+        "allow_list_metric",
+        {"option": [nested, registry_value(mean_score())]},
+        allowed_types=LOG_METRIC_OPTION_TYPES,
+    )
+    assert len(calls) == 2
+
+    # without an allow-list, anything is built as before
+    create_registry_object("metric", "allow_list_metric", {"option": model})
+    assert len(calls) == 3
+
+
+def test_registry_arg_preserves_ordinary_registry_shaped_dict() -> None:
+    """Ordinary user dicts must not be treated as encoded registry objects."""
+    from inspect_ai._util.registry import is_registry_dict, registry_arg
+
+    ordinary = {"type": "ordinary-data", "name": "example", "params": {}}
+    assert not is_registry_dict(ordinary)
+    assert registry_arg(ordinary) == ordinary
+    assert registry_arg({"config": ordinary}) == {"config": ordinary}
+
+
+def test_registry_arg_instantiates_nested_score_reducer() -> None:
+    """Snake-case registry types should restore the registered instance."""
+    from inspect_ai._util.registry import registry_arg
+
+    restored = registry_arg(registry_value(mean_score()))
+
+    assert restored is not mean_score
+    assert isinstance(restored, ScoreReducer)
+
+
+def test_registry_arg_round_trips_parameterized_score_reducers() -> None:
+    """Reducer display suffixes must not replace their registered factory names."""
+    from inspect_ai._util.registry import registry_arg
+
+    for name, factory in (
+        ("at_least", at_least),
+        ("pass_at", pass_at),
+        ("pass_k", pass_k),
+    ):
+        encoded = registry_value(factory(2))
+
+        assert encoded == {
+            "type": "score_reducer",
+            "name": name,
+            "params": {"k": 2},
+        }
+
+        restored = registry_arg(encoded)
+        assert isinstance(restored, ScoreReducer)
+        assert reducer_log_name(restored) == f"{name}_2"
+
+
+def test_registry_arg_instantiates_nested_task_source() -> None:
+    """Generic nested restoration should not require a type-specific workaround."""
+    from inspect_ai._util.registry import registry_arg
+
+    @task_source(name="registry_roundtrip_task_source")
+    def roundtrip_task_source() -> TaskSource:
+        return TaskSource()
+
+    restored = registry_arg(registry_value(roundtrip_task_source()))
+
+    assert isinstance(restored, TaskSource)
+
+
+def test_registry_create_from_dict_instantiates_without_type_name_heuristic() -> None:
+    def score_reducer_factory() -> ScoreReducer:
+        return mean_score()
+
+    registry_add(
+        score_reducer_factory,
+        RegistryInfo(type="score_reducer", name="non_matching_return_annotation"),
+    )
+
+    assert (
+        cast(
+            object,
+            registry_create("score_reducer", "non_matching_return_annotation"),
+        )
+        is score_reducer_factory
+    )
+
+    restored = registry_create_from_dict(
+        {
+            "type": "score_reducer",
+            "name": "non_matching_return_annotation",
+            "params": {},
+        }
+    )
+
+    assert isinstance(restored, ScoreReducer)
+
+
 def _extract(fn, *args, **kwargs):
     """Helper to call extract_named_params with apply_defaults=True."""
     return extract_named_params(fn, True, *args, **kwargs)
@@ -183,3 +389,49 @@ def test_repr_params_all_strategies() -> None:
     )
     assert result["compaction"]["threshold"] == 0.75
     assert result["compaction"]["memory"] == "auto"
+
+
+def test_registry_types_include_sentinel_kinds() -> None:
+    from typing import get_args
+
+    from inspect_ai._util.registry import RegistryType
+
+    assert {"monitor", "protocol"} <= set(get_args(RegistryType))
+
+
+def test_registry_types_include_ranges_kinds() -> None:
+    from typing import get_args
+
+    from inspect_ai._util.registry import RegistryType
+
+    assert "range_goal" in set(get_args(RegistryType))
+
+
+def test_registry_has_matches_by_type_and_name() -> None:
+    async def predicate() -> None:
+        pass
+
+    registry_add(predicate, RegistryInfo(type="monitor", name="test_has/watch"))
+    try:
+        assert registry_has("monitor", "test_has/watch")
+        assert not registry_has("protocol", "test_has/watch")
+        assert not registry_has("monitor", "test_has/other")
+    finally:
+        _registry.pop(registry_key("monitor", "test_has/watch"), None)
+
+
+def test_registry_has_finds_unnamespaced_inspect_ai_names() -> None:
+    assert registry_has("metric", "accuracy")
+    assert registry_has("metric", f"{PKG_NAME}/accuracy")
+
+
+def test_registry_has_does_not_load_entry_points(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from inspect_ai._util import registry
+
+    def fail(package: str | None = None) -> None:
+        raise AssertionError("entry points were loaded")
+
+    monkeypatch.setattr(registry, "ensure_entry_points", fail)
+    assert not registry_has("monitor", "unloaded_pkg/watch")

@@ -1,5 +1,4 @@
 import json
-import os
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Any
@@ -7,7 +6,7 @@ from typing import Any
 import jsonlines
 
 from inspect_ai._util.asyncfiles import is_s3_filename
-from inspect_ai._util.file import file
+from inspect_ai._util.file import absolute_file_path, file
 
 from .._dataset import (
     Dataset,
@@ -16,7 +15,12 @@ from .._dataset import (
     MemoryDataset,
     RecordToSample,
 )
-from .._util import data_to_samples, record_to_sample_fn, shuffle_choices_if_requested
+from .._util import (
+    data_to_samples,
+    record_to_sample_fn,
+    resolve_shuffle,
+    shuffle_choices_if_requested,
+)
 from .util import resolve_sample_files
 
 
@@ -24,7 +28,7 @@ def json_dataset(
     json_file: str,
     sample_fields: FieldSpec | RecordToSample | None = None,
     auto_id: bool = False,
-    shuffle: bool = False,
+    shuffle: bool | int = False,
     seed: int | None = None,
     shuffle_choices: bool | int | None = None,
     limit: int | None = None,
@@ -50,8 +54,8 @@ def json_dataset(
         `FieldSpec` to specify mapping fields by name; Pass a `RecordToSample` to
         handle mapping with a custom function that returns one or more samples.
       auto_id: Assign an auto-incrementing ID for each sample.
-      shuffle: Randomly shuffle the dataset order.
-      seed: Seed used for random shuffle.
+      shuffle: Randomly shuffle the dataset order. An int (including 0) is used as the seed, so `shuffle=0` shuffles.
+      seed: Seed used for random shuffle. Only valid with a boolean `shuffle`.
       shuffle_choices: Whether to shuffle the choices. If an int is passed, this will be used as the seed when shuffling.
       limit: Limit the number of records to read.
       encoding: Text encoding for file (defaults to "utf-8").
@@ -65,6 +69,8 @@ def json_dataset(
     Returns:
         Dataset read from JSON file.
     """
+    resolved_shuffle = resolve_shuffle(shuffle, seed)
+
     # resolve data_to_sample function
     data_to_sample = record_to_sample_fn(sample_fields)
 
@@ -87,20 +93,20 @@ def json_dataset(
                 dataset_reader(f, **reader_kwargs), data_to_sample, auto_id
             ),
             name=name,
-            location=os.path.abspath(json_file),
+            location=absolute_file_path(json_file),
         )
 
         # resolve relative file paths
         resolve_sample_files(dataset)
 
         # shuffle if requested
-        if shuffle:
-            dataset.shuffle(seed=seed)
+        if resolved_shuffle.enabled:
+            dataset.shuffle(seed=resolved_shuffle.seed)
 
         shuffle_choices_if_requested(dataset, shuffle_choices)
 
         # limit if requested
-        if limit:
+        if limit is not None:
             return dataset[0:limit]
 
     return dataset

@@ -1,3 +1,5 @@
+import pytest
+
 from inspect_ai import Task, eval
 from inspect_ai.dataset import Sample
 from inspect_ai.log import EvalLog
@@ -252,6 +254,28 @@ def test_basic_agent_respects_token_limit():
     assert sum(usage.total_tokens for usage in log.stats.model_usage.values()) == 14
 
 
+def test_basic_agent_accepts_string_token_limit():
+    task = Task(
+        dataset=[Sample(input="What is 1 + 1?", target=["2", "2.0", "Two"])],
+        solver=basic_agent(token_limit="output:5"),
+        scorer=includes(),
+    )
+    model_output = ModelOutput.from_content(model="mockllm", content="hello")
+    model_output.usage = ModelUsage(input_tokens=10, output_tokens=3, total_tokens=13)
+    model = get_model("mockllm/model", custom_outputs=[model_output] * 5)
+
+    log = eval(task, model)[0]
+
+    # the limit (5 output tokens) trips on the 2nd generation (6 output tokens)
+    assert log.status == "success"
+    assert sum(usage.output_tokens for usage in log.stats.model_usage.values()) == 6
+
+
+def test_basic_agent_rejects_invalid_string_token_limit():
+    with pytest.raises(ValueError):
+        basic_agent(token_limit="xyz")
+
+
 def test_basic_agent_respects_message_limit():
     task = Task(
         dataset=[Sample(input="What is 1 + 1?", target=["2", "2.0", "Two"])],
@@ -293,6 +317,25 @@ def test_basic_agent_defaults_to_50_message_limit():
 
     assert log.status == "success"
     assert len(log.samples[0].messages) == 50
+
+
+def test_basic_agent_accepts_tuple_init():
+    task = Task(
+        dataset=[Sample(input="What is 1 + 1?", target=["2", "2.0", "Two"])],
+        solver=basic_agent(
+            init=(
+                system_message("You are a helpful assistant."),
+                system_message(AGENT_SYSTEM_MESSAGE),
+            )
+        ),
+        scorer=includes(),
+        message_limit=3,
+    )
+    model = get_model("mockllm/model")
+
+    log = eval(task, model)[0]
+
+    assert log.status == "success"
 
 
 if __name__ == "__main__":
